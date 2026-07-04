@@ -1,0 +1,3 @@
+# meta/policy-changes.log -- audit trail for policy.allowDirectCommitsToMaster transitions (#746)
+2026-07-04T21:57:08Z actor=task policy:wip-cap wipCap=10 previous=None note=onboarding: confirm framework default
+2026-07-04T22:01:29Z actor=triage-welcome field=plan.policy.triageScope preset=small rule_count=1 changed=true
