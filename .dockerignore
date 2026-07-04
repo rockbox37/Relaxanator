@@ -1,9 +1,13 @@
+.claude
 .deft
 .deft-cache
+.env
 .git
 .github
 .next
+.vscode
 coverage
+dist
 node_modules
 xbrief
 vbrief
@@ -12,4 +16,5 @@ Taskfile.yml
 fly.toml
 Dockerfile
 .dockerignore
+*.log
 *.md
