@@ -34,6 +34,13 @@
           "Traces": "FR-2, NFR-2"
         }
       }
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/3",
+        "type": "x-xbrief/github-issue",
+        "TrustLevel": "external"
+      }
     ]
   }
 }
