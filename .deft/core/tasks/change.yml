@@ -1,0 +1,29 @@
+version: '3'
+
+vars:
+  # Per ../Taskfile.yml header: joinPath is evaluated eagerly by go-task
+  # templating and yields a native-separator absolute path so {{.DEFT_ROOT}}
+  # resolves correctly under node on Windows (#566).
+  DEFT_ROOT: '{{joinPath .TASKFILE_DIR ".."}}'
+
+tasks:
+
+  changelog:check:
+    desc: Verify CHANGELOG.md has an [Unreleased] section with at least one entry
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'changelog-check --project-root "{{.USER_WORKING_DIR}}"'
+
+  change:init:
+    desc: Create a new change proposal directory structure in history/changes/<name>/
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'change-init --project-root "{{.USER_WORKING_DIR}}" --name {{.CLI_ARGS}}'

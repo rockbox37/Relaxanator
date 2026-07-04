@@ -1,0 +1,26 @@
+version: '3'
+
+# tasks/relocate.yml -- DROPPED from the consumer task surface (#2022).
+#
+# The relocate task previously wired `task relocate` (namespaced
+# `relocate:relocate`) to `uv run python scripts/relocate.py` -- the sole
+# remaining consumer-exposed Python coupling on the deft task surface. Per
+# the #2022 Python-purge readiness gate it has been REMOVED from the
+# consumer-exposed task graph: this fragment is no longer referenced by the
+# root Taskfile.yml `includes:` block and exposes no task.
+#
+# Canonical consumer (re)install / relocate path is now the npm installer
+# (`npm i -g @deftai/directive@latest`), NOT a bundled task -- see
+# content/UPGRADING.md "Manual drift repair" and #1912 (the relocator is a
+# back-compat / legacy bridge only, never a routine-upgrade path). The
+# underlying helper scripts/relocate.py is intentionally retained for #1860
+# (big-bang Python delete) to remove; this story only drops the consumer
+# task surface.
+#
+# This file is retained (un-wired) so the framework's own Taskfile
+# content-contract tests keep a stable fixture. The DEFT_ROOT joinPath var
+# below preserves the #566 per-subfile path-resolution idiom for any future
+# maintainer-side re-wiring.
+
+vars:
+  DEFT_ROOT: '{{joinPath .TASKFILE_DIR ".."}}'

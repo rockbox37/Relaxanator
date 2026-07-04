@@ -1,0 +1,23 @@
+version: '3'
+
+vars:
+  DEFT_ROOT: '{{joinPath .TASKFILE_DIR ".."}}'
+
+tasks:
+  check:
+    desc: Verify required maintainer toolchain is installed (go, uv, git, gh, node, pnpm)
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'toolchain-check'
+
+  check-consumer:
+    desc: Verify required consumer toolchain is installed (git, gh, node, pnpm, task) without Python/go/uv (#2022 Phase 3).
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'toolchain-check --consumer'

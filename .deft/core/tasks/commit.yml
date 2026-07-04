@@ -1,0 +1,19 @@
+version: '3'
+
+vars:
+  # Per ../Taskfile.yml header: joinPath is evaluated eagerly by go-task
+  # templating and yields a native-separator absolute path so {{.DEFT_ROOT}}
+  # resolves correctly under node on Windows (#566).
+  DEFT_ROOT: '{{joinPath .TASKFILE_DIR ".."}}'
+
+tasks:
+
+  commit:lint:
+    desc: Validate HEAD commit message against conventional commit format
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'commit-lint --project-root "{{.USER_WORKING_DIR}}"'

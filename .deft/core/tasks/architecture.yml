@@ -1,0 +1,15 @@
+version: '3'
+
+vars:
+  DEFT_ROOT: '{{joinPath .TASKFILE_DIR ".."}}'
+
+tasks:
+  sor-preflight:
+    desc: "System-of-record architecture preflight. Run before stateful implementation: task architecture:sor-preflight -- --story-path <path>"
+    dir: '{{.USER_WORKING_DIR}}'
+    # Per conventions/task-caching.md: no sources/generates because this target
+    # forwards user-supplied story paths and flags via CLI_ARGS.
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'architecture-preflight-sor {{.CLI_ARGS}}'

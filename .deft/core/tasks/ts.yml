@@ -1,0 +1,39 @@
+version: '3'
+
+# TypeScript engine monorepo verbs (#1717). Parity oracle tasks removed (#1860).
+
+vars:
+  DEFT_ROOT: '{{joinPath .TASKFILE_DIR ".."}}'
+
+tasks:
+  build:
+    desc: "Build the TypeScript engine monorepo (tsc -b project references, #1717)"
+    dir: '{{.DEFT_ROOT}}'
+    cmds:
+      - pnpm run build
+
+  test:
+    desc: "Run the TypeScript engine test suite with coverage (vitest, #1717)"
+    dir: '{{.DEFT_ROOT}}'
+    cmds:
+      - pnpm run test
+
+  lint:
+    desc: "Lint + format-check the TypeScript engine (biome, #1717)"
+    dir: '{{.DEFT_ROOT}}'
+    cmds:
+      - pnpm run lint
+
+  check-lane:
+    desc: "Run the TS lane (lint+build+test) when a Node toolchain is present; skip with a notice otherwise (#1530, #1790)."
+    dir: '{{.DEFT_ROOT}}'
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'ts-check-lane --project-root "{{.DEFT_ROOT}}"'
+
+  encoding:
+    desc: "Run the ported verify:encoding gate (TS @deftai/core port, #1718)"
+    deps: [build]
+    cmds:
+      - node "{{.DEFT_ROOT}}/packages/cli/dist/verify-encoding.js" --all --project-root "{{.DEFT_ROOT}}"

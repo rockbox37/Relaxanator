@@ -1,0 +1,22 @@
+version: '3'
+
+# Maintainer-only packaging lane (#1860). Build/clean dispatch the native
+# TypeScript build-dist helper; Python/uv paths removed.
+
+vars:
+  DEFT_ROOT: '{{joinPath .TASKFILE_DIR ".."}}'
+
+tasks:
+  build:
+    desc: Package framework for distribution (cross-platform via TypeScript build-dist, #736 / #1860)
+    deps:
+      - task: :ts:build
+    cmds:
+      - node "{{.DEFT_ROOT}}/packages/core/dist/release/build-dist-runner.js" "{{.VERSION}}" "{{.DEFT_ROOT}}"
+
+  clean:
+    desc: Clean generated dist/ artifacts (cross-platform, #736 / #1860)
+    cmds:
+      - cmd: >-
+          node -e "const fs=require('node:fs');const path=require('node:path');const d=path.join(process.argv[1],'dist');if(fs.existsSync(d))fs.rmSync(d,{recursive:true,force:true});console.log('Cleaned '+d);"
+          "{{.DEFT_ROOT}}"

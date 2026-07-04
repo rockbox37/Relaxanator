@@ -1,0 +1,32 @@
+version: '3'
+
+vars:
+  DEFT_ROOT: '{{joinPath .TASKFILE_DIR ".."}}'
+
+# roadmap tasks -- consumer-safe CWD + script resolution (#539, #540, #566).
+# Scripts are dispatched via {{.DEFT_ROOT}} (defined locally in this file's
+# `vars:` block via ``{{joinPath .TASKFILE_DIR ".."}}`` -- see
+# ../Taskfile.yml for why root-level definition is avoided) to keep the
+# path traversal-free and avoid the {{.TASKFILE_DIR}}/.. form that breaks
+# on Windows under `uv --project "{{.DEFT_ROOT}}" run python` (#566).
+
+tasks:
+  render:
+    desc: Render ROADMAP.md from pending/ and completed/ lifecycle folders
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'roadmap-render --project-root "{{.USER_WORKING_DIR}}"'
+
+  check:
+    desc: Verify ROADMAP.md matches what roadmap:render would produce
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'roadmap-render --project-root "{{.USER_WORKING_DIR}}" --check'

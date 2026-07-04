@@ -1,0 +1,87 @@
+version: '3'
+
+# tasks/policy.yml -- reconfiguration surface for the typed branch policy
+# (#746) and the detection-bound gate (#747). Per `conventions/task-caching.md`,
+# tasks that accept user-facing recovery flags via `{{.CLI_ARGS}}` (here:
+# `--confirm`, `--note "<text>"`) MUST NOT declare `sources:` / `generates:`
+# -- the cached cmds: skip would silently discard the recovery flag.
+
+vars:
+  DEFT_ROOT: '{{joinPath .TASKFILE_DIR ".."}}'
+
+tasks:
+  show:
+    # N8 (#1148) of #1119 Wave-2d-1: `task policy:show` is now the
+    # CONSOLIDATED typed-policy inspector. Walks every entry in
+    # `scripts.policy._REGISTERED_POLICIES` (allowDirectCommitsToMaster #746,
+    # wipCap #1124, triageScope #1131, triageScopeIgnores #1133/#1182,
+    # triageRankingLabels #1128, triageAutoClassify #1129, triageHoldMarkers
+    # #1129) and prints current / default / source per row. Flags forwarded
+    # via {{.CLI_ARGS}}:
+    #   --format=text|json    -- machine-stable scripting envelope
+    #   --changed-only         -- drop default-source rows
+    #   --field=<name>         -- single-field isolation
+    # The legacy `python -m scripts.policy show` CLI continues to work for
+    # any scripts that called it directly (back-compat for #746 consumers).
+    desc: "Inspect every registered typed-policy field on vbrief/PROJECT-DEFINITION.vbrief.json (#1148 / N8). -- task policy:show [-- --format=json] [--changed-only] [--field=<name>]"
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'policy show --project-root "{{.USER_WORKING_DIR}}" {{.CLI_ARGS}}'
+
+  enforce-branches:
+    desc: "Set plan.policy.allowDirectCommitsToMaster=false (enforce feature branches). Audits to meta/policy-changes.log. (#746)"
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'policy enforce-branches --project-root "{{.USER_WORKING_DIR}}" {{.CLI_ARGS}}'
+
+  allow-direct-commits:
+    desc: "Set plan.policy.allowDirectCommitsToMaster=true (capability-cost: branch-protection OFF). Requires --confirm to apply. (#746)"
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'policy allow-direct-commits --project-root "{{.USER_WORKING_DIR}}" {{.CLI_ARGS}}'
+
+  wip-cap:
+    desc: "Set plan.policy.wipCap=N (#1124 / D4 of #1119). Requires --set N --confirm. Default cap is 10 per umbrella #1119 Current Shape v3."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'policy-set wip-cap {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  subagent-backend:
+    desc: "DEPRECATED (superseded by `task swarm:routing-set`, #1739). Was: Set plan.policy.swarmSubagentBackend (#1531a). -- task policy:subagent-backend -- --set composer|grok-build|cursor-cloud"
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - cmd: echo "[deft deprecation] task policy:subagent-backend is superseded by 'task swarm:routing-set' (#1739). The swarmSubagentBackend enum is no longer the active routing surface." 1>&2
+        silent: true
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'policy-set subagent-backend {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  subagent-backends:
+    desc: "DEPRECATED (superseded by `task swarm:routing-set` / `task verify:routing`, #1739). Was: Probe sub-agent backend ids, role capabilities, and availability (#1531a). -- task policy:subagent-backends [-- --format=json]"
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: :engine:_ts-build
+    cmds:
+      - cmd: echo "[deft deprecation] task policy:subagent-backends is superseded by 'task verify:routing -- --advise' and 'task swarm:routing-set' (#1739). The swarmSubagentBackend enum is no longer the active routing surface." 1>&2
+        silent: true
+      - task: :engine:invoke
+        vars:
+          ENGINE_CMD: 'policy-set subagent-backends {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
