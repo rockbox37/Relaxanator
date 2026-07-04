@@ -1,0 +1,39 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:deft-directive-setup",
+    "description": "Scope xBRIEF",
+    "created": "2026-07-04T21:05:00Z"
+  },
+  "plan": {
+    "title": "App scaffold and quality gates",
+    "status": "proposed",
+    "narratives": {
+      "Overview": "Scaffold the Next.js + TypeScript application and wire up the quality gates so every later scope lands on rails: linting, type-checking, unit tests with coverage, and the task check entrypoint.",
+      "Requirements": "FR-1: Next.js (App Router) + TypeScript project scaffolded at the repo root. FR-2: `task check` runs lint, typecheck, and the test suite with coverage in one command. FR-3: Test runner configured for headless unit testing of pure-logic modules. NFR-1: Coverage gate enforced at >= 85% overall and per-module. NFR-2: `task check` passes on a clean scaffold."
+    },
+    "items": [
+      {
+        "title": "Scaffold Next.js + TypeScript app",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-1"
+        }
+      },
+      {
+        "title": "Configure lint + typecheck + test runner with coverage",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-2, FR-3, NFR-1"
+        }
+      },
+      {
+        "title": "Wire task check and verify green baseline",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-2, NFR-2"
+        }
+      }
+    ]
+  }
+}
