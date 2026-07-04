@@ -1,0 +1,35 @@
+.deft-cache/
+
+# vbrief/.eval/ tracking governance (#1144, N4 of #1119).
+# Hybrid policy from the Current Shape comment on #1144:
+#   - candidates.jsonl       -> gitignored (operator-private triage
+#                               decisions; re-derive via
+#                               `task triage:bootstrap` on a fresh
+#                               clone). #845 Story 2 + #915.
+#   - summary-history.jsonl  -> gitignored (operator-private
+#                               observability; not load-bearing for
+#                               any decision).
+#   - scope-lifecycle.jsonl  -> gitignored (operator-private
+#                               scope-lifecycle audit decisions;
+#                               D1 / #1121). Per-operator demote
+#                               stream; sharing would conflate
+#                               operators' demote timing across the
+#                               team.
+#   - decompositions/        -> gitignored (local story-decomposition
+#                               draft scratch; generated child story
+#                               vBRIEFs live in lifecycle folders via
+#                               `task scope:decompose`).
+#   - doctor-state.json      -> gitignored (per-machine `task doctor`
+#                               throttle state gating the 24h/4h
+#                               re-probe window; #1308 / #1464). Local
+#                               to each clone; never committed.
+#   - slices.jsonl           -> TRACKED (team-shared cohort records
+#                               produced by slicing skills; see
+#                               #1132 / D13).
+# See vbrief/.eval/README.md for the full policy + merge=union
+# rebase note.
+vbrief/.eval/candidates.jsonl
+vbrief/.eval/summary-history.jsonl
+vbrief/.eval/scope-lifecycle.jsonl
+vbrief/.eval/decompositions/
+vbrief/.eval/doctor-state.json
