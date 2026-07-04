@@ -2,7 +2,7 @@
 
 <!-- Purpose: bounded consumer AGENTS.md header (#2065 Option A). Edit the one-liner below. Do NOT add Status / Next / Known Issues — they rot silently; see UPGRADING.md § AGENTS.md: managed vs unmanaged header. -->
 
-One-line project description (edit me).
+Relaxanator — offline-capable PWA that generates EQ-shaped colored noise (brown/pink/white) with scheduled meditation sounds and break prompts.
 
 ## Session orientation
 
