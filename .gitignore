@@ -33,3 +33,22 @@ vbrief/.eval/summary-history.jsonl
 vbrief/.eval/scope-lifecycle.jsonl
 vbrief/.eval/decompositions/
 vbrief/.eval/doctor-state.json
+# Same policy for the current xbrief/ layout (triage:bootstrap still writes
+# the vbrief/ entries above; see deftai/directive#2295-adjacent papercuts).
+xbrief/.eval/candidates.jsonl
+xbrief/.eval/summary-history.jsonl
+xbrief/.eval/scope-lifecycle.jsonl
+xbrief/.eval/decompositions/
+xbrief/.eval/doctor-state.json
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+.env*.local
+
+# Deft local state (worktree/HEAD-bound; never committed)
+.deft/ritual-state.json
+.deft/xbrief-migrate-backup-*/
