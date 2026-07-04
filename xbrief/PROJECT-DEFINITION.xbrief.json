@@ -10,7 +10,7 @@
     "status": "running",
     "narratives": {
       "Overview": "Relaxanator \u2014 a web application (greenfield).",
-      "TechStack": "Web App using TypeScript \u2014 Next.js full-stack (React frontend + API routes), deployed to Web / Cloud.",
+      "TechStack": "Web App using TypeScript \u2014 Next.js full-stack (React frontend + API routes), deployed to Fly.io (fly.dev).",
       "Strategy": "Use interview for this project",
       "Quality": "Run task check before every commit. Achieve >= 85% coverage overall + per-module. Store secrets in secrets/ dir.",
       "ProjectRules": "No project-specific rules defined.",
