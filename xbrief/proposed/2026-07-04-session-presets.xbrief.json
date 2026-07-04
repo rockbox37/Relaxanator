@@ -1,0 +1,39 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:deft-directive-setup",
+    "description": "Scope xBRIEF",
+    "created": "2026-07-04T21:05:00Z"
+  },
+  "plan": {
+    "title": "Whole-session presets",
+    "status": "proposed",
+    "narratives": {
+      "Overview": "Preset system capturing the entire session: noise color, EQ curve, volumes, enabled meditation sounds with schedules, and break-prompt settings. Ships with sensible defaults; users can save, rename, and delete their own.",
+      "Requirements": "FR-1: Ship default presets (e.g. Deep Work, Wind Down). FR-2: Save, rename, delete, and apply user presets. FR-3: A preset captures noise + EQ + meditation-sound schedules + break settings. NFR-1: Presets persist locally (localStorage) across sessions; no backend. NFR-2: Preset schema is versioned so future fields migrate cleanly."
+    },
+    "items": [
+      {
+        "title": "Versioned preset schema + local persistence store",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-3, NFR-1, NFR-2"
+        }
+      },
+      {
+        "title": "Default presets",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-1"
+        }
+      },
+      {
+        "title": "Preset management UI (save/rename/delete/apply)",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-2"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:deft-directive-setup",
+    "description": "Project specification",
+    "created": "2026-07-04T21:05:00Z"
+  },
+  "plan": {
+    "title": "Relaxanator Specification",
+    "status": "approved",
+    "narratives": {
+      "Overview": "Relaxanator is an installable, offline-capable web app (PWA) for focus and relaxation. It generates colored background noise (brown, pink, white; architecture extensible to further colors) shaped by a 10-band graphic-equalizer, layered with user-configurable periodic meditation sounds (bell, chime, drones, omm, and later deep tones inspired by Manding music from Mali and Guinea), and prompts the user to take breaks (stretching, walking, water). All user data is stored locally in the browser; there is no backend or account system. Whole-session presets (noise + EQ + meditation sounds + break settings) ship as defaults and can be saved by the user.",
+      "Architecture": "Next.js (TypeScript, App Router) serving a client-heavy single-page app; all audio runs in the browser via the Web Audio API. Audio graph: noise sources generated in an AudioWorklet (white/pink/brown algorithms) -> chain of 10 peaking BiquadFilterNodes (31Hz-16kHz, octave-spaced, +/-12dB) -> master GainNode -> destination. Meditation tones are hybrid: synthesized voices (oscillator/FM for drones, omm, deep tones) and decoded sample playback (bell, chime), each with its own schedule (interval + optional jitter + volume) driven by the AudioContext clock for reliability in background tabs. Break prompts share the scheduler, emit a gentle audio cue through the master bus, an in-app banner, and optional Notification API alerts. State is managed in typed stores; persistence via localStorage (settings/presets) with a versioned preset schema. PWA layer: web app manifest + service worker precaching the app shell and audio samples for full offline use. Audio-node wiring is kept thin and separated from pure-logic modules (scheduling, preset (de)serialization, EQ math) so logic is headlessly testable to the 85% coverage gate."
+    },
+    "items": []
+  }
+}

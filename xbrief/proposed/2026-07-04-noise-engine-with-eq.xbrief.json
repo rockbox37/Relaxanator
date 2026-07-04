@@ -1,0 +1,39 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:deft-directive-setup",
+    "description": "Scope xBRIEF",
+    "created": "2026-07-04T21:05:00Z"
+  },
+  "plan": {
+    "title": "Noise engine with 10-band EQ",
+    "status": "proposed",
+    "narratives": {
+      "Overview": "The core audio engine: continuous colored-noise generation (white, pink, brown; extensible to more colors) shaped by a 10-band graphic equalizer with a master volume and play/pause transport.",
+      "Requirements": "FR-1: Generate white, pink, and brown noise via an AudioWorklet, selectable at runtime; the color registry is extensible. FR-2: 10 octave-spaced peaking-filter bands (31Hz-16kHz), each with a +/-12dB slider. FR-3: Master volume and play/pause. NFR-1: Parameter changes (sliders, color switch, volume) are click/glitch-free via parameter smoothing. NFR-2: Playback continues uninterrupted while the tab is backgrounded."
+    },
+    "items": [
+      {
+        "title": "AudioWorklet noise generators (white/pink/brown) with color registry",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-1"
+        }
+      },
+      {
+        "title": "10-band peaking EQ chain with slider UI",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-2"
+        }
+      },
+      {
+        "title": "Master gain, transport, and parameter smoothing",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-3, NFR-1, NFR-2"
+        }
+      }
+    ]
+  }
+}
