@@ -7,7 +7,7 @@
   },
   "plan": {
     "title": "App scaffold and quality gates",
-    "status": "proposed",
+    "status": "running",
     "narratives": {
       "Overview": "Scaffold the Next.js + TypeScript application and wire up the quality gates so every later scope lands on rails: linting, type-checking, unit tests with coverage, and the task check entrypoint.",
       "Requirements": "FR-1: Next.js (App Router) + TypeScript project scaffolded at the repo root. FR-2: `task check` runs lint, typecheck, and the test suite with coverage in one command. FR-3: Test runner configured for headless unit testing of pure-logic modules. NFR-1: Coverage gate enforced at >= 85% overall and per-module. NFR-2: `task check` passes on a clean scaffold."
@@ -41,6 +41,7 @@
         "type": "x-xbrief/github-issue",
         "TrustLevel": "external"
       }
-    ]
+    ],
+    "updated": "2026-07-04T22:12:06Z"
   }
 }

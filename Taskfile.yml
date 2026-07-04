@@ -9,3 +9,11 @@ includes:
   deft:
     taskfile: ./.deft/core/Taskfile.yml
     optional: true
+
+tasks:
+  check:
+    desc: "Quality gate: lint, typecheck, tests with 85% coverage (run before every commit)"
+    cmds:
+      - npm run lint
+      - npm run typecheck
+      - npm run test
