@@ -9,17 +9,23 @@
     "title": "Relaxanator",
     "status": "running",
     "narratives": {
-      "Overview": "Relaxanator — a web application (greenfield).",
-      "TechStack": "Web App using TypeScript — Next.js full-stack (React frontend + API routes), deployed to Web / Cloud.",
+      "Overview": "Relaxanator \u2014 a web application (greenfield).",
+      "TechStack": "Web App using TypeScript \u2014 Next.js full-stack (React frontend + API routes), deployed to Web / Cloud.",
       "Strategy": "Use interview for this project",
       "Quality": "Run task check before every commit. Achieve >= 85% coverage overall + per-module. Store secrets in secrets/ dir.",
       "ProjectRules": "No project-specific rules defined.",
       "Branching": "Branch-based workflow (default)",
       "DeftVersion": "0.20.0"
     },
-    "policy": {
-      "allowDirectCommitsToMaster": false
-    },
-    "items": []
+    "items": [],
+    "x-directive/policy": {
+      "allowDirectCommitsToMaster": false,
+      "wipCap": 10,
+      "triageScope": [
+        {
+          "rule": "all-open"
+        }
+      ]
+    }
   }
 }
