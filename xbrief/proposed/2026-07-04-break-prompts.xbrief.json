@@ -34,6 +34,13 @@
           "Traces": "FR-3"
         }
       }
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/2",
+        "type": "x-xbrief/github-issue",
+        "TrustLevel": "external"
+      }
     ]
   }
 }
