@@ -7,7 +7,7 @@
   },
   "plan": {
     "title": "Fly.io deployment",
-    "status": "proposed",
+    "status": "running",
     "narratives": {
       "Overview": "Deploy Relaxanator to Fly.io (fly.dev): containerized Next.js standalone build, fly.toml app config, and a repeatable deploy path. The app is client-heavy with no backend state, so a single small machine suffices.",
       "Requirements": "FR-1: Dockerfile producing a Next.js standalone production image. FR-2: fly.toml with app name, primary region, HTTP service on the Next.js port, and health check. FR-3: Documented deploy command path (flyctl deploy) runnable from a clean checkout. NFR-1: App serves over HTTPS on the fly.dev domain. NFR-2: Machine auto-stop/auto-start enabled so an idle app costs ~nothing. NFR-3: Deployed image passes the same task check-gated commit that produced it (no snowflake builds)."
@@ -41,6 +41,7 @@
         "type": "x-xbrief/github-issue",
         "TrustLevel": "external"
       }
-    ]
+    ],
+    "updated": "2026-07-04T23:28:20Z"
   }
 }
