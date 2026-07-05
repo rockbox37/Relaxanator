@@ -15,6 +15,50 @@ type VoicePlayer = (
   volume: number,
 ) => void;
 
+/** Distant low horn: struck partials through a lowpass with soft attack. */
+function distantHorn(
+  ctx: BaseAudioContext,
+  dest: AudioNode,
+  when: number,
+  volume: number,
+  f0: number,
+  partials: Array<[ratio: number, gain: number]>,
+  decaySec: number,
+  lowpassHz: number,
+  attackSec = 0.12,
+): void {
+  const out = ctx.createGain();
+  out.gain.value = volume * 0.6;
+  out.connect(dest);
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = lowpassHz;
+  lp.Q.value = 0.7;
+  lp.connect(out);
+
+  let remaining = partials.length;
+  for (const [ratio, gain] of partials) {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = f0 * ratio;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(gain, when + attackSec);
+    env.gain.exponentialRampToValueAtTime(0.0001, when + decaySec);
+    osc.connect(env).connect(lp);
+    osc.start(when);
+    osc.stop(when + decaySec + 0.1);
+    osc.onended = () => {
+      remaining -= 1;
+      if (remaining === 0) {
+        lp.disconnect();
+        out.disconnect();
+      }
+    };
+  }
+}
+
 /** Additive struck tone: enharmonic partials with exponential decay. */
 function struck(
   ctx: BaseAudioContext,
@@ -161,12 +205,48 @@ const omm: VoicePlayer = (ctx, dest, when, volume) => {
   fundamental.onended = () => env.disconnect();
 };
 
+const fogHorn: VoicePlayer = (ctx, dest, when, volume) => {
+  // Distant fog horn (#22): very low B1 fundamental, simple boomy partials,
+  // heavy lowpass and ~18 s decay so each blast fades slowly into the bed.
+  distantHorn(ctx, dest, when, volume, 58.27, [
+    [1, 1],
+    [2, 0.22],
+    [2.5, 0.08],
+  ], 18, 340, 0.18);
+};
+
+const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
+  // Ship's horn (#23): D2 fundamental with strong quint partials for a
+  // brassy maritime blast; brighter lowpass than fog horn for distinction.
+  distantHorn(ctx, dest, when, volume, 73.42, [
+    [1, 1],
+    [1.5, 0.42],
+    [2, 0.18],
+    [3, 0.06],
+  ], 16, 520, 0.14);
+};
+
+const trainHorn: VoicePlayer = (ctx, dest, when, volume) => {
+  // Train horn (#23): E2 fundamental with minor-third tierce like Deep Bell,
+  // muffled lowpass and long decay for a distant rail-yard character.
+  distantHorn(ctx, dest, when, volume, 82.41, [
+    [1, 1],
+    [1.2, 0.58],
+    [1.5, 0.24],
+    [2, 0.1],
+    [2.4, 0.05],
+  ], 17, 450, 0.12);
+};
+
 const PLAYERS: Record<MeditationVoiceDef["synth"], VoicePlayer> = {
   bell,
   deepBell,
   chime,
   drone,
   omm,
+  fogHorn,
+  shipHorn,
+  trainHorn,
 };
 
 export function playVoice(
