@@ -13,7 +13,7 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 # voice-dir:macos-voice pairs
-VOICES="zarvox:Zarvox fred:Fred trinoids:Trinoids"
+VOICES="zarvox:Zarvox fred:Fred hal:Daniel"
 
 # word-id:spoken-text pairs (word ids are the filenames the app requests)
 WORDS="its:It's one:one two:two three:three four:four five:five six:six seven:seven

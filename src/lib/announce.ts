@@ -7,6 +7,8 @@
  * src/audio/announce-engine.ts.
  */
 
+export type AnnounceVoiceEffect = "plain" | "vocoder-saw" | "hal";
+
 export interface AnnounceVoiceDef {
   id: string;
   label: string;
@@ -14,6 +16,8 @@ export interface AnnounceVoiceDef {
   dir: string;
   /** Sample playback rate — below 1 deepens the voice. */
   playbackRate: number;
+  /** Playback-time processing applied in announce-engine. */
+  effect?: AnnounceVoiceEffect;
 }
 
 /** Robot voices; adding one = registry entry + a sprite set in public/. */
@@ -23,18 +27,21 @@ export const ANNOUNCE_VOICES: readonly AnnounceVoiceDef[] = [
     label: "Vocoder (deep robot)",
     dir: "zarvox",
     playbackRate: 0.82,
+    effect: "vocoder-saw",
   },
   {
     id: "speak-spell",
     label: "Speak & Spell",
     dir: "fred",
     playbackRate: 1,
+    effect: "plain",
   },
   {
-    id: "trinoids",
-    label: "Robot (Trinoids)",
-    dir: "trinoids",
-    playbackRate: 1,
+    id: "hal9000",
+    label: "HAL 9000",
+    dir: "hal",
+    playbackRate: 0.9,
+    effect: "hal",
   },
 ];
 

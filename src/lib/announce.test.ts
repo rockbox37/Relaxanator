@@ -22,12 +22,22 @@ describe("ANNOUNCE_VOICES", () => {
     const ids = ANNOUNCE_VOICES.map((v) => v.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain(DEFAULT_ANNOUNCE_VOICE_ID);
+    expect(getAnnounceVoice(DEFAULT_ANNOUNCE_VOICE_ID).effect).toBe("vocoder-saw");
     expect(getAnnounceVoice(DEFAULT_ANNOUNCE_VOICE_ID).playbackRate).toBeLessThan(1);
     expect(ids).toContain("speak-spell");
+    expect(ids).toContain("hal9000");
+    expect(ids).not.toContain("trinoids");
   });
 
   it("falls back to the default voice for unknown ids", () => {
-    expect(getAnnounceVoice("hal9000").id).toBe(DEFAULT_ANNOUNCE_VOICE_ID);
+    expect(getAnnounceVoice("trinoids").id).toBe(DEFAULT_ANNOUNCE_VOICE_ID);
+  });
+
+  it("defines HAL as a measured British sprite set with soft filtering", () => {
+    const hal = getAnnounceVoice("hal9000");
+    expect(hal.dir).toBe("hal");
+    expect(hal.effect).toBe("hal");
+    expect(hal.playbackRate).toBeLessThan(1);
   });
 });
 
