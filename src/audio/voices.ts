@@ -77,6 +77,20 @@ const bell: VoicePlayer = (ctx, dest, when, volume) => {
   ], 9.5);
 };
 
+const deepBell: VoicePlayer = (ctx, dest, when, volume) => {
+  // Church-bell voicing an octave-and-a-half below the bell: F2 fundamental
+  // with hum (0.5), prime (1), tierce (1.2 — the minor third that gives big
+  // bells their character), quint (1.5), and nominal (2.0), ringing ~16s.
+  struck(ctx, dest, when, volume * 0.9, 87.31, [
+    [0.5, 0.5],
+    [1, 1],
+    [1.2, 0.55],
+    [1.5, 0.28],
+    [2.0, 0.22],
+    [2.67, 0.08],
+  ], 16);
+};
+
 const chime: VoicePlayer = (ctx, dest, when, volume) => {
   struck(ctx, dest, when, volume * 0.6, 880, [
     [1, 1],
@@ -144,6 +158,7 @@ const omm: VoicePlayer = (ctx, dest, when, volume) => {
 
 const PLAYERS: Record<MeditationVoiceDef["synth"], VoicePlayer> = {
   bell,
+  deepBell,
   chime,
   drone,
   omm,
