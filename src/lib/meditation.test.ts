@@ -45,9 +45,10 @@ describe("MEDITATION_VOICES", () => {
     }
   });
 
-  it("documents fog horn 2 as minor sixth plus whole step", () => {
+  it("documents fog horn 2 as minor sixth interval", () => {
     const fogHorn2 = MEDITATION_VOICES.find((v) => v.id === "fog-horn-2");
-    expect(fogHorn2?.description).toContain("minor sixth + whole step");
+    expect(fogHorn2?.description).toContain("minor sixth");
+    expect(fogHorn2?.description).not.toContain("whole step");
   });
 
   it("documents fog horn 4 as vintage film two-tone with perfect fourth", () => {

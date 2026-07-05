@@ -10,12 +10,12 @@ import {
 } from "./voices";
 
 describe("fog horn 2 tuning", () => {
-  it("places tone 2 a minor sixth plus one whole step (10 semitones) below tone 1", () => {
+  it("places tone 2 a minor sixth (8 semitones) below tone 1", () => {
     const expectedTone2Hz = FOG_HORN_2_TONE1_HZ * 2 ** (-FOG_HORN_2_INTERVAL_SEMITONES / 12);
-    expect(FOG_HORN_2_INTERVAL_SEMITONES).toBe(10);
+    expect(FOG_HORN_2_INTERVAL_SEMITONES).toBe(8);
     expect(FOG_HORN_2_TONE2_HZ).toBeCloseTo(expectedTone2Hz, 2);
     expect(FOG_HORN_2_TONE1_HZ).toBeCloseTo(146.83, 2);
-    expect(FOG_HORN_2_TONE2_HZ).toBeCloseTo(82.41, 2);
+    expect(FOG_HORN_2_TONE2_HZ).toBeCloseTo(92.5, 2);
   });
 });
 
