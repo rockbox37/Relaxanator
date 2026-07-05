@@ -9,7 +9,7 @@ export interface MeditationVoiceDef {
   label: string;
   description: string;
   /** Key into the synth implementations in src/audio/voices.ts. */
-  synth: "bell" | "deepBell" | "chime" | "drone" | "omm" | "fogHorn" | "fogHorn2" | "fogHorn3" | "shipHorn" | "shipHorn2" | "trainHorn";
+  synth: "bell" | "doomBell" | "chime" | "drone" | "omm" | "fogHorn" | "fogHorn2" | "fogHorn3" | "shipHorn" | "shipHorn2" | "trainHorn";
   defaultIntervalMin: number;
   defaultVolume: number;
 }
@@ -29,10 +29,10 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
     defaultVolume: 0.5,
   },
   {
-    id: "deep-bell",
-    label: "Deep Bell",
+    id: "doom-bell",
+    label: "doom bell",
     description: "Very low bell with a minor-third shimmer and long decay",
-    synth: "deepBell",
+    synth: "doomBell",
     defaultIntervalMin: 20,
     defaultVolume: 0.5,
   },

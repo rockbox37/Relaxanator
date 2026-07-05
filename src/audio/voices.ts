@@ -159,7 +159,7 @@ const bell: VoicePlayer = (ctx, dest, when, volume) => {
   ], 9.5);
 };
 
-const deepBell: VoicePlayer = (ctx, dest, when, volume) => {
+const doomBell: VoicePlayer = (ctx, dest, when, volume) => {
   // Church-bell voicing an octave-and-a-half below the bell: F2 fundamental
   // with hum (0.5), prime (1), tierce (1.2 — the minor third that gives big
   // bells their character), quint (1.5), and nominal (2.0), ringing ~16s.
@@ -175,7 +175,7 @@ const deepBell: VoicePlayer = (ctx, dest, when, volume) => {
 
 const chime: VoicePlayer = (ctx, dest, when, volume) => {
   // Re-voiced much lower with a minor-third tierce and longer ring (#18):
-  // C4 fundamental keeps it a lighter strike than Bell (C3) and Deep Bell
+  // C4 fundamental keeps it a lighter strike than Bell (C3) and doom bell
   // (F2) while sharing the same bittersweet minor-third character.
   struck(ctx, dest, when, volume * 0.65, 261.63, [
     [1, 1],
@@ -454,7 +454,7 @@ const trainHorn: VoicePlayer = (ctx, dest, when, volume) => {
 
 const PLAYERS: Record<MeditationVoiceDef["synth"], VoicePlayer> = {
   bell,
-  deepBell,
+  doomBell,
   chime,
   drone,
   omm,

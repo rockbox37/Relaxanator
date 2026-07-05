@@ -22,7 +22,7 @@ describe("MEDITATION_VOICES", () => {
     const ids = MEDITATION_VOICES.map((v) => v.id);
     expect(ids).toEqual([
       "bell",
-      "deep-bell",
+      "doom-bell",
       "chime",
       "drone",
       "omm",
@@ -50,7 +50,7 @@ describe("createDefaultMeditationSettings", () => {
     const settings = createDefaultMeditationSettings();
     expect(Object.keys(settings)).toHaveLength(MEDITATION_VOICES.length);
     expect(settings.bell.enabled).toBe(true);
-    expect(settings["deep-bell"].enabled).toBe(false);
+    expect(settings["doom-bell"].enabled).toBe(false);
     expect(settings.chime.enabled).toBe(false);
     expect(settings.drone.enabled).toBe(false);
     expect(settings.omm.enabled).toBe(false);
