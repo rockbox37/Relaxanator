@@ -267,21 +267,67 @@ const fogHorn2: VoicePlayer = (ctx, dest, when, volume) => {
   ], 17, 620, 0.05, 2.6, 0.88);
 };
 
+/** Hard-gated horn blast: fixed duration, no decay tail (fog horn 3). */
+function gatedHornBlast(
+  ctx: BaseAudioContext,
+  dest: AudioNode,
+  when: number,
+  volume: number,
+  f0: number,
+  partials: Array<[ratio: number, gain: number]>,
+  durationSec: number,
+  lowpassHz: number,
+  attackSec: number,
+  outputScale: number,
+): void {
+  const stopAt = when + durationSec;
+  const out = ctx.createGain();
+  out.gain.value = volume * outputScale;
+  out.connect(dest);
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = lowpassHz;
+  lp.Q.value = 0.7;
+  lp.connect(out);
+
+  let remaining = partials.length;
+  for (const [ratio, gain] of partials) {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = f0 * ratio;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(gain, when + attackSec);
+    env.gain.setValueAtTime(gain, stopAt);
+    env.gain.setValueAtTime(0, stopAt);
+    osc.connect(env).connect(lp);
+    osc.start(when);
+    osc.stop(stopAt + 0.05);
+    osc.onended = () => {
+      remaining -= 1;
+      if (remaining === 0) {
+        lp.disconnect();
+        out.disconnect();
+      }
+    };
+  }
+}
+
 const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
-  // Two-tone fog signal (#26): 250 Hz blast, brief gap, ~198 Hz blast (major
-  // third down), through heavy feedback-delay reverb — mid-range voicing
-  // distinct from low B1/B2 fog horns 1/2.
+  // Two-tone fog signal (#26): low F2 (1 s) then lower D♭2 (2 s), hard-gated
+  // sequential blasts through heavy feedback-delay reverb — distinct from
+  // sustained-decay B1/B2 fog horns 1/2.
   const attackSec = 0.07;
-  const hold1Sec = 1.0;
-  const hold2Sec = 1.5;
-  const gapSec = 0.25;
-  const decaySec = 18;
-  const tone1F0 = 250;
-  const tone2F0 = tone1F0 * 2 ** (-4 / 12);
+  const tone1DurSec = 1.0;
+  const tone2DurSec = 2.0;
+  const tone1F0 = 87.31; // F2
+  const tone2F0 = 69.3; // D♭2, major third below F2
 
   const tone1When = when;
-  const tone2When = when + attackSec + hold1Sec + gapSec;
-  const sequenceEnd = tone2When + attackSec + hold2Sec + decaySec + 0.1;
+  const tone2When = when + tone1DurSec;
+  const reverbTailSec = 18;
+  const sequenceEnd = tone2When + tone2DurSec + reverbTailSec + 0.1;
 
   const out = ctx.createGain();
   out.gain.value = volume * 0.62;
@@ -298,8 +344,8 @@ const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
 
   const reverbSend = ctx.createGain();
   reverbSend.gain.setValueAtTime(1, when);
-  reverbSend.gain.setValueAtTime(1, tone2When + attackSec + hold2Sec);
-  reverbSend.gain.exponentialRampToValueAtTime(0.0001, tone2When + attackSec + hold2Sec + 3);
+  reverbSend.gain.setValueAtTime(1, tone2When + tone2DurSec);
+  reverbSend.gain.exponentialRampToValueAtTime(0.0001, tone2When + tone2DurSec + 3);
   bus.connect(reverbSend);
   const reverbNodes = feedbackReverb(ctx, reverbSend, wet);
   wet.connect(out);
@@ -307,19 +353,19 @@ const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
 
   const cleanupNodes: AudioNode[] = [out, dry, wet, bus, reverbSend, ...reverbNodes];
 
-  distantHorn(ctx, bus, tone1When, 1, tone1F0, [
+  gatedHornBlast(ctx, bus, tone1When, 1, tone1F0, [
     [1, 1],
     [1.5, 0.44],
     [2, 0.5],
     [3, 0.12],
-  ], decaySec, 920, attackSec, hold1Sec, 0.9);
+  ], tone1DurSec, 480, attackSec, 0.9);
 
-  distantHorn(ctx, bus, tone2When, 1, tone2F0, [
+  gatedHornBlast(ctx, bus, tone2When, 1, tone2F0, [
     [1, 1],
     [1.5, 0.42],
     [2, 0.48],
     [3, 0.1],
-  ], decaySec, 760, attackSec, hold2Sec, 0.9);
+  ], tone2DurSec, 420, attackSec, 0.9);
 
   const delayMs = Math.max(0, (sequenceEnd - ctx.currentTime) * 1000) + 5000;
   setTimeout(() => {
