@@ -417,9 +417,10 @@ const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
   // Higher ship's horn (#26): D3 maritime blast with brassy quint-heavy partials,
   // very sharp attack, sustained body, and massive feedback-delay reverb — wetter
   // and longer-tailed than train horn while staying distinct from ship horn 1.
-  const attackSec = 0.018;
-  const holdSec = 2.2;
+  const attackSec = 0.014;
+  const holdSec = 1.76;
   const decaySec = 22;
+  const reverbSendFadeSec = 5;
   const endSec = when + attackSec + holdSec + decaySec;
   const stopAt = endSec + 0.1;
   const f0 = 146.84; // D3
@@ -450,7 +451,10 @@ const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
   const reverbSend = ctx.createGain();
   reverbSend.gain.setValueAtTime(1, when);
   reverbSend.gain.setValueAtTime(1, when + attackSec + holdSec);
-  reverbSend.gain.exponentialRampToValueAtTime(0.0001, when + attackSec + holdSec + 4);
+  reverbSend.gain.exponentialRampToValueAtTime(
+    0.0001,
+    when + attackSec + holdSec + reverbSendFadeSec,
+  );
   bright.connect(reverbSend);
   const reverbNodes = feedbackReverb(ctx, reverbSend, wet, 0.08);
   wet.connect(out);
