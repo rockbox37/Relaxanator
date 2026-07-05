@@ -27,6 +27,7 @@ describe("MEDITATION_VOICES", () => {
       "drone",
       "omm",
       "fog-horn",
+      "fog-horn-2",
       "ship-horn",
       "train-horn",
     ]);

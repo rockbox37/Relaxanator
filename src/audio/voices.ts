@@ -255,6 +255,18 @@ const fogHorn: VoicePlayer = (ctx, dest, when, volume) => {
   ], 18, 480, 0.08, 2.8, 0.88);
 };
 
+const fogHorn2: VoicePlayer = (ctx, dest, when, volume) => {
+  // Higher fog horn (#26): B2 fundamental (octave above fog horn), slightly
+  // sharper attack, brighter lowpass, and a touch more 2nd/3rd partial for
+  // a distinct but still distant, long-decay fog-horn family tone.
+  distantHorn(ctx, dest, when, volume, 123.47, [
+    [1, 1],
+    [1.5, 0.4],
+    [2, 0.58],
+    [3, 0.18],
+  ], 17, 620, 0.05, 2.6, 0.88);
+};
+
 const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
   // Ship's horn (#23): D2 fundamental with strong quint partials for a
   // brassy maritime blast; brightest lowpass and highest output of the horns
@@ -369,6 +381,7 @@ const PLAYERS: Record<MeditationVoiceDef["synth"], VoicePlayer> = {
   drone,
   omm,
   fogHorn,
+  fogHorn2,
   shipHorn,
   trainHorn,
 };
