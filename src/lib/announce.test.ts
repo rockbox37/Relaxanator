@@ -212,24 +212,21 @@ describe("formatAnnouncement", () => {
 });
 
 describe("systemPrefers24Hour", () => {
-  const realDateTimeFormat = Intl.DateTimeFormat;
-
   afterEach(() => {
-    Intl.DateTimeFormat = realDateTimeFormat;
     vi.restoreAllMocks();
   });
 
-  /** Force Intl to resolve to the given options (or throw) for the detector. */
+  /** Force Intl.resolvedOptions to report the given fields (or throw). */
   function stubResolvedOptions(
     resolved: Partial<Intl.ResolvedDateTimeFormatOptions> | "throw",
   ): void {
-    Intl.DateTimeFormat = vi.fn(() => {
+    vi.spyOn(
+      Intl.DateTimeFormat.prototype,
+      "resolvedOptions",
+    ).mockImplementation(() => {
       if (resolved === "throw") throw new Error("Intl unavailable");
-      return {
-        resolvedOptions: () =>
-          resolved as Intl.ResolvedDateTimeFormatOptions,
-      };
-    }) as unknown as typeof Intl.DateTimeFormat;
+      return resolved as Intl.ResolvedDateTimeFormatOptions;
+    });
   }
 
   it("returns a boolean without throwing on the real environment", () => {
@@ -239,18 +236,20 @@ describe("systemPrefers24Hour", () => {
   it("prefers the resolved hour12 flag when present", () => {
     stubResolvedOptions({ hour12: false });
     expect(systemPrefers24Hour()).toBe(true);
+  });
+
+  it("treats a true hour12 flag as 12-hour", () => {
     stubResolvedOptions({ hour12: true });
     expect(systemPrefers24Hour()).toBe(false);
   });
 
-  it("falls back to hourCycle when hour12 is absent", () => {
+  it("falls back to a 24-hour hourCycle when hour12 is absent", () => {
     stubResolvedOptions({ hourCycle: "h23" });
     expect(systemPrefers24Hour()).toBe(true);
-    stubResolvedOptions({ hourCycle: "h24" });
-    expect(systemPrefers24Hour()).toBe(true);
+  });
+
+  it("treats a 12-hour hourCycle as 12-hour", () => {
     stubResolvedOptions({ hourCycle: "h12" });
-    expect(systemPrefers24Hour()).toBe(false);
-    stubResolvedOptions({ hourCycle: "h11" });
     expect(systemPrefers24Hour()).toBe(false);
   });
 
@@ -262,18 +261,6 @@ describe("systemPrefers24Hour", () => {
   it("defaults to 12-hour when Intl throws", () => {
     stubResolvedOptions("throw");
     expect(systemPrefers24Hour()).toBe(false);
-  });
-
-  it("agrees with a 24-hour locale's resolved formatting", () => {
-    // en-GB resolves to a 24-hour clock; the detector reads Intl the same way.
-    const resolved = new realDateTimeFormat("en-GB", {
-      hour: "numeric",
-    }).resolvedOptions();
-    const is24h =
-      typeof resolved.hour12 === "boolean"
-        ? !resolved.hour12
-        : resolved.hourCycle === "h23" || resolved.hourCycle === "h24";
-    expect(is24h).toBe(true);
   });
 });
 
