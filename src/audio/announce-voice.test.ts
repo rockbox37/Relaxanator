@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  FIRST_WORD_ATTACK_SEC,
   HAL_OUTPUT_GAIN,
   PLAIN_ATTACK_SEC,
   VOCODER_DETUNE_CENTS,
@@ -136,6 +137,30 @@ describe("scheduleAnnounceWord detune", () => {
       when + PLAIN_ATTACK_SEC,
     );
     expect(nodes.find((n) => n.type === "gain")).toBeDefined();
+  });
+
+  it("uses a longer attack on the first plain word of a session", () => {
+    const { ctx } = mockAudioContext();
+    const voice = getAnnounceVoice("vocoder");
+    const when = 2;
+    const volume = 0.6;
+    const setValueAtTime = vi.fn();
+    const linearRampToValueAtTime = vi.fn();
+    const origCreateGain = ctx.createGain.bind(ctx);
+    ctx.createGain = () => {
+      const gain = origCreateGain();
+      gain.gain.setValueAtTime = setValueAtTime;
+      gain.gain.linearRampToValueAtTime = linearRampToValueAtTime;
+      return gain;
+    };
+
+    scheduleAnnounceWord(ctx, buffer, dest, when, voice, volume, true);
+
+    expect(setValueAtTime).toHaveBeenCalledWith(0, when);
+    expect(linearRampToValueAtTime).toHaveBeenCalledWith(
+      volume,
+      when + FIRST_WORD_ATTACK_SEC,
+    );
   });
 });
 

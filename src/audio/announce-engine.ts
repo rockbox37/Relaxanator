@@ -18,6 +18,9 @@ import { scheduleAnnounceWord } from "@/audio/announce-voice";
 const PUMP_MS = 500;
 const LOOKAHEAD_MS = 1500;
 
+/** Fade-in when the announce bus first connects to a cold mix/limiter chain. */
+export const FIRST_OUTPUT_RAMP_SEC = 0.035;
+
 export class AnnounceEngine {
   private settings: AnnounceSettings;
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -25,6 +28,8 @@ export class AnnounceEngine {
   private buffers = new Map<string, Map<string, AudioBuffer>>();
   /** In-flight sprite loads — speak/preview must await these, not an empty map. */
   private preloadJobs = new Map<string, Promise<void>>();
+  /** False until the first phrase is queued — drives bus warm-up ramp. */
+  private hasScheduledOutput = false;
 
   constructor(
     private readonly ctx: BaseAudioContext,
@@ -61,6 +66,7 @@ export class AnnounceEngine {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     this.scheduledBoundaryMs = 0;
+    this.hasScheduledOutput = false;
   }
 
   private async preload(voiceId: string): Promise<void> {
@@ -114,13 +120,25 @@ export class AnnounceEngine {
     const words = this.buffers.get(voice.dir);
     if (!words) return false;
 
+    const at = Math.max(when, this.ctx.currentTime);
+    const firstOutput = !this.hasScheduledOutput;
+
     const gain = this.ctx.createGain();
-    gain.gain.value = this.settings.volume;
+    if (firstOutput) {
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(
+        this.settings.volume,
+        at + FIRST_OUTPUT_RAMP_SEC,
+      );
+    } else {
+      gain.gain.value = this.settings.volume;
+    }
     gain.connect(this.dest);
 
-    let at = Math.max(when, this.ctx.currentTime);
+    let cursor = at;
     let lastNode: AudioNode | null = null;
     let scheduled = false;
+    let firstWord = true;
     for (const token of tokens) {
       const buffer = words.get(token);
       if (!buffer) continue;
@@ -129,17 +147,20 @@ export class AnnounceEngine {
         this.ctx,
         buffer,
         gain,
-        at,
+        cursor,
         voice,
         1,
+        firstOutput && firstWord,
       );
-      at = stopAt + wordGapAfterToken(token);
+      firstWord = false;
+      cursor = stopAt + wordGapAfterToken(token);
       lastNode = node;
     }
     if (!scheduled) {
       gain.disconnect();
       return false;
     }
+    this.hasScheduledOutput = true;
     if (lastNode && "onended" in lastNode) {
       (lastNode as AudioScheduledSourceNode).onended = () => gain.disconnect();
     } else {

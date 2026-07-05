@@ -13,8 +13,11 @@ const HAL_DETUNE_CENTS = -75;
 /** Vocoder (Zarvox) pitch drop: 3 whole steps = 6 semitones below playbackRate pitch. */
 export const VOCODER_DETUNE_CENTS = -600;
 
-/** Linear fade-in on plain sprites — avoids buffer-edge clicks on first play. */
+/** Linear fade-in on plain sprites — avoids buffer-edge clicks. */
 export const PLAIN_ATTACK_SEC = 0.01;
+
+/** Longer attack on the first word of a session — cold mix/limiter needs more headroom. */
+export const FIRST_WORD_ATTACK_SEC = 0.04;
 
 export type AnnounceWordHandle = {
   stopAt: number;
@@ -33,6 +36,7 @@ function schedulePlain(
   playbackRate: number,
   volume: number,
   detuneCents = 0,
+  firstWord = false,
 ): AnnounceWordHandle {
   const source = ctx.createBufferSource();
   source.buffer = buffer;
@@ -41,8 +45,9 @@ function schedulePlain(
     source.detune.value = detuneCents;
   }
   const gain = ctx.createGain();
+  const attackSec = firstWord ? FIRST_WORD_ATTACK_SEC : PLAIN_ATTACK_SEC;
   gain.gain.setValueAtTime(0, when);
-  gain.gain.linearRampToValueAtTime(volume, when + PLAIN_ATTACK_SEC);
+  gain.gain.linearRampToValueAtTime(volume, when + attackSec);
   source.connect(gain).connect(dest);
   source.start(when);
   return {
@@ -116,6 +121,7 @@ export function scheduleAnnounceWord(
   when: number,
   voice: AnnounceVoiceDef,
   volume: number,
+  firstWord = false,
 ): AnnounceWordHandle {
   switch (voice.effect) {
     case "hal":
@@ -133,6 +139,7 @@ export function scheduleAnnounceWord(
         voice.playbackRate,
         volume,
         detuneCents,
+        firstWord,
       );
     }
   }

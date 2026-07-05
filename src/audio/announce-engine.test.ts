@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AnnounceEngine } from "./announce-engine";
+import { AnnounceEngine, FIRST_OUTPUT_RAMP_SEC } from "./announce-engine";
 import { ANNOUNCE_WORDS } from "../lib/announce";
 
 function mockAudioContext(state: AudioContextState = "running") {
@@ -80,5 +80,73 @@ describe("AnnounceEngine preload", () => {
 
     expect(ctx.decodeAudioData).toHaveBeenCalledTimes(ANNOUNCE_WORDS.length);
     expect(bufferSources).toBeGreaterThan(0);
+  });
+
+  it("ramps the announce bus on first output, then steps gain on later phrases", async () => {
+    const ctx = mockAudioContext();
+    const setValueAtTime = vi.fn();
+    const linearRampToValueAtTime = vi.fn();
+    let gainCount = 0;
+    const origCreateGain = ctx.createGain.bind(ctx);
+    ctx.createGain = () => {
+      gainCount += 1;
+      const gain = origCreateGain();
+      gain.gain.setValueAtTime = setValueAtTime;
+      gain.gain.linearRampToValueAtTime = linearRampToValueAtTime;
+      return gain;
+    };
+
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await engine.preview();
+    expect(gainCount).toBeGreaterThan(0);
+    expect(setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+    const busRamp = linearRampToValueAtTime.mock.calls.find((c) => c[0] === 0.6);
+    expect(busRamp).toBeDefined();
+    expect(busRamp![1]).toBeCloseTo(0.05 + FIRST_OUTPUT_RAMP_SEC);
+
+    setValueAtTime.mockClear();
+    linearRampToValueAtTime.mockClear();
+    await engine.preview();
+    expect(
+      linearRampToValueAtTime.mock.calls.find((c) => c[0] === 0.6),
+    ).toBeUndefined();
+  });
+
+  it("resets the first-output ramp after stop()", async () => {
+    const ctx = mockAudioContext();
+    const linearRampToValueAtTime = vi.fn();
+    const origCreateGain = ctx.createGain.bind(ctx);
+    ctx.createGain = () => {
+      const gain = origCreateGain();
+      gain.gain.linearRampToValueAtTime = linearRampToValueAtTime;
+      return gain;
+    };
+
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await engine.preview();
+    linearRampToValueAtTime.mockClear();
+
+    engine.stop();
+    engine.start();
+    await engine.preview();
+    expect(
+      linearRampToValueAtTime.mock.calls.find((c) => c[0] === 0.6),
+    ).toBeDefined();
   });
 });
