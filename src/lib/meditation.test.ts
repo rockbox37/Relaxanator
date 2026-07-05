@@ -29,6 +29,7 @@ describe("MEDITATION_VOICES", () => {
       "fog-horn",
       "fog-horn-2",
       "ship-horn",
+      "ship-horn-2",
       "train-horn",
     ]);
     expect(new Set(ids).size).toBe(ids.length);

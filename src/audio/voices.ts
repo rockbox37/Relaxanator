@@ -279,6 +279,18 @@ const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
   ], 16, 820, 0.05, 2.5, 1.12);
 };
 
+const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
+  // Higher ship's horn (#26): D3 fundamental (octave above ship horn), sharper
+  // attack, brighter lowpass, and slightly stronger quint/2nd partials for a
+  // distinct but still brassy maritime blast with long decay.
+  distantHorn(ctx, dest, when, volume, 146.84, [
+    [1, 1],
+    [1.5, 0.55],
+    [2, 0.36],
+    [3, 0.14],
+  ], 16, 1000, 0.035, 2.4, 1.1);
+};
+
 const trainHorn: VoicePlayer = (ctx, dest, when, volume) => {
   // Classic freight-train horn (#23): K5LA-style five-chime B-major-6th
   // cluster (311–622 Hz), sharp bright attack, sustained blast, and enormous
@@ -383,6 +395,7 @@ const PLAYERS: Record<MeditationVoiceDef["synth"], VoicePlayer> = {
   fogHorn,
   fogHorn2,
   shipHorn,
+  shipHorn2,
   trainHorn,
 };
 
