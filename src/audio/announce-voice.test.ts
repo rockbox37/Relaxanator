@@ -16,7 +16,7 @@ describe("HAL word sprites", () => {
   /** macOS `say` in a sandbox emits 4096-byte FLLR silence — real sprites are much larger. */
   const MIN_HAL_SPRITE_BYTES = 8000;
 
-  it("ships non-silent Daniel TTS sprites for every word", () => {
+  it("ships non-silent Ralph TTS sprites for every word", () => {
     for (const word of ANNOUNCE_WORDS) {
       const path = join(process.cwd(), "public/audio/tts/hal", `${word}.wav`);
       const bytes = readFileSync(path);

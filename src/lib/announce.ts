@@ -40,7 +40,7 @@ export const ANNOUNCE_VOICES: readonly AnnounceVoiceDef[] = [
     id: "hal9000",
     label: "HAL 9000",
     dir: "hal",
-    playbackRate: 0.9,
+    playbackRate: 0.88,
     effect: "hal",
   },
 ];

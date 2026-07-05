@@ -1,11 +1,14 @@
 /**
  * Per-voice playback routing for time announcements: plain sprites or
- * HAL-style soft filtering.
+ * HAL-style warm mid-register processing.
  */
 import type { AnnounceVoiceDef } from "@/lib/announce";
 
-/** HAL uses plain sprites + lowpass only — no extra trim. */
+/** HAL chain output trim — unity so volume matches other voices. */
 export const HAL_OUTPUT_GAIN = 1;
+
+/** Slight pitch drop (cents) for Douglas Rain–style calm mid-register. */
+const HAL_DETUNE_CENTS = -75;
 
 export type AnnounceWordHandle = {
   stopAt: number;
@@ -37,7 +40,10 @@ function schedulePlain(
   };
 }
 
-/** Calm, soft HAL tone: British sprites through a gentle lowpass. */
+/**
+ * Warm, measured HAL tone: Ralph (en_US) sprites through gentle compression,
+ * mid presence, and soft top rolloff — calm and detached, not tinny British.
+ */
 function scheduleHal(
   ctx: BaseAudioContext,
   buffer: AudioBuffer,
@@ -49,16 +55,41 @@ function scheduleHal(
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.playbackRate.value = playbackRate;
+  source.detune.value = HAL_DETUNE_CENTS;
 
-  const tone = ctx.createBiquadFilter();
-  tone.type = "lowpass";
-  tone.frequency.value = 2800;
-  tone.Q.value = 0.6;
+  const highPass = ctx.createBiquadFilter();
+  highPass.type = "highpass";
+  highPass.frequency.value = 120;
+  highPass.Q.value = 0.7;
+
+  const midPresence = ctx.createBiquadFilter();
+  midPresence.type = "peaking";
+  midPresence.frequency.value = 1050;
+  midPresence.Q.value = 0.85;
+  midPresence.gain.value = 2.5;
+
+  const lowPass = ctx.createBiquadFilter();
+  lowPass.type = "lowpass";
+  lowPass.frequency.value = 3400;
+  lowPass.Q.value = 0.55;
+
+  const compressor = ctx.createDynamicsCompressor();
+  compressor.threshold.value = -20;
+  compressor.knee.value = 8;
+  compressor.ratio.value = 2.5;
+  compressor.attack.value = 0.012;
+  compressor.release.value = 0.18;
 
   const gain = ctx.createGain();
   gain.gain.value = volume * HAL_OUTPUT_GAIN;
 
-  source.connect(tone).connect(gain).connect(dest);
+  source
+    .connect(highPass)
+    .connect(midPresence)
+    .connect(lowPass)
+    .connect(compressor)
+    .connect(gain)
+    .connect(dest);
   source.start(when);
 
   return {

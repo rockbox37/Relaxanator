@@ -35,11 +35,11 @@ describe("ANNOUNCE_VOICES", () => {
     expect(getAnnounceVoice("trinoids").id).toBe(DEFAULT_ANNOUNCE_VOICE_ID);
   });
 
-  it("defines HAL as a measured British sprite set with soft filtering", () => {
+  it("defines HAL as a measured North American sprite set with warm filtering", () => {
     const hal = getAnnounceVoice("hal9000");
     expect(hal.dir).toBe("hal");
     expect(hal.effect).toBe("hal");
-    expect(hal.playbackRate).toBeLessThan(1);
+    expect(hal.playbackRate).toBe(0.88);
   });
 });
 
