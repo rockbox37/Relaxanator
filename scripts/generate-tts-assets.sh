@@ -1,0 +1,36 @@
+#!/bin/sh
+# Generate the time-announcement word sprites (issue #17).
+#
+# Renders the 16 words needed to speak any quarter-hour time with macOS
+# text-to-speech robot voices, converted to small mono 22.05kHz WAVs under
+# public/audio/tts/<voice>/<word>.wav. Requires macOS (say + afconvert).
+# Re-run only when adding voices or words; the WAVs are committed.
+set -eu
+
+cd "$(dirname "$0")/.."
+OUT_ROOT="public/audio/tts"
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+# voice-dir:macos-voice pairs
+VOICES="zarvox:Zarvox fred:Fred trinoids:Trinoids"
+
+# word-id:spoken-text pairs (word ids are the filenames the app requests)
+WORDS="one:one two:two three:three four:four five:five six:six seven:seven
+eight:eight nine:nine ten:ten eleven:eleven twelve:twelve
+fifteen:fifteen thirty:thirty fortyfive:forty-five oclock:o'clock"
+
+for voice_pair in $VOICES; do
+  dir=${voice_pair%%:*}
+  voice=${voice_pair#*:}
+  mkdir -p "$OUT_ROOT/$dir"
+  for word_pair in $WORDS; do
+    word=${word_pair%%:*}
+    text=${word_pair#*:}
+    aiff="$TMP/$dir-$word.aiff"
+    wav="$OUT_ROOT/$dir/$word.wav"
+    say -v "$voice" -o "$aiff" "$text"
+    afconvert -f WAVE -d LEI16@22050 -c 1 "$aiff" "$wav"
+    printf '%s/%s: %s bytes\n' "$dir" "$word" "$(wc -c < "$wav" | tr -d ' ')"
+  done
+done
