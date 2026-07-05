@@ -1,0 +1,96 @@
+"use client";
+
+import {
+  MAX_INTERVAL_MIN,
+  MEDITATION_VOICES,
+  MIN_INTERVAL_MIN,
+  type MeditationSettings,
+  type VoiceSettings,
+  clampIntervalMin,
+} from "@/lib/meditation";
+
+interface MeditationPanelProps {
+  settings: MeditationSettings;
+  onChange: (voiceId: string, update: Partial<VoiceSettings>) => void;
+  onPreview: (voiceId: string) => void;
+  previewEnabled: boolean;
+}
+
+export default function MeditationPanel({
+  settings,
+  onChange,
+  onPreview,
+  previewEnabled,
+}: MeditationPanelProps) {
+  return (
+    <section className="meditation" aria-label="Meditation sounds">
+      <h2>Meditation sounds</h2>
+      <ul className="voices">
+        {MEDITATION_VOICES.map((voice) => {
+          const state = settings[voice.id];
+          return (
+            <li key={voice.id} className="voice">
+              <label className="voice-enable" title={voice.description}>
+                <input
+                  type="checkbox"
+                  checked={state.enabled}
+                  onChange={(e) => onChange(voice.id, { enabled: e.target.checked })}
+                />
+                {voice.label}
+              </label>
+
+              <label className="voice-interval">
+                every
+                <input
+                  type="number"
+                  min={MIN_INTERVAL_MIN}
+                  max={MAX_INTERVAL_MIN}
+                  step={0.5}
+                  value={state.intervalMin}
+                  onChange={(e) =>
+                    onChange(voice.id, {
+                      intervalMin: clampIntervalMin(Number(e.target.value)),
+                    })
+                  }
+                  aria-label={`${voice.label} interval in minutes`}
+                />
+                min
+              </label>
+
+              <label className="voice-jitter" title="Vary each interval by up to ±15%">
+                <input
+                  type="checkbox"
+                  checked={state.jitter}
+                  onChange={(e) => onChange(voice.id, { jitter: e.target.checked })}
+                />
+                vary
+              </label>
+
+              <label className="voice-volume">
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={state.volume}
+                  onChange={(e) => onChange(voice.id, { volume: Number(e.target.value) })}
+                  aria-label={`${voice.label} volume`}
+                />
+              </label>
+
+              <button
+                type="button"
+                className="voice-preview"
+                onClick={() => onPreview(voice.id)}
+                disabled={!previewEnabled}
+                title={previewEnabled ? `Play ${voice.label} now` : "Press Play first"}
+              >
+                ♪
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}

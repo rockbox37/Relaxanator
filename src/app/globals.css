@@ -122,6 +122,83 @@ main > p {
   color: var(--text);
 }
 
+.meditation h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.voices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.voice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.voice-enable {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  min-width: 5.5rem;
+  font-weight: 600;
+}
+
+.voice-interval {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  color: var(--muted);
+}
+
+.voice-interval input {
+  width: 4.2rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.25rem 0.4rem;
+}
+
+.voice-jitter {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  color: var(--muted);
+}
+
+.voice-volume input {
+  width: 7rem;
+}
+
+.voice-preview {
+  margin-left: auto;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.2rem 0.7rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.voice-preview:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 @media (max-width: 560px) {
   .eq {
     grid-template-columns: repeat(5, 1fr);
