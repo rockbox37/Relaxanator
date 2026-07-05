@@ -18,9 +18,23 @@ export class NoiseEngine {
   private source: AudioWorkletNode | null = null;
   private bands: BiquadFilterNode[] = [];
   private master: GainNode | null = null;
+  private mix: GainNode | null = null;
 
   get running(): boolean {
     return this.ctx?.state === "running";
+  }
+
+  /** Shared AudioContext, available after init(). */
+  get context(): AudioContext | null {
+    return this.ctx;
+  }
+
+  /**
+   * Mix bus other sound layers (meditation voices) connect into. Sits
+   * before the output limiter so layered sounds share its headroom.
+   */
+  get mixBus(): AudioNode | null {
+    return this.mix;
   }
 
   /** Create the graph. Must be called from a user gesture. */
@@ -49,18 +63,31 @@ export class NoiseEngine {
     const master = ctx.createGain();
     master.gain.value = clampVolume(state.masterVolume);
 
+    // Everything meets at the mix bus, then a gentle limiter keeps layered
+    // sounds (noise + meditation voices) from clipping the output.
+    const mix = ctx.createGain();
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -6;
+    limiter.knee.value = 6;
+    limiter.ratio.value = 12;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.25;
+
     let tail: AudioNode = source;
     for (const band of bands) {
       tail.connect(band);
       tail = band;
     }
     tail.connect(master);
-    master.connect(ctx.destination);
+    master.connect(mix);
+    mix.connect(limiter);
+    limiter.connect(ctx.destination);
 
     this.ctx = ctx;
     this.source = source;
     this.bands = bands;
     this.master = master;
+    this.mix = mix;
   }
 
   async resume(): Promise<void> {
@@ -99,5 +126,6 @@ export class NoiseEngine {
     this.source = null;
     this.bands = [];
     this.master = null;
+    this.mix = null;
   }
 }

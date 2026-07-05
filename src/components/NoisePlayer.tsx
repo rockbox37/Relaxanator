@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { MeditationEngine } from "@/audio/meditation-engine";
 import { NoiseEngine } from "@/audio/noise-engine";
 import {
   EQ_GAIN_MAX_DB,
@@ -10,20 +11,33 @@ import {
   withBandGain,
 } from "@/lib/eq";
 import {
+  type MeditationSettings,
+  type VoiceSettings,
+  createDefaultMeditationSettings,
+} from "@/lib/meditation";
+import {
   NOISE_COLORS,
   type NoiseColor,
   clampVolume,
   createDefaultNoiseState,
 } from "@/lib/noise";
 
+import MeditationPanel from "./MeditationPanel";
+
 export default function NoisePlayer() {
   const engineRef = useRef<NoiseEngine | null>(null);
+  const meditationRef = useRef<MeditationEngine | null>(null);
   const [state, setState] = useState(createDefaultNoiseState);
+  const [meditation, setMeditation] = useState<MeditationSettings>(
+    createDefaultMeditationSettings,
+  );
   const [playing, setPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     return () => {
+      meditationRef.current?.stop();
+      meditationRef.current = null;
       engineRef.current?.dispose();
       engineRef.current = null;
     };
@@ -37,6 +51,15 @@ export default function NoisePlayer() {
         const engine = new NoiseEngine();
         await engine.init(state);
         engineRef.current = engine;
+        if (engine.context && engine.mixBus) {
+          const meditationEngine = new MeditationEngine(
+            engine.context,
+            engine.mixBus,
+            meditation,
+          );
+          meditationEngine.start();
+          meditationRef.current = meditationEngine;
+        }
       } finally {
         setStarting(false);
       }
@@ -64,6 +87,18 @@ export default function NoisePlayer() {
     const clamped = clampVolume(volume);
     setState((s) => ({ ...s, masterVolume: clamped }));
     engineRef.current?.setMasterVolume(clamped);
+  }
+
+  function changeVoice(voiceId: string, update: Partial<VoiceSettings>) {
+    setMeditation((m) => {
+      const next = { ...m, [voiceId]: { ...m[voiceId], ...update } };
+      meditationRef.current?.updateSettings(next);
+      return next;
+    });
+  }
+
+  function previewVoice(voiceId: string) {
+    meditationRef.current?.preview(voiceId);
   }
 
   return (
@@ -125,6 +160,13 @@ export default function NoisePlayer() {
           </label>
         ))}
       </div>
+
+      <MeditationPanel
+        settings={meditation}
+        onChange={changeVoice}
+        onPreview={previewVoice}
+        previewEnabled={playing}
+      />
     </section>
   );
 }
