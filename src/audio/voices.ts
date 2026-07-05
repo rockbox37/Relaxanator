@@ -8,6 +8,35 @@
  */
 import type { MeditationVoiceDef } from "@/lib/meditation";
 
+
+/** Disconnect nodes after `when + graceSec` on the audio timeline (not wall clock). */
+function scheduleAudioTimelineCleanup(
+  ctx: BaseAudioContext,
+  when: number,
+  nodes: AudioNode[],
+  graceSec: number,
+): void {
+  const end = when + graceSec;
+  const tick = ctx.createOscillator();
+  tick.frequency.value = 440;
+  const silent = ctx.createGain();
+  silent.gain.value = 0;
+  tick.connect(silent).connect(ctx.destination);
+  tick.start(end);
+  tick.stop(end + 1 / ctx.sampleRate);
+  tick.onended = () => {
+    for (const node of nodes) {
+      try {
+        node.disconnect();
+      } catch {
+        /* already disconnected */
+      }
+    }
+    tick.disconnect();
+    silent.disconnect();
+  };
+}
+
 type VoicePlayer = (
   ctx: BaseAudioContext,
   dest: AudioNode,
@@ -441,16 +470,7 @@ function gatedTwoBlastHorn(
     oscType,
   );
 
-  const delayMs = Math.max(0, (sequenceEnd - ctx.currentTime) * 1000) + 5000;
-  setTimeout(() => {
-    for (const node of cleanupNodes) {
-      try {
-        node.disconnect();
-      } catch {
-        /* already disconnected */
-      }
-    }
-  }, delayMs);
+  scheduleAudioTimelineCleanup(ctx, when, cleanupNodes, sequenceEnd - when + 5);
 }
 
 /** D3 — fog horn 2 first blast (1 s). */
@@ -610,15 +630,7 @@ const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
     osc.onended = () => {
       remaining -= 1;
       if (remaining === 0) {
-        setTimeout(() => {
-          for (const node of cleanupNodes) {
-            try {
-              node.disconnect();
-            } catch {
-              /* already disconnected */
-            }
-          }
-        }, 6000);
+        scheduleAudioTimelineCleanup(ctx, stopAt, cleanupNodes, 6);
       }
     };
   }
@@ -705,15 +717,7 @@ const trainHorn: VoicePlayer = (ctx, dest, when, volume) => {
       remaining -= 1;
       if (remaining === 0) {
         // Let feedback-delay tails finish before disconnecting.
-        setTimeout(() => {
-          for (const node of cleanupNodes) {
-            try {
-              node.disconnect();
-            } catch {
-              /* already disconnected */
-            }
-          }
-        }, 5000);
+        scheduleAudioTimelineCleanup(ctx, stopAt, cleanupNodes, 5);
       }
     };
   }
