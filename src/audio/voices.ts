@@ -268,16 +268,20 @@ const fogHorn2: VoicePlayer = (ctx, dest, when, volume) => {
 };
 
 const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
-  // Classic two-tone fog signal (#26): low B1 blast, brief gap, high B2 blast,
-  // through heavy feedback-delay reverb — distinct from single-tone fog 1/2.
-  const attackSec = 0.1;
-  const holdSec = 2.8;
-  const gapSec = 0.35;
+  // Two-tone fog signal (#26): 250 Hz blast, brief gap, ~198 Hz blast (major
+  // third down), through heavy feedback-delay reverb — mid-range voicing
+  // distinct from low B1/B2 fog horns 1/2.
+  const attackSec = 0.07;
+  const hold1Sec = 1.0;
+  const hold2Sec = 1.5;
+  const gapSec = 0.25;
   const decaySec = 18;
+  const tone1F0 = 250;
+  const tone2F0 = tone1F0 * 2 ** (-4 / 12);
 
   const tone1When = when;
-  const tone2When = when + attackSec + holdSec + gapSec;
-  const sequenceEnd = tone2When + attackSec + holdSec + decaySec + 0.1;
+  const tone2When = when + attackSec + hold1Sec + gapSec;
+  const sequenceEnd = tone2When + attackSec + hold2Sec + decaySec + 0.1;
 
   const out = ctx.createGain();
   out.gain.value = volume * 0.62;
@@ -294,8 +298,8 @@ const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
 
   const reverbSend = ctx.createGain();
   reverbSend.gain.setValueAtTime(1, when);
-  reverbSend.gain.setValueAtTime(1, tone2When + attackSec + holdSec);
-  reverbSend.gain.exponentialRampToValueAtTime(0.0001, tone2When + attackSec + holdSec + 3);
+  reverbSend.gain.setValueAtTime(1, tone2When + attackSec + hold2Sec);
+  reverbSend.gain.exponentialRampToValueAtTime(0.0001, tone2When + attackSec + hold2Sec + 3);
   bus.connect(reverbSend);
   const reverbNodes = feedbackReverb(ctx, reverbSend, wet);
   wet.connect(out);
@@ -303,19 +307,19 @@ const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
 
   const cleanupNodes: AudioNode[] = [out, dry, wet, bus, reverbSend, ...reverbNodes];
 
-  distantHorn(ctx, bus, tone1When, 1, 61.74, [
+  distantHorn(ctx, bus, tone1When, 1, tone1F0, [
     [1, 1],
-    [1.5, 0.38],
-    [2, 0.52],
-    [3, 0.14],
-  ], decaySec, 480, attackSec, holdSec, 0.92);
+    [1.5, 0.44],
+    [2, 0.5],
+    [3, 0.12],
+  ], decaySec, 920, attackSec, hold1Sec, 0.9);
 
-  distantHorn(ctx, bus, tone2When, 1, 123.47, [
+  distantHorn(ctx, bus, tone2When, 1, tone2F0, [
     [1, 1],
-    [1.5, 0.4],
-    [2, 0.58],
-    [3, 0.18],
-  ], decaySec, 620, attackSec, holdSec, 0.92);
+    [1.5, 0.42],
+    [2, 0.48],
+    [3, 0.1],
+  ], decaySec, 760, attackSec, hold2Sec, 0.9);
 
   const delayMs = Math.max(0, (sequenceEnd - ctx.currentTime) * 1000) + 5000;
   setTimeout(() => {
