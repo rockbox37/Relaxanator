@@ -256,7 +256,7 @@ const fogHorn: VoicePlayer = (ctx, dest, when, volume) => {
   ], 18, 480, 0.08, 2.8, 0.88);
 };
 
-/** Hard-gated horn blast: fixed duration, no decay tail (fog horns 2/3). */
+/** Hard-gated horn blast: fixed duration, no decay tail (fog horns 2–4). */
 function gatedHornBlast(
   ctx: BaseAudioContext,
   dest: AudioNode,
@@ -268,6 +268,7 @@ function gatedHornBlast(
   lowpassHz: number,
   attackSec: number,
   outputScale: number,
+  oscType: OscillatorType = "sine",
 ): void {
   const stopAt = when + durationSec;
   const out = ctx.createGain();
@@ -283,7 +284,7 @@ function gatedHornBlast(
   let remaining = partials.length;
   for (const [ratio, gain] of partials) {
     const osc = ctx.createOscillator();
-    osc.type = "sine";
+    osc.type = oscType;
     osc.frequency.value = f0 * ratio;
     const env = ctx.createGain();
     env.gain.setValueAtTime(0, when);
@@ -303,6 +304,18 @@ function gatedHornBlast(
   }
 }
 
+interface GatedTwoBlastOptions {
+  attackSec?: number;
+  tone1DurSec?: number;
+  tone2DurSec?: number;
+  dryGain?: number;
+  wetGain?: number;
+  feedbackBoost?: number;
+  reverbTailSec?: number;
+  outputScale?: number;
+  oscType?: OscillatorType;
+}
+
 /** Two hard-gated sequential horn blasts with heavy feedback-delay reverb. */
 function gatedTwoBlastHorn(
   ctx: BaseAudioContext,
@@ -313,24 +326,30 @@ function gatedTwoBlastHorn(
   tone2F0: number,
   tone1LowpassHz: number,
   tone2LowpassHz: number,
+  options: GatedTwoBlastOptions = {},
 ): void {
-  const attackSec = 0.07;
-  const tone1DurSec = 1.0;
-  const tone2DurSec = 2.0;
+  const attackSec = options.attackSec ?? 0.07;
+  const tone1DurSec = options.tone1DurSec ?? 1.0;
+  const tone2DurSec = options.tone2DurSec ?? 2.0;
+  const dryGain = options.dryGain ?? 0.22;
+  const wetGain = options.wetGain ?? 0.78;
+  const feedbackBoost = options.feedbackBoost ?? 0;
+  const reverbTailSec = options.reverbTailSec ?? 18;
+  const outputScale = options.outputScale ?? 0.62;
+  const oscType = options.oscType ?? "sine";
 
   const tone1When = when;
   const tone2When = when + tone1DurSec;
-  const reverbTailSec = 18;
   const sequenceEnd = tone2When + tone2DurSec + reverbTailSec + 0.1;
 
   const out = ctx.createGain();
-  out.gain.value = volume * 0.62;
+  out.gain.value = volume * outputScale;
   out.connect(dest);
 
   const dry = ctx.createGain();
-  dry.gain.value = 0.22;
+  dry.gain.value = dryGain;
   const wet = ctx.createGain();
-  wet.gain.value = 0.78;
+  wet.gain.value = wetGain;
 
   const bus = ctx.createGain();
   bus.gain.value = 1;
@@ -341,7 +360,7 @@ function gatedTwoBlastHorn(
   reverbSend.gain.setValueAtTime(1, tone2When + tone2DurSec);
   reverbSend.gain.exponentialRampToValueAtTime(0.0001, tone2When + tone2DurSec + 3);
   bus.connect(reverbSend);
-  const reverbNodes = feedbackReverb(ctx, reverbSend, wet);
+  const reverbNodes = feedbackReverb(ctx, reverbSend, wet, feedbackBoost);
   wet.connect(out);
   dry.connect(out);
 
@@ -352,14 +371,14 @@ function gatedTwoBlastHorn(
     [1.5, 0.44],
     [2, 0.5],
     [3, 0.12],
-  ], tone1DurSec, tone1LowpassHz, attackSec, 0.9);
+  ], tone1DurSec, tone1LowpassHz, attackSec, 0.9, oscType);
 
   gatedHornBlast(ctx, bus, tone2When, 1, tone2F0, [
     [1, 1],
     [1.5, 0.42],
     [2, 0.48],
     [3, 0.1],
-  ], tone2DurSec, tone2LowpassHz, attackSec, 0.9);
+  ], tone2DurSec, tone2LowpassHz, attackSec, 0.9, oscType);
 
   const delayMs = Math.max(0, (sequenceEnd - ctx.currentTime) * 1000) + 5000;
   setTimeout(() => {
@@ -399,6 +418,30 @@ const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
   // sequential blasts through heavy feedback-delay reverb — distinct from
   // sustained-decay B1 fog horn 1 and higher D3/E2 fog horn 2 (10 semitones apart).
   gatedTwoBlastHorn(ctx, dest, when, volume, 87.31, 69.3, 480, 420);
+};
+
+/** C3 — fog horn 4 first blast (0.85 s); vintage film tugboat horn. */
+export const FOG_HORN_4_TONE1_HZ = 130.81;
+/** G2 — fog horn 4 second blast (2.15 s); perfect fourth below tone 1. */
+export const FOG_HORN_4_TONE2_HZ = 98.0;
+export const FOG_HORN_4_INTERVAL_SEMITONES = 5;
+
+const fogHorn4: VoicePlayer = (ctx, dest, when, volume) => {
+  // Vintage two-tone boat horn (#26, ref 5KwjDwt5m3w): C3 short blast then
+  // lower G2 long blast — classic 60s Cinesound tug/film horn (101 Dalmations,
+  // Gerry Anderson). Triangle partials for warm vinyl character; much wetter
+  // reverb than fog horns 2/3.
+  gatedTwoBlastHorn(ctx, dest, when, volume, FOG_HORN_4_TONE1_HZ, FOG_HORN_4_TONE2_HZ, 620, 520, {
+    attackSec: 0.05,
+    tone1DurSec: 0.85,
+    tone2DurSec: 2.15,
+    dryGain: 0.08,
+    wetGain: 0.92,
+    feedbackBoost: 0.1,
+    reverbTailSec: 24,
+    outputScale: 0.6,
+    oscType: "triangle",
+  });
 };
 
 const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
@@ -606,6 +649,7 @@ const PLAYERS: Record<MeditationVoiceDef["synth"], VoicePlayer> = {
   fogHorn,
   fogHorn2,
   fogHorn3,
+  fogHorn4,
   shipHorn,
   shipHorn2,
   trainHorn,

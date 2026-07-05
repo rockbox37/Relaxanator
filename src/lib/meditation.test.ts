@@ -29,6 +29,7 @@ describe("MEDITATION_VOICES", () => {
       "fog-horn",
       "fog-horn-2",
       "fog-horn-3",
+      "fog-horn-4",
       "ship-horn",
       "ship-horn-2",
       "train-horn",
@@ -47,6 +48,12 @@ describe("MEDITATION_VOICES", () => {
   it("documents fog horn 2 as minor sixth plus whole step", () => {
     const fogHorn2 = MEDITATION_VOICES.find((v) => v.id === "fog-horn-2");
     expect(fogHorn2?.description).toContain("minor sixth + whole step");
+  });
+
+  it("documents fog horn 4 as vintage film two-tone with perfect fourth", () => {
+    const fogHorn4 = MEDITATION_VOICES.find((v) => v.id === "fog-horn-4");
+    expect(fogHorn4?.description).toContain("Vintage film two-tone");
+    expect(fogHorn4?.description).toContain("perfect fourth");
   });
 });
 
