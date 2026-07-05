@@ -5,6 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY next.config.ts tsconfig.json next-env.d.ts ./
 COPY src ./src
+COPY public ./public
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
@@ -19,8 +20,10 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
+# Standalone output excludes public/ and .next/static by design — copy both.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 EXPOSE 3000
