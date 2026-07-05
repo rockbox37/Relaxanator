@@ -43,6 +43,11 @@ describe("MEDITATION_VOICES", () => {
       expect(v.defaultVolume).toBeLessThanOrEqual(1);
     }
   });
+
+  it("documents fog horn 2 as minor sixth plus whole step", () => {
+    const fogHorn2 = MEDITATION_VOICES.find((v) => v.id === "fog-horn-2");
+    expect(fogHorn2?.description).toContain("minor sixth + whole step");
+  });
 });
 
 describe("createDefaultMeditationSettings", () => {

@@ -373,16 +373,31 @@ function gatedTwoBlastHorn(
   }, delayMs);
 }
 
+/** D3 — fog horn 2 first blast (1 s). */
+export const FOG_HORN_2_TONE1_HZ = 146.83;
+/** E2 — fog horn 2 second blast (2 s); minor sixth + whole step (10 semitones) below tone 1. */
+export const FOG_HORN_2_TONE2_HZ = 82.41;
+export const FOG_HORN_2_INTERVAL_SEMITONES = 10;
+
 const fogHorn2: VoicePlayer = (ctx, dest, when, volume) => {
-  // Two-tone fog signal (#26): D3 (1 s) then lower E2 (2 s), hard-gated
-  // sequential blasts — minor seventh down, one octave above fog horn 3.
-  gatedTwoBlastHorn(ctx, dest, when, volume, 146.83, 82.41, 560, 430);
+  // Two-tone fog signal (#26): D3 (1 s) then E2 (2 s), hard-gated sequential
+  // blasts — minor sixth down plus one whole step (10 semitones total).
+  gatedTwoBlastHorn(
+    ctx,
+    dest,
+    when,
+    volume,
+    FOG_HORN_2_TONE1_HZ,
+    FOG_HORN_2_TONE2_HZ,
+    560,
+    430,
+  );
 };
 
 const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
   // Two-tone fog signal (#26): low F2 (1 s) then lower D♭2 (2 s), hard-gated
   // sequential blasts through heavy feedback-delay reverb — distinct from
-  // sustained-decay B1 fog horn 1 and higher minor-seventh D3/E2 fog horn 2.
+  // sustained-decay B1 fog horn 1 and higher D3/E2 fog horn 2 (10 semitones apart).
   gatedTwoBlastHorn(ctx, dest, when, volume, 87.31, 69.3, 480, 420);
 };
 
