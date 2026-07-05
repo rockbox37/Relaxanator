@@ -26,9 +26,11 @@ function distantHorn(
   decaySec: number,
   lowpassHz: number,
   attackSec = 0.12,
+  holdSec = 0,
+  outputScale = 0.6,
 ): void {
   const out = ctx.createGain();
-  out.gain.value = volume * 0.6;
+  out.gain.value = volume * outputScale;
   out.connect(dest);
 
   const lp = ctx.createBiquadFilter();
@@ -45,6 +47,9 @@ function distantHorn(
     const env = ctx.createGain();
     env.gain.setValueAtTime(0, when);
     env.gain.linearRampToValueAtTime(gain, when + attackSec);
+    if (holdSec > 0) {
+      env.gain.setValueAtTime(gain, when + attackSec + holdSec);
+    }
     env.gain.exponentialRampToValueAtTime(0.0001, when + decaySec);
     osc.connect(env).connect(lp);
     osc.start(when);
@@ -206,13 +211,15 @@ const omm: VoicePlayer = (ctx, dest, when, volume) => {
 };
 
 const fogHorn: VoicePlayer = (ctx, dest, when, volume) => {
-  // Distant fog horn (#22): very low B1 fundamental, simple boomy partials,
-  // heavy lowpass and ~18 s decay so each blast fades slowly into the bed.
-  distantHorn(ctx, dest, when, volume, 58.27, [
+  // Distant fog horn (#22): low B1 fundamental with strong quint/2nd body,
+  // a short sustained blast, brighter lowpass than before, and higher output
+  // so the tone reads on small speakers while staying deeper than ship/train.
+  distantHorn(ctx, dest, when, volume, 61.74, [
     [1, 1],
-    [2, 0.22],
-    [2.5, 0.08],
-  ], 18, 340, 0.18);
+    [1.5, 0.38],
+    [2, 0.52],
+    [3, 0.14],
+  ], 18, 480, 0.08, 2.8, 0.88);
 };
 
 const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
