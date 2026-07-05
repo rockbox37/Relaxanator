@@ -10,6 +10,7 @@ import {
   type AnnounceSettings,
   getAnnounceVoice,
   nextBoundaryMs,
+  systemPrefers24Hour,
   timeTokens,
   wordGapAfterToken,
 } from "@/lib/announce";
@@ -75,7 +76,9 @@ export class AnnounceEngine {
       nextBoundaryMs(Date.now(), this.settings.intervalMin),
     );
     await this.speak(
-      timeTokens(boundary.getHours(), boundary.getMinutes()),
+      timeTokens(boundary.getHours(), boundary.getMinutes(), {
+        hour12: !systemPrefers24Hour(),
+      }),
       this.ctx.currentTime + 0.05,
     );
   }
@@ -160,7 +163,9 @@ export class AnnounceEngine {
     const boundary = new Date(boundaryMs);
     const when = this.ctx.currentTime + (boundaryMs - nowMs) / 1000;
     const scheduled = await this.speak(
-      timeTokens(boundary.getHours(), boundary.getMinutes()),
+      timeTokens(boundary.getHours(), boundary.getMinutes(), {
+        hour12: !systemPrefers24Hour(),
+      }),
       when,
     );
     if (scheduled) this.scheduledBoundaryMs = boundaryMs;

@@ -110,6 +110,7 @@ export function nextBoundaryMs(nowMs: number, intervalMin: number): number {
   return candidate.getTime();
 }
 
+/** Hour words for 12-hour speech, indexed by `hour24 % 12` (0 -> "twelve"). */
 const HOUR_WORDS = [
   "twelve", // hour 0
   "one",
@@ -125,6 +126,38 @@ const HOUR_WORDS = [
   "eleven",
 ] as const;
 
+/**
+ * Hour words for 24-hour speech (#24), indexed by the literal 0–23 hour, so
+ * 00:00 -> "zero", 15:00 -> "fifteen", 22:00 -> "twenty-two". Index 15 reuses
+ * the "fifteen" minute sprite; the rest have their own sprites.
+ */
+const HOUR_WORDS_24 = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+  "thirteen",
+  "fourteen",
+  "fifteen",
+  "sixteen",
+  "seventeen",
+  "eighteen",
+  "nineteen",
+  "twenty",
+  "twentyone",
+  "twentytwo",
+  "twentythree",
+] as const;
+
 const MINUTE_WORDS: Record<number, string> = {
   15: "fifteen",
   30: "thirty",
@@ -135,39 +168,89 @@ const TOKEN_PHRASE: Record<string, string> = {
   its: "It's",
   oclock: "o'clock",
   fortyfive: "forty-five",
+  twentyone: "twenty-one",
+  twentytwo: "twenty-two",
+  twentythree: "twenty-three",
 };
 
+export interface TimeTokenOptions {
+  /**
+   * Speak 12-hour hour words ("ten" for both 10:00 and 22:00) when true, or
+   * 24-hour hour words ("twenty-two" for 22:00) when false. Defaults to true
+   * to preserve the original #17 behavior for callers that omit it.
+   */
+  hour12?: boolean;
+}
+
 /**
- * Word-sprite ids that speak a time, 12-hour style: 10:00 -> ["its", "ten",
- * "oclock"], 14:30 -> ["its", "two", "thirty"]. Boundaries only land on
- * quarter hours; any other minute rounds down to the nearest supported word
- * so a stray value degrades gracefully instead of going silent.
+ * Word-sprite ids that speak a time. In 12-hour mode (default) 10:00 ->
+ * ["its", "ten", "oclock"] and 22:00 collapses to the same hour word; in
+ * 24-hour mode (#24) 22:00 -> ["its", "twentytwo", "oclock"]. Boundaries only
+ * land on quarter hours; any other minute rounds down to the nearest
+ * supported word so a stray value degrades gracefully instead of going silent.
  */
-export function timeTokens(hour24: number, minute: number): string[] {
-  const hourWord = HOUR_WORDS[((hour24 % 24) + 24) % 24 % 12];
+export function timeTokens(
+  hour24: number,
+  minute: number,
+  options: TimeTokenOptions = {},
+): string[] {
+  const { hour12 = true } = options;
+  const hour = ((hour24 % 24) + 24) % 24;
+  const hourWord = hour12 ? HOUR_WORDS[hour % 12] : HOUR_WORDS_24[hour];
   const quarter = Math.floor(minute / 15) * 15;
   if (quarter === 0) return ["its", hourWord, "oclock"];
   return ["its", hourWord, MINUTE_WORDS[quarter]];
 }
 
 /** Human-readable phrase for a spoken time (e.g. "It's ten o'clock"). */
-export function formatAnnouncement(hour24: number, minute: number): string {
-  return timeTokens(hour24, minute)
+export function formatAnnouncement(
+  hour24: number,
+  minute: number,
+  options: TimeTokenOptions = {},
+): string {
+  return timeTokens(hour24, minute, options)
     .map((token) => TOKEN_PHRASE[token] ?? token)
     .join(" ");
 }
 
 /** On-the-hour announcement phrase from a Date (local time). */
-export function formatHourAnnouncement(date: Date): string {
-  return formatAnnouncement(date.getHours(), date.getMinutes());
+export function formatHourAnnouncement(
+  date: Date,
+  options: TimeTokenOptions = {},
+): string {
+  return formatAnnouncement(date.getHours(), date.getMinutes(), options);
 }
 
-/** All word-sprite ids a voice needs preloaded. */
+/**
+ * True when the host's resolved locale formats time on a 24-hour clock,
+ * following the OS preference where the platform exposes it. Reads
+ * `Intl.DateTimeFormat`'s resolved `hour12` / `hourCycle`; falls back to
+ * 12-hour when the environment reports neither (keeps the original phrasing).
+ */
+export function systemPrefers24Hour(): boolean {
+  try {
+    const resolved = new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+    }).resolvedOptions();
+    if (typeof resolved.hour12 === "boolean") return !resolved.hour12;
+    if (resolved.hourCycle) {
+      return resolved.hourCycle === "h23" || resolved.hourCycle === "h24";
+    }
+  } catch {
+    // Intl unavailable / throwing: fall through to the 12-hour default.
+  }
+  return false;
+}
+
+/** All word-sprite ids a voice needs preloaded (12- and 24-hour vocabulary). */
 export const ANNOUNCE_WORDS: readonly string[] = [
-  "its",
-  ...HOUR_WORDS,
-  ...Object.values(MINUTE_WORDS),
-  "oclock",
+  ...new Set<string>([
+    "its",
+    ...HOUR_WORDS,
+    ...HOUR_WORDS_24,
+    ...Object.values(MINUTE_WORDS),
+    "oclock",
+  ]),
 ];
 
 /** Standard pause between spoken words (seconds). Used by announce-engine. */
