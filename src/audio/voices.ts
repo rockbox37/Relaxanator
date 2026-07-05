@@ -224,13 +224,14 @@ const fogHorn: VoicePlayer = (ctx, dest, when, volume) => {
 
 const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
   // Ship's horn (#23): D2 fundamental with strong quint partials for a
-  // brassy maritime blast; brighter lowpass than fog horn for distinction.
+  // brassy maritime blast; brighter lowpass and higher output than fog/train
+  // for audibility while keeping a long decay.
   distantHorn(ctx, dest, when, volume, 73.42, [
     [1, 1],
-    [1.5, 0.42],
-    [2, 0.18],
-    [3, 0.06],
-  ], 16, 520, 0.14);
+    [1.5, 0.48],
+    [2, 0.24],
+    [3, 0.08],
+  ], 16, 620, 0.08, 2.5, 0.88);
 };
 
 const trainHorn: VoicePlayer = (ctx, dest, when, volume) => {
