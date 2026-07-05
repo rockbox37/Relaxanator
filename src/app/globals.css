@@ -101,6 +101,43 @@ main > p {
   cursor: wait;
 }
 
+.sleep-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+}
+
+.sleep-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.sleep-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.3rem 0.4rem;
+}
+
+.sleep-custom {
+  width: 3.6rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.25rem 0.4rem;
+}
+
+.sleep-countdown {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  font-weight: 600;
+  min-width: 3.2rem;
+  text-align: right;
+}
+
 .colors {
   border: none;
   margin: 0;

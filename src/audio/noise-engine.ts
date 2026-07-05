@@ -161,6 +161,39 @@ export class NoiseEngine {
     await this.ctx?.suspend();
   }
 
+  /**
+   * Gently ramp every audible bus (noise + meditation via the mix bus, plus
+   * the announce bus) down to silence over `durationSec` for the sleep timer
+   * (#19). The clock-scheduled ramp stays accurate even in a throttled
+   * background tab; the caller suspends once it completes.
+   */
+  fadeOut(durationSec: number): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const end = t + Math.max(0.01, durationSec);
+    for (const node of [this.mix, this.announceOut]) {
+      if (!node) continue;
+      node.gain.cancelScheduledValues(t);
+      node.gain.setValueAtTime(node.gain.value, t);
+      node.gain.linearRampToValueAtTime(0, end);
+    }
+  }
+
+  /**
+   * Restore the mix + announce buses to unity, cancelling any in-flight fade.
+   * Called before re-arming or after a hard stop so a later Play/resume is not
+   * left silent by a sleep-timer fade that already ramped the buses down.
+   */
+  resetBuses(): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    for (const node of [this.mix, this.announceOut]) {
+      if (!node) continue;
+      node.gain.cancelScheduledValues(t);
+      node.gain.value = 1;
+    }
+  }
+
   setColor(color: NoiseState["color"]): void {
     if (!this.ctx || !this.source) return;
     this.source.parameters
