@@ -26,7 +26,7 @@ export const ANNOUNCE_VOICES: readonly AnnounceVoiceDef[] = [
     id: "vocoder",
     label: "Vocoder (deep robot)",
     dir: "zarvox",
-    playbackRate: 0.82,
+    playbackRate: 0.984, // 0.82 × 1.2 — 20% faster than pre-revert Zarvox rate
     effect: "plain",
   },
   {

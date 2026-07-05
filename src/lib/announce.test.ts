@@ -25,7 +25,7 @@ describe("ANNOUNCE_VOICES", () => {
     const vocoder = getAnnounceVoice(DEFAULT_ANNOUNCE_VOICE_ID);
     expect(vocoder.dir).toBe("zarvox");
     expect(vocoder.effect).toBe("plain");
-    expect(vocoder.playbackRate).toBe(0.82);
+    expect(vocoder.playbackRate).toBe(0.984);
     expect(ids).toContain("speak-spell");
     expect(ids).toContain("hal9000");
     expect(ids).not.toContain("trinoids");
