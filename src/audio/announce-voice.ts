@@ -11,6 +11,8 @@ export const VOCODER_CARRIER_HZ = 110;
 export const VOCODER_CARRIER_LP_HZ = 520;
 /** Output trim relative to plain voices (was 0.55; raised for audibility). */
 export const VOCODER_OUTPUT_GAIN = 0.92;
+/** HAL uses plain sprites + lowpass only — no extra trim (unlike vocoder AM). */
+export const HAL_OUTPUT_GAIN = 1;
 /** Envelope depth added on top of {@link VOCODER_GAIN_FLOOR}. */
 export const VOCODER_ENVELOPE_DEPTH = 0.88;
 /** Minimum vocoder gain so the carrier never inverts (ring-mod glitch). */
@@ -129,7 +131,7 @@ function scheduleHal(
   tone.Q.value = 0.6;
 
   const gain = ctx.createGain();
-  gain.gain.value = volume * 0.92;
+  gain.gain.value = volume * HAL_OUTPUT_GAIN;
 
   source.connect(tone).connect(gain).connect(dest);
   source.start(when);
