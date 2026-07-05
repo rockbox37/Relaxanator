@@ -1,7 +1,7 @@
 #!/bin/sh
 # Generate the time-announcement word sprites (issue #17).
 #
-# Renders the 16 words needed to speak any quarter-hour time with macOS
+# Renders the 17 words needed to speak any quarter-hour time with macOS
 # text-to-speech robot voices, converted to small mono 22.05kHz WAVs under
 # public/audio/tts/<voice>/<word>.wav. Requires macOS (say + afconvert).
 # Re-run only when adding voices or words; the WAVs are committed.
@@ -16,7 +16,7 @@ trap 'rm -rf "$TMP"' EXIT
 VOICES="zarvox:Zarvox fred:Fred trinoids:Trinoids"
 
 # word-id:spoken-text pairs (word ids are the filenames the app requests)
-WORDS="one:one two:two three:three four:four five:five six:six seven:seven
+WORDS="its:It's one:one two:two three:three four:four five:five six:six seven:seven
 eight:eight nine:nine ten:ten eleven:eleven twelve:twelve
 fifteen:fifteen thirty:thirty fortyfive:forty-five oclock:o'clock"
 

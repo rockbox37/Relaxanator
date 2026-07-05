@@ -6,6 +6,8 @@ import {
   ANNOUNCE_WORDS,
   DEFAULT_ANNOUNCE_VOICE_ID,
   createDefaultAnnounceSettings,
+  formatAnnouncement,
+  formatHourAnnouncement,
   getAnnounceVoice,
   nextBoundaryMs,
   timeTokens,
@@ -68,21 +70,22 @@ describe("nextBoundaryMs", () => {
 });
 
 describe("timeTokens", () => {
-  it("speaks o'clock on the hour in 12-hour style", () => {
-    expect(timeTokens(15, 0)).toEqual(["three", "oclock"]);
-    expect(timeTokens(0, 0)).toEqual(["twelve", "oclock"]);
-    expect(timeTokens(12, 0)).toEqual(["twelve", "oclock"]);
+  it("speaks It's … o'clock on the hour in 12-hour style", () => {
+    expect(timeTokens(10, 0)).toEqual(["its", "ten", "oclock"]);
+    expect(timeTokens(15, 0)).toEqual(["its", "three", "oclock"]);
+    expect(timeTokens(0, 0)).toEqual(["its", "twelve", "oclock"]);
+    expect(timeTokens(12, 0)).toEqual(["its", "twelve", "oclock"]);
   });
 
-  it("speaks quarter-hour minutes", () => {
-    expect(timeTokens(14, 30)).toEqual(["two", "thirty"]);
-    expect(timeTokens(9, 15)).toEqual(["nine", "fifteen"]);
-    expect(timeTokens(23, 45)).toEqual(["eleven", "fortyfive"]);
+  it("speaks quarter-hour minutes with the It's prefix", () => {
+    expect(timeTokens(14, 30)).toEqual(["its", "two", "thirty"]);
+    expect(timeTokens(9, 15)).toEqual(["its", "nine", "fifteen"]);
+    expect(timeTokens(23, 45)).toEqual(["its", "eleven", "fortyfive"]);
   });
 
   it("degrades stray minutes to the nearest quarter below", () => {
-    expect(timeTokens(14, 7)).toEqual(["two", "oclock"]);
-    expect(timeTokens(14, 50)).toEqual(["two", "fortyfive"]);
+    expect(timeTokens(14, 7)).toEqual(["its", "two", "oclock"]);
+    expect(timeTokens(14, 50)).toEqual(["its", "two", "fortyfive"]);
   });
 
   it("only ever emits words that exist as sprites", () => {
@@ -93,5 +96,28 @@ describe("timeTokens", () => {
         }
       }
     }
+  });
+});
+
+describe("formatAnnouncement", () => {
+  it("formats on-the-hour times as It's {hour} o'clock", () => {
+    expect(formatAnnouncement(10, 0)).toBe("It's ten o'clock");
+    expect(formatAnnouncement(22, 0)).toBe("It's ten o'clock");
+    expect(formatAnnouncement(0, 0)).toBe("It's twelve o'clock");
+    expect(formatAnnouncement(12, 0)).toBe("It's twelve o'clock");
+    expect(formatAnnouncement(1, 0)).toBe("It's one o'clock");
+  });
+
+  it("formats quarter-hour times with hyphenated forty-five", () => {
+    expect(formatAnnouncement(14, 30)).toBe("It's two thirty");
+    expect(formatAnnouncement(23, 45)).toBe("It's eleven forty-five");
+  });
+});
+
+describe("formatHourAnnouncement", () => {
+  it("reads the hour from a Date in local time", () => {
+    expect(formatHourAnnouncement(new Date(2026, 5, 15, 10, 0))).toBe(
+      "It's ten o'clock",
+    );
   });
 });

@@ -124,21 +124,40 @@ const MINUTE_WORDS: Record<number, string> = {
   45: "fortyfive",
 };
 
+const TOKEN_PHRASE: Record<string, string> = {
+  its: "It's",
+  oclock: "o'clock",
+  fortyfive: "forty-five",
+};
+
 /**
- * Word-sprite ids that speak a time, 12-hour style: 3:00 -> ["three",
- * "oclock"], 14:30 -> ["two", "thirty"]. Boundaries only land on quarter
- * hours; any other minute rounds down to the nearest supported word so a
- * stray value degrades gracefully instead of going silent.
+ * Word-sprite ids that speak a time, 12-hour style: 10:00 -> ["its", "ten",
+ * "oclock"], 14:30 -> ["its", "two", "thirty"]. Boundaries only land on
+ * quarter hours; any other minute rounds down to the nearest supported word
+ * so a stray value degrades gracefully instead of going silent.
  */
 export function timeTokens(hour24: number, minute: number): string[] {
   const hourWord = HOUR_WORDS[((hour24 % 24) + 24) % 24 % 12];
   const quarter = Math.floor(minute / 15) * 15;
-  if (quarter === 0) return [hourWord, "oclock"];
-  return [hourWord, MINUTE_WORDS[quarter]];
+  if (quarter === 0) return ["its", hourWord, "oclock"];
+  return ["its", hourWord, MINUTE_WORDS[quarter]];
+}
+
+/** Human-readable phrase for a spoken time (e.g. "It's ten o'clock"). */
+export function formatAnnouncement(hour24: number, minute: number): string {
+  return timeTokens(hour24, minute)
+    .map((token) => TOKEN_PHRASE[token] ?? token)
+    .join(" ");
+}
+
+/** On-the-hour announcement phrase from a Date (local time). */
+export function formatHourAnnouncement(date: Date): string {
+  return formatAnnouncement(date.getHours(), date.getMinutes());
 }
 
 /** All word-sprite ids a voice needs preloaded. */
 export const ANNOUNCE_WORDS: readonly string[] = [
+  "its",
   ...HOUR_WORDS,
   ...Object.values(MINUTE_WORDS),
   "oclock",
