@@ -66,13 +66,15 @@ function swellEnvelope(
 }
 
 const bell: VoicePlayer = (ctx, dest, when, volume) => {
-  struck(ctx, dest, when, volume * 0.8, 220, [
+  // Deep temple-bell voicing (#14): low C3-ish fundamental, strong low
+  // partials, soft shimmer on top, and a longer decay to match the pitch.
+  struck(ctx, dest, when, volume * 0.85, 130.81, [
     [1, 1],
-    [2.0, 0.6],
-    [2.76, 0.4],
-    [5.4, 0.25],
-    [8.93, 0.12],
-  ], 7);
+    [2.0, 0.55],
+    [2.76, 0.32],
+    [5.4, 0.16],
+    [8.93, 0.07],
+  ], 9.5);
 };
 
 const chime: VoicePlayer = (ctx, dest, when, volume) => {
