@@ -11,25 +11,47 @@ import {
   getAnnounceVoice,
   nextBoundaryMs,
   timeTokens,
+  wordGapAfterToken,
 } from "@/lib/announce";
-import { scheduleAnnounceWord } from "@/audio/announce-voice";
+import { fadeInDecodedBuffer } from "@/audio/announce-buffer";
+import {
+  VOCODER_DETUNE_CENTS,
+  scheduleAnnounceWord,
+} from "@/audio/announce-voice";
 
 const PUMP_MS = 500;
 const LOOKAHEAD_MS = 1500;
-const WORD_GAP_SEC = 0.12;
+
+/** Fade-in when the announce bus first carries audible output. */
+export const FIRST_OUTPUT_RAMP_SEC = 0.1;
+
+/** Delay before the first word — lets the bus ramp settle. */
+export const FIRST_OUTPUT_SETTLE_SEC = 0.05;
 
 export class AnnounceEngine {
   private settings: AnnounceSettings;
   private timer: ReturnType<typeof setInterval> | null = null;
   private scheduledBoundaryMs = 0;
   private buffers = new Map<string, Map<string, AudioBuffer>>();
+  /** In-flight sprite loads — speak/preview must await these, not an empty map. */
+  private preloadJobs = new Map<string, Promise<void>>();
+  /** False until the first phrase is queued — drives bus warm-up ramp. */
+  private hasScheduledOutput = false;
+  /** Always connected to dest — never connect/disconnect per phrase. */
+  private readonly outputBus: GainNode;
+  private vocoderPrimed = false;
+  /** Bumped on stop() so in-flight speak() aborts after preload. */
+  private speakGeneration = 0;
 
   constructor(
     private readonly ctx: BaseAudioContext,
-    private readonly dest: AudioNode,
+    dest: AudioNode,
     settings: AnnounceSettings,
   ) {
     this.settings = settings;
+    this.outputBus = ctx.createGain();
+    this.outputBus.gain.value = 0;
+    this.outputBus.connect(dest);
   }
 
   start(): void {
@@ -41,7 +63,10 @@ export class AnnounceEngine {
   updateSettings(settings: AnnounceSettings): void {
     const voiceChanged = settings.voiceId !== this.settings.voiceId;
     this.settings = settings;
-    if (voiceChanged) void this.preload(settings.voiceId);
+    if (voiceChanged) {
+      this.vocoderPrimed = false;
+      void this.preload(settings.voiceId);
+    }
   }
 
   /** Speak the upcoming boundary's time immediately (UI preview). */
@@ -58,24 +83,71 @@ export class AnnounceEngine {
   stop(): void {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+    this.scheduledBoundaryMs = 0;
+    this.hasScheduledOutput = false;
+    this.vocoderPrimed = false;
+    this.speakGeneration += 1;
+    this.outputBus.gain.value = 0;
   }
 
   private async preload(voiceId: string): Promise<void> {
     const voice = getAnnounceVoice(voiceId);
-    if (this.buffers.has(voice.dir)) return;
+    if (this.buffers.has(voice.dir)) {
+      this.primeVocoderPath(voice);
+      return;
+    }
+
+    let job = this.preloadJobs.get(voice.dir);
+    if (!job) {
+      job = this.loadVoiceBuffers(voice);
+      this.preloadJobs.set(voice.dir, job);
+      void job.finally(() => this.preloadJobs.delete(voice.dir));
+    }
+    await job;
+    this.primeVocoderPath(voice);
+  }
+
+  private async loadVoiceBuffers(voice: ReturnType<typeof getAnnounceVoice>): Promise<void> {
     const words = new Map<string, AudioBuffer>();
-    this.buffers.set(voice.dir, words);
     await Promise.all(
       ANNOUNCE_WORDS.map(async (word) => {
         try {
           const res = await fetch(`/audio/tts/${voice.dir}/${word}.wav`);
           if (!res.ok) return;
-          words.set(word, await this.ctx.decodeAudioData(await res.arrayBuffer()));
+          const raw = await this.ctx.decodeAudioData(await res.arrayBuffer());
+          words.set(word, fadeInDecodedBuffer(raw));
         } catch {
           // Missing sprite: the word is skipped at speak time.
         }
       }),
     );
+    this.buffers.set(voice.dir, words);
+  }
+
+  /**
+   * Warm the vocoder detune + playbackRate resampler with a sub-audible blip
+   * routed through the permanent bus so the first real "its" does not pop.
+   */
+  private primeVocoderPath(voice: ReturnType<typeof getAnnounceVoice>): void {
+    if (this.vocoderPrimed || voice.id !== "vocoder") return;
+    if (this.ctx.state !== "running") return;
+
+    const buffer = this.buffers.get(voice.dir)?.get("its");
+    if (!buffer) return;
+
+    const t = this.ctx.currentTime;
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = voice.playbackRate;
+    source.detune.value = VOCODER_DETUNE_CENTS;
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0.00001;
+    source.connect(gain).connect(this.outputBus);
+    source.start(t, 0, 0.002);
+    source.stop(t + 0.003);
+
+    this.vocoderPrimed = true;
   }
 
   private async pump(): Promise<void> {
@@ -84,46 +156,65 @@ export class AnnounceEngine {
     const boundaryMs = nextBoundaryMs(nowMs, this.settings.intervalMin);
     if (boundaryMs - nowMs > LOOKAHEAD_MS) return;
     if (boundaryMs === this.scheduledBoundaryMs) return;
-    this.scheduledBoundaryMs = boundaryMs;
 
     const boundary = new Date(boundaryMs);
     const when = this.ctx.currentTime + (boundaryMs - nowMs) / 1000;
-    await this.speak(
+    const scheduled = await this.speak(
       timeTokens(boundary.getHours(), boundary.getMinutes()),
       when,
     );
+    if (scheduled) this.scheduledBoundaryMs = boundaryMs;
   }
 
-  private async speak(tokens: string[], when: number): Promise<void> {
+  private async speak(tokens: string[], when: number): Promise<boolean> {
+    const generation = this.speakGeneration;
     const voice = getAnnounceVoice(this.settings.voiceId);
     await this.preload(voice.id);
+    if (generation !== this.speakGeneration) return false;
     const words = this.buffers.get(voice.dir);
-    if (!words) return;
+    if (!words) return false;
 
-    const gain = this.ctx.createGain();
-    gain.gain.value = this.settings.volume;
-    gain.connect(this.dest);
+    const at = Math.max(when, this.ctx.currentTime);
+    const firstOutput = !this.hasScheduledOutput;
 
-    let at = Math.max(when, this.ctx.currentTime);
-    let lastNode: AudioNode | null = null;
+    if (firstOutput) {
+      this.outputBus.gain.cancelScheduledValues(at);
+      this.outputBus.gain.setValueAtTime(0, at);
+      this.outputBus.gain.linearRampToValueAtTime(
+        this.settings.volume,
+        at + FIRST_OUTPUT_RAMP_SEC,
+      );
+    } else {
+      this.outputBus.gain.setValueAtTime(this.settings.volume, at);
+    }
+
+    let cursor = firstOutput ? at + FIRST_OUTPUT_SETTLE_SEC : at;
+    let scheduled = false;
+    let firstWord = true;
     for (const token of tokens) {
       const buffer = words.get(token);
       if (!buffer) continue;
-      const { stopAt, lastNode: node } = scheduleAnnounceWord(
+      scheduled = true;
+      const { stopAt } = scheduleAnnounceWord(
         this.ctx,
         buffer,
-        gain,
-        at,
+        this.outputBus,
+        cursor,
         voice,
         1,
+        firstOutput && firstWord,
       );
-      at = stopAt + WORD_GAP_SEC;
-      lastNode = node;
+      firstWord = false;
+      cursor = stopAt + wordGapAfterToken(token);
     }
-    if (lastNode && "onended" in lastNode) {
-      (lastNode as AudioScheduledSourceNode).onended = () => gain.disconnect();
-    } else {
-      gain.disconnect();
+    if (!scheduled) {
+      if (firstOutput) {
+        this.outputBus.gain.cancelScheduledValues(at);
+        this.outputBus.gain.setValueAtTime(0, at);
+      }
+      return false;
     }
+    this.hasScheduledOutput = true;
+    return true;
   }
 }

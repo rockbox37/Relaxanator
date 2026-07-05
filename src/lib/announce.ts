@@ -26,7 +26,7 @@ export const ANNOUNCE_VOICES: readonly AnnounceVoiceDef[] = [
     id: "vocoder",
     label: "Vocoder (deep robot)",
     dir: "zarvox",
-    playbackRate: 0.82,
+    playbackRate: 1.025, // 0.82 × 1.25 — 25% faster than pre-revert Zarvox rate
     effect: "plain",
   },
   {
@@ -169,3 +169,13 @@ export const ANNOUNCE_WORDS: readonly string[] = [
   ...Object.values(MINUTE_WORDS),
   "oclock",
 ];
+
+/** Standard pause between spoken words (seconds). Used by announce-engine. */
+export const WORD_GAP_SEC = 0.12;
+/** Shorter pause after the "It's" prefix (50% of {@link WORD_GAP_SEC}). */
+export const WORD_GAP_AFTER_ITS_SEC = 0.06;
+
+/** Gap before the next word, given the token that just finished. */
+export function wordGapAfterToken(token: string): number {
+  return token === "its" ? WORD_GAP_AFTER_ITS_SEC : WORD_GAP_SEC;
+}

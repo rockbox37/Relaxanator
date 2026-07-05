@@ -63,7 +63,11 @@ export default function NoisePlayer() {
       const engine = new NoiseEngine();
       await engine.init(state);
       engineRef.current = engine;
-      if (engine.context && engine.mixBus) {
+      if (engine.context && engine.mixBus && engine.announceBus) {
+        // Resume during the user gesture before priming output paths.
+        await engine.resume();
+        engine.primeAudioOutput();
+
         const meditationEngine = new MeditationEngine(
           engine.context,
           engine.mixBus,
@@ -74,7 +78,7 @@ export default function NoisePlayer() {
 
         const announceEngine = new AnnounceEngine(
           engine.context,
-          engine.mixBus,
+          engine.announceBus,
           announce,
         );
         announceEngine.start();
