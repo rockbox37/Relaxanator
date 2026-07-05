@@ -9,7 +9,7 @@ export interface MeditationVoiceDef {
   label: string;
   description: string;
   /** Key into the synth implementations in src/audio/voices.ts. */
-  synth: "bell" | "deepBell" | "chime" | "drone" | "omm";
+  synth: "bell" | "deepBell" | "chime" | "drone" | "omm" | "fogHorn" | "shipHorn" | "trainHorn";
   defaultIntervalMin: number;
   defaultVolume: number;
 }
@@ -58,6 +58,30 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
     description: "Deep vocal-like omm tone",
     synth: "omm",
     defaultIntervalMin: 5,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "fog-horn",
+    label: "fog horn",
+    description: "Distant, deep fog horn with a long slow decay",
+    synth: "fogHorn",
+    defaultIntervalMin: 25,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "ship-horn",
+    label: "ship's horn",
+    description: "Distant ship's horn with brassy low tones and long decay",
+    synth: "shipHorn",
+    defaultIntervalMin: 22,
+    defaultVolume: 0.55,
+  },
+  {
+    id: "train-horn",
+    label: "train horn",
+    description: "Multi-chime freight train horn with sharp attack and vast reverb",
+    synth: "trainHorn",
+    defaultIntervalMin: 18,
     defaultVolume: 0.45,
   },
 ];

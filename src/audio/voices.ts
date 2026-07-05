@@ -15,6 +15,88 @@ type VoicePlayer = (
   volume: number,
 ) => void;
 
+/** Distant low horn: struck partials through a lowpass with soft attack. */
+function distantHorn(
+  ctx: BaseAudioContext,
+  dest: AudioNode,
+  when: number,
+  volume: number,
+  f0: number,
+  partials: Array<[ratio: number, gain: number]>,
+  decaySec: number,
+  lowpassHz: number,
+  attackSec = 0.12,
+  holdSec = 0,
+  outputScale = 0.6,
+): void {
+  const out = ctx.createGain();
+  out.gain.value = volume * outputScale;
+  out.connect(dest);
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = lowpassHz;
+  lp.Q.value = 0.7;
+  lp.connect(out);
+
+  let remaining = partials.length;
+  for (const [ratio, gain] of partials) {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = f0 * ratio;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(gain, when + attackSec);
+    if (holdSec > 0) {
+      env.gain.setValueAtTime(gain, when + attackSec + holdSec);
+    }
+    env.gain.exponentialRampToValueAtTime(0.0001, when + decaySec);
+    osc.connect(env).connect(lp);
+    osc.start(when);
+    osc.stop(when + decaySec + 0.1);
+    osc.onended = () => {
+      remaining -= 1;
+      if (remaining === 0) {
+        lp.disconnect();
+        out.disconnect();
+      }
+    };
+  }
+}
+
+/** Multi-tap feedback delay for long reverb tails (train horn). */
+function feedbackReverb(
+  ctx: BaseAudioContext,
+  source: AudioNode,
+  wet: GainNode,
+): AudioNode[] {
+  const nodes: AudioNode[] = [];
+  const taps = [
+    { delaySec: 0.067, feedback: 0.78, dampHz: 3400 },
+    { delaySec: 0.089, feedback: 0.74, dampHz: 3000 },
+    { delaySec: 0.113, feedback: 0.71, dampHz: 2600 },
+    { delaySec: 0.149, feedback: 0.68, dampHz: 2200 },
+    { delaySec: 0.197, feedback: 0.64, dampHz: 1800 },
+  ];
+  for (const tap of taps) {
+    const delay = ctx.createDelay(3);
+    delay.delayTime.value = tap.delaySec;
+    const fb = ctx.createGain();
+    fb.gain.value = tap.feedback;
+    const damp = ctx.createBiquadFilter();
+    damp.type = "lowpass";
+    damp.frequency.value = tap.dampHz;
+    damp.Q.value = 0.4;
+    source.connect(delay);
+    delay.connect(damp);
+    damp.connect(fb);
+    fb.connect(delay);
+    delay.connect(wet);
+    nodes.push(delay, fb, damp);
+  }
+  return nodes;
+}
+
 /** Additive struck tone: enharmonic partials with exponential decay. */
 function struck(
   ctx: BaseAudioContext,
@@ -161,12 +243,134 @@ const omm: VoicePlayer = (ctx, dest, when, volume) => {
   fundamental.onended = () => env.disconnect();
 };
 
+const fogHorn: VoicePlayer = (ctx, dest, when, volume) => {
+  // Distant fog horn (#22): low B1 fundamental with strong quint/2nd body,
+  // a short sustained blast, brighter lowpass than before, and higher output
+  // so the tone reads on small speakers while staying deeper than ship/train.
+  distantHorn(ctx, dest, when, volume, 61.74, [
+    [1, 1],
+    [1.5, 0.38],
+    [2, 0.52],
+    [3, 0.14],
+  ], 18, 480, 0.08, 2.8, 0.88);
+};
+
+const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
+  // Ship's horn (#23): D2 fundamental with strong quint partials for a
+  // brassy maritime blast; brightest lowpass and highest output of the horns
+  // for audibility on small speakers while keeping a long decay.
+  distantHorn(ctx, dest, when, volume, 73.42, [
+    [1, 1],
+    [1.5, 0.52],
+    [2, 0.32],
+    [3, 0.12],
+  ], 16, 820, 0.05, 2.5, 1.12);
+};
+
+const trainHorn: VoicePlayer = (ctx, dest, when, volume) => {
+  // Classic freight-train horn (#23): K5LA-style five-chime B-major-6th
+  // cluster (311–622 Hz), sharp bright attack, sustained blast, and enormous
+  // feedback-delay reverb — distinct from fog (low boomy) and ship (brassy D2).
+  const attackSec = 0.004;
+  const holdSec = 2.2;
+  const decaySec = 18;
+  const endSec = when + attackSec + holdSec + decaySec;
+  const stopAt = endSec + 0.1;
+
+  const out = ctx.createGain();
+  out.gain.value = volume * 0.58;
+  out.connect(dest);
+
+  const dry = ctx.createGain();
+  dry.gain.value = 0.32;
+  const wet = ctx.createGain();
+  wet.gain.value = 0.68;
+
+  const tone = ctx.createBiquadFilter();
+  tone.type = "bandpass";
+  tone.frequency.value = 520;
+  tone.Q.value = 0.55;
+
+  const bright = ctx.createBiquadFilter();
+  bright.type = "highpass";
+  bright.frequency.value = 220;
+  bright.Q.value = 0.6;
+
+  tone.connect(bright);
+  bright.connect(dry);
+  dry.connect(out);
+
+  const reverbSend = ctx.createGain();
+  reverbSend.gain.setValueAtTime(1, when);
+  reverbSend.gain.setValueAtTime(1, when + attackSec + holdSec);
+  reverbSend.gain.exponentialRampToValueAtTime(0.0001, when + attackSec + holdSec + 2.5);
+  bright.connect(reverbSend);
+  const reverbNodes = feedbackReverb(ctx, reverbSend, wet);
+  wet.connect(out);
+
+  const cleanupNodes: AudioNode[] = [out, dry, wet, tone, bright, reverbSend, ...reverbNodes];
+
+  // Nathan K5LA American tuning: D♯3, F♯3, G♯3, B3, D♯4
+  const chimes: Array<[hz: number, gain: number]> = [
+    [311.13, 1],
+    [369.99, 0.9],
+    [415.3, 0.84],
+    [493.88, 0.74],
+    [622.25, 0.6],
+  ];
+
+  let remaining = chimes.length;
+  for (const [hz, chimeGain] of chimes) {
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.value = hz;
+
+    const octave = ctx.createOscillator();
+    octave.type = "sine";
+    octave.frequency.value = hz * 2;
+    const octaveGain = ctx.createGain();
+    octaveGain.gain.value = 0.22;
+
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(chimeGain, when + attackSec);
+    env.gain.setValueAtTime(chimeGain, when + attackSec + holdSec);
+    env.gain.exponentialRampToValueAtTime(0.0001, endSec);
+
+    osc.connect(env);
+    octave.connect(octaveGain).connect(env);
+    env.connect(tone);
+    osc.start(when);
+    octave.start(when);
+    osc.stop(stopAt);
+    octave.stop(stopAt);
+    osc.onended = () => {
+      remaining -= 1;
+      if (remaining === 0) {
+        // Let feedback-delay tails finish before disconnecting.
+        setTimeout(() => {
+          for (const node of cleanupNodes) {
+            try {
+              node.disconnect();
+            } catch {
+              /* already disconnected */
+            }
+          }
+        }, 5000);
+      }
+    };
+  }
+};
+
 const PLAYERS: Record<MeditationVoiceDef["synth"], VoicePlayer> = {
   bell,
   deepBell,
   chime,
   drone,
   omm,
+  fogHorn,
+  shipHorn,
+  trainHorn,
 };
 
 export function playVoice(

@@ -18,9 +18,18 @@ function voice(overrides: Partial<VoiceSettings> = {}): VoiceSettings {
 }
 
 describe("MEDITATION_VOICES", () => {
-  it("registers bell, deep-bell, chime, drone, and omm with unique ids", () => {
+  it("registers all meditation voices with unique ids", () => {
     const ids = MEDITATION_VOICES.map((v) => v.id);
-    expect(ids).toEqual(["bell", "deep-bell", "chime", "drone", "omm"]);
+    expect(ids).toEqual([
+      "bell",
+      "deep-bell",
+      "chime",
+      "drone",
+      "omm",
+      "fog-horn",
+      "ship-horn",
+      "train-horn",
+    ]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
