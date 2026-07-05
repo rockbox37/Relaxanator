@@ -22,8 +22,10 @@ describe("ANNOUNCE_VOICES", () => {
     const ids = ANNOUNCE_VOICES.map((v) => v.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain(DEFAULT_ANNOUNCE_VOICE_ID);
-    expect(getAnnounceVoice(DEFAULT_ANNOUNCE_VOICE_ID).effect).toBe("vocoder-saw");
-    expect(getAnnounceVoice(DEFAULT_ANNOUNCE_VOICE_ID).playbackRate).toBeLessThan(1);
+    const vocoder = getAnnounceVoice(DEFAULT_ANNOUNCE_VOICE_ID);
+    expect(vocoder.dir).toBe("zarvox");
+    expect(vocoder.effect).toBe("plain");
+    expect(vocoder.playbackRate).toBe(0.82);
     expect(ids).toContain("speak-spell");
     expect(ids).toContain("hal9000");
     expect(ids).not.toContain("trinoids");

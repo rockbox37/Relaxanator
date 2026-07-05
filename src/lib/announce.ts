@@ -7,7 +7,7 @@
  * src/audio/announce-engine.ts.
  */
 
-export type AnnounceVoiceEffect = "plain" | "vocoder-saw" | "hal";
+export type AnnounceVoiceEffect = "plain" | "hal";
 
 export interface AnnounceVoiceDef {
   id: string;
@@ -27,7 +27,7 @@ export const ANNOUNCE_VOICES: readonly AnnounceVoiceDef[] = [
     label: "Vocoder (deep robot)",
     dir: "zarvox",
     playbackRate: 0.82,
-    effect: "vocoder-saw",
+    effect: "plain",
   },
   {
     id: "speak-spell",
