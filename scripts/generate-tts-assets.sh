@@ -1,10 +1,15 @@
 #!/bin/sh
-# Generate the time-announcement word sprites (issue #17).
+# Generate the time-announcement word sprites (issues #17, #24).
 #
-# Renders the 17 words needed to speak any quarter-hour time with macOS
+# Renders the words needed to speak any quarter-hour time with macOS
 # text-to-speech robot voices, converted to small mono 22.05kHz WAVs under
 # public/audio/tts/<voice>/<word>.wav. Requires macOS (say + afconvert).
 # Re-run only when adding voices or words; the WAVs are committed.
+#
+# The base set (#17) speaks 12-hour times (one..twelve + o'clock + quarters).
+# The extended set (#24) adds the 24-hour hour vocabulary — "zero" plus
+# "thirteen".."twenty-three" — so announcements can honour the OS 24-hour
+# preference (hour 15 reuses the existing "fifteen" minute sprite).
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -20,7 +25,10 @@ HAL_SAY_RATE=155
 # word-id:spoken-text pairs (word ids are the filenames the app requests)
 WORDS="its:It's one:one two:two three:three four:four five:five six:six seven:seven
 eight:eight nine:nine ten:ten eleven:eleven twelve:twelve
-fifteen:fifteen thirty:thirty fortyfive:forty-five oclock:o'clock"
+fifteen:fifteen thirty:thirty fortyfive:forty-five oclock:o'clock
+zero:zero thirteen:thirteen fourteen:fourteen sixteen:sixteen
+seventeen:seventeen eighteen:eighteen nineteen:nineteen twenty:twenty
+twentyone:twenty-one twentytwo:twenty-two twentythree:twenty-three"
 
 for voice_pair in $VOICES; do
   dir=${voice_pair%%:*}

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ANNOUNCE_INTERVALS,
@@ -12,6 +12,7 @@ import {
   formatHourAnnouncement,
   getAnnounceVoice,
   nextBoundaryMs,
+  systemPrefers24Hour,
   timeTokens,
   wordGapAfterToken,
 } from "./announce";
@@ -106,11 +107,77 @@ describe("timeTokens", () => {
   it("only ever emits words that exist as sprites", () => {
     for (let h = 0; h < 24; h += 1) {
       for (const m of [0, 15, 30, 45]) {
-        for (const token of timeTokens(h, m)) {
-          expect(ANNOUNCE_WORDS).toContain(token);
+        for (const hour12 of [true, false]) {
+          for (const token of timeTokens(h, m, { hour12 })) {
+            expect(ANNOUNCE_WORDS).toContain(token);
+          }
         }
       }
     }
+  });
+
+  it("collapses AM/PM to the same 12-hour word by default", () => {
+    expect(timeTokens(10, 0)).toEqual(timeTokens(22, 0));
+    expect(timeTokens(1, 0)).toEqual(timeTokens(13, 0));
+  });
+});
+
+describe("timeTokens (24-hour mode)", () => {
+  it("speaks the literal 0–23 hour word on the hour", () => {
+    expect(timeTokens(0, 0, { hour12: false })).toEqual([
+      "its",
+      "zero",
+      "oclock",
+    ]);
+    expect(timeTokens(10, 0, { hour12: false })).toEqual([
+      "its",
+      "ten",
+      "oclock",
+    ]);
+    expect(timeTokens(13, 0, { hour12: false })).toEqual([
+      "its",
+      "thirteen",
+      "oclock",
+    ]);
+    expect(timeTokens(15, 0, { hour12: false })).toEqual([
+      "its",
+      "fifteen",
+      "oclock",
+    ]);
+    expect(timeTokens(22, 0, { hour12: false })).toEqual([
+      "its",
+      "twentytwo",
+      "oclock",
+    ]);
+    expect(timeTokens(23, 0, { hour12: false })).toEqual([
+      "its",
+      "twentythree",
+      "oclock",
+    ]);
+  });
+
+  it("keeps quarter-hour minute words alongside the 24-hour hour", () => {
+    expect(timeTokens(14, 30, { hour12: false })).toEqual([
+      "its",
+      "fourteen",
+      "thirty",
+    ]);
+    expect(timeTokens(23, 45, { hour12: false })).toEqual([
+      "its",
+      "twentythree",
+      "fortyfive",
+    ]);
+    expect(timeTokens(19, 15, { hour12: false })).toEqual([
+      "its",
+      "nineteen",
+      "fifteen",
+    ]);
+  });
+
+  it("distinguishes AM from PM hours", () => {
+    expect(timeTokens(9, 0, { hour12: false })).not.toEqual(
+      timeTokens(21, 0, { hour12: false }),
+    );
   });
 });
 
@@ -126,6 +193,87 @@ describe("formatAnnouncement", () => {
   it("formats quarter-hour times with hyphenated forty-five", () => {
     expect(formatAnnouncement(14, 30)).toBe("It's two thirty");
     expect(formatAnnouncement(23, 45)).toBe("It's eleven forty-five");
+  });
+
+  it("uses 24-hour hour words with hyphenation when hour12 is false", () => {
+    expect(formatAnnouncement(22, 0, { hour12: false })).toBe(
+      "It's twenty-two o'clock",
+    );
+    expect(formatAnnouncement(13, 0, { hour12: false })).toBe(
+      "It's thirteen o'clock",
+    );
+    expect(formatAnnouncement(0, 0, { hour12: false })).toBe(
+      "It's zero o'clock",
+    );
+    expect(formatAnnouncement(21, 45, { hour12: false })).toBe(
+      "It's twenty-one forty-five",
+    );
+  });
+});
+
+describe("systemPrefers24Hour", () => {
+  const realDateTimeFormat = Intl.DateTimeFormat;
+
+  afterEach(() => {
+    Intl.DateTimeFormat = realDateTimeFormat;
+    vi.restoreAllMocks();
+  });
+
+  /** Force Intl to resolve to the given options (or throw) for the detector. */
+  function stubResolvedOptions(
+    resolved: Partial<Intl.ResolvedDateTimeFormatOptions> | "throw",
+  ): void {
+    Intl.DateTimeFormat = vi.fn(() => {
+      if (resolved === "throw") throw new Error("Intl unavailable");
+      return {
+        resolvedOptions: () =>
+          resolved as Intl.ResolvedDateTimeFormatOptions,
+      };
+    }) as unknown as typeof Intl.DateTimeFormat;
+  }
+
+  it("returns a boolean without throwing on the real environment", () => {
+    expect(typeof systemPrefers24Hour()).toBe("boolean");
+  });
+
+  it("prefers the resolved hour12 flag when present", () => {
+    stubResolvedOptions({ hour12: false });
+    expect(systemPrefers24Hour()).toBe(true);
+    stubResolvedOptions({ hour12: true });
+    expect(systemPrefers24Hour()).toBe(false);
+  });
+
+  it("falls back to hourCycle when hour12 is absent", () => {
+    stubResolvedOptions({ hourCycle: "h23" });
+    expect(systemPrefers24Hour()).toBe(true);
+    stubResolvedOptions({ hourCycle: "h24" });
+    expect(systemPrefers24Hour()).toBe(true);
+    stubResolvedOptions({ hourCycle: "h12" });
+    expect(systemPrefers24Hour()).toBe(false);
+    stubResolvedOptions({ hourCycle: "h11" });
+    expect(systemPrefers24Hour()).toBe(false);
+  });
+
+  it("defaults to 12-hour when neither field is reported", () => {
+    stubResolvedOptions({});
+    expect(systemPrefers24Hour()).toBe(false);
+  });
+
+  it("defaults to 12-hour when Intl throws", () => {
+    stubResolvedOptions("throw");
+    expect(systemPrefers24Hour()).toBe(false);
+  });
+
+  it("agrees with a 24-hour locale's resolved formatting", () => {
+    // en-GB resolves to a 24-hour clock; the detector reads Intl the same way.
+    const resolved = new realDateTimeFormat("en-GB", {
+      hour: "numeric",
+    }).resolvedOptions();
+    const is24h =
+      typeof resolved.hour12 === "boolean"
+        ? !resolved.hour12
+        : resolved.hourCycle === "h23" || resolved.hourCycle === "h24";
+    expect(is24h).toBe(true);
   });
 });
 
