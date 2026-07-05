@@ -26,7 +26,11 @@ function mockAudioContext(state: AudioContextState = "running") {
     },
     createGain() {
       return {
-        gain: { value: 1 },
+        gain: {
+          value: 1,
+          setValueAtTime(_value: number, _time: number) {},
+          linearRampToValueAtTime(_value: number, _time: number) {},
+        },
         connect(dest: unknown) {
           return dest;
         },

@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
   HAL_OUTPUT_GAIN,
+  PLAIN_ATTACK_SEC,
   VOCODER_DETUNE_CENTS,
   scheduleAnnounceWord,
 } from "./announce-voice";
@@ -38,7 +39,18 @@ function mockAudioContext() {
       return source;
     },
     createGain() {
-      const gain = { type: "gain", gain: { value: 1 }, connect(dest: unknown) { return dest; } };
+      const gainParam = {
+        value: 1,
+        setValueAtTime(_value: number, _time: number) {},
+        linearRampToValueAtTime(_value: number, _time: number) {},
+      };
+      const gain = {
+        type: "gain",
+        gain: gainParam,
+        connect(dest: unknown) {
+          return dest;
+        },
+      };
       nodes.push(gain);
       return gain;
     },
@@ -99,6 +111,31 @@ describe("scheduleAnnounceWord detune", () => {
     const source = nodes.find((n) => n.type === "source");
     expect(source?.detune?.value).toBe(-75);
     expect(source?.playbackRate?.value).toBe(0.88);
+  });
+
+  it("applies a short linear attack on plain (vocoder) word gain", () => {
+    const { ctx, nodes } = mockAudioContext();
+    const voice = getAnnounceVoice("vocoder");
+    const when = 1.25;
+    const volume = 0.6;
+    const setValueAtTime = vi.fn();
+    const linearRampToValueAtTime = vi.fn();
+    const origCreateGain = ctx.createGain.bind(ctx);
+    ctx.createGain = () => {
+      const gain = origCreateGain();
+      gain.gain.setValueAtTime = setValueAtTime;
+      gain.gain.linearRampToValueAtTime = linearRampToValueAtTime;
+      return gain;
+    };
+
+    scheduleAnnounceWord(ctx, buffer, dest, when, voice, volume);
+
+    expect(setValueAtTime).toHaveBeenCalledWith(0, when);
+    expect(linearRampToValueAtTime).toHaveBeenCalledWith(
+      volume,
+      when + PLAIN_ATTACK_SEC,
+    );
+    expect(nodes.find((n) => n.type === "gain")).toBeDefined();
   });
 });
 

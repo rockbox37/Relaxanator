@@ -13,6 +13,9 @@ const HAL_DETUNE_CENTS = -75;
 /** Vocoder (Zarvox) pitch drop: 3 whole steps = 6 semitones below playbackRate pitch. */
 export const VOCODER_DETUNE_CENTS = -600;
 
+/** Linear fade-in on plain sprites — avoids buffer-edge clicks on first play. */
+export const PLAIN_ATTACK_SEC = 0.01;
+
 export type AnnounceWordHandle = {
   stopAt: number;
   lastNode: AudioNode;
@@ -38,7 +41,8 @@ function schedulePlain(
     source.detune.value = detuneCents;
   }
   const gain = ctx.createGain();
-  gain.gain.value = volume;
+  gain.gain.setValueAtTime(0, when);
+  gain.gain.linearRampToValueAtTime(volume, when + PLAIN_ATTACK_SEC);
   source.connect(gain).connect(dest);
   source.start(when);
   return {
