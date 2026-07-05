@@ -64,11 +64,12 @@ function distantHorn(
   }
 }
 
-/** Multi-tap feedback delay for long reverb tails (train horn). */
+/** Multi-tap feedback delay for long reverb tails (train / ship horns). */
 function feedbackReverb(
   ctx: BaseAudioContext,
   source: AudioNode,
   wet: GainNode,
+  feedbackBoost = 0,
 ): AudioNode[] {
   const nodes: AudioNode[] = [];
   const taps = [
@@ -82,7 +83,7 @@ function feedbackReverb(
     const delay = ctx.createDelay(3);
     delay.delayTime.value = tap.delaySec;
     const fb = ctx.createGain();
-    fb.gain.value = tap.feedback;
+    fb.gain.value = Math.min(0.92, tap.feedback + feedbackBoost);
     const damp = ctx.createBiquadFilter();
     damp.type = "lowpass";
     damp.frequency.value = tap.dampHz;
@@ -398,15 +399,88 @@ const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
 };
 
 const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
-  // Higher ship's horn (#26): D3 fundamental (octave above ship horn), sharper
-  // attack, brighter lowpass, and slightly stronger quint/2nd partials for a
-  // distinct but still brassy maritime blast with long decay.
-  distantHorn(ctx, dest, when, volume, 146.84, [
+  // Higher ship's horn (#26): D3 maritime blast with brassy quint-heavy partials,
+  // very sharp attack, sustained body, and massive feedback-delay reverb — wetter
+  // and longer-tailed than train horn while staying distinct from ship horn 1.
+  const attackSec = 0.018;
+  const holdSec = 2.2;
+  const decaySec = 22;
+  const endSec = when + attackSec + holdSec + decaySec;
+  const stopAt = endSec + 0.1;
+  const f0 = 146.84; // D3
+
+  const out = ctx.createGain();
+  out.gain.value = volume * 0.64;
+  out.connect(dest);
+
+  const dry = ctx.createGain();
+  dry.gain.value = 0.14;
+  const wet = ctx.createGain();
+  wet.gain.value = 0.86;
+
+  const tone = ctx.createBiquadFilter();
+  tone.type = "bandpass";
+  tone.frequency.value = 340;
+  tone.Q.value = 0.48;
+
+  const bright = ctx.createBiquadFilter();
+  bright.type = "highpass";
+  bright.frequency.value = 88;
+  bright.Q.value = 0.55;
+
+  tone.connect(bright);
+  bright.connect(dry);
+  dry.connect(out);
+
+  const reverbSend = ctx.createGain();
+  reverbSend.gain.setValueAtTime(1, when);
+  reverbSend.gain.setValueAtTime(1, when + attackSec + holdSec);
+  reverbSend.gain.exponentialRampToValueAtTime(0.0001, when + attackSec + holdSec + 4);
+  bright.connect(reverbSend);
+  const reverbNodes = feedbackReverb(ctx, reverbSend, wet, 0.08);
+  wet.connect(out);
+
+  const cleanupNodes: AudioNode[] = [out, dry, wet, tone, bright, reverbSend, ...reverbNodes];
+
+  const partials: Array<[ratio: number, gain: number]> = [
     [1, 1],
-    [1.5, 0.55],
-    [2, 0.36],
-    [3, 0.14],
-  ], 16, 1000, 0.035, 2.4, 1.1);
+    [1.25, 0.3],
+    [1.5, 0.64],
+    [2, 0.46],
+    [2.5, 0.18],
+    [3, 0.2],
+  ];
+
+  let remaining = partials.length;
+  for (const [ratio, gain] of partials) {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = f0 * ratio;
+
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(gain, when + attackSec);
+    env.gain.setValueAtTime(gain, when + attackSec + holdSec);
+    env.gain.exponentialRampToValueAtTime(0.0001, endSec);
+
+    osc.connect(env).connect(tone);
+    osc.start(when);
+    osc.stop(stopAt);
+    osc.onended = () => {
+      remaining -= 1;
+      if (remaining === 0) {
+        setTimeout(() => {
+          for (const node of cleanupNodes) {
+            try {
+              node.disconnect();
+            } catch {
+              /* already disconnected */
+            }
+          }
+        }, 6000);
+      }
+    };
+  }
 };
 
 const trainHorn: VoicePlayer = (ctx, dest, when, volume) => {
