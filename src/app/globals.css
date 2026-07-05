@@ -199,6 +199,20 @@ main > p {
   cursor: not-allowed;
 }
 
+.announce .voice-interval select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.3rem 0.4rem;
+}
+
+.announce-note {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 @media (max-width: 560px) {
   .eq {
     grid-template-columns: repeat(5, 1fr);

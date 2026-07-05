@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { AnnounceEngine } from "@/audio/announce-engine";
 import { MeditationEngine } from "@/audio/meditation-engine";
 import { NoiseEngine } from "@/audio/noise-engine";
 import {
@@ -10,6 +11,10 @@ import {
   formatFrequency,
   withBandGain,
 } from "@/lib/eq";
+import {
+  type AnnounceSettings,
+  createDefaultAnnounceSettings,
+} from "@/lib/announce";
 import {
   type MeditationSettings,
   type VoiceSettings,
@@ -23,19 +28,26 @@ import {
 } from "@/lib/noise";
 
 import MeditationPanel from "./MeditationPanel";
+import TimeAnnouncePanel from "./TimeAnnouncePanel";
 
 export default function NoisePlayer() {
   const engineRef = useRef<NoiseEngine | null>(null);
   const meditationRef = useRef<MeditationEngine | null>(null);
+  const announceRef = useRef<AnnounceEngine | null>(null);
   const [state, setState] = useState(createDefaultNoiseState);
   const [meditation, setMeditation] = useState<MeditationSettings>(
     createDefaultMeditationSettings,
+  );
+  const [announce, setAnnounce] = useState<AnnounceSettings>(
+    createDefaultAnnounceSettings,
   );
   const [playing, setPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     return () => {
+      announceRef.current?.stop();
+      announceRef.current = null;
       meditationRef.current?.stop();
       meditationRef.current = null;
       engineRef.current?.dispose();
@@ -59,6 +71,14 @@ export default function NoisePlayer() {
           );
           meditationEngine.start();
           meditationRef.current = meditationEngine;
+
+          const announceEngine = new AnnounceEngine(
+            engine.context,
+            engine.mixBus,
+            announce,
+          );
+          announceEngine.start();
+          announceRef.current = announceEngine;
         }
       } finally {
         setStarting(false);
@@ -99,6 +119,18 @@ export default function NoisePlayer() {
 
   function previewVoice(voiceId: string) {
     meditationRef.current?.preview(voiceId);
+  }
+
+  function changeAnnounce(update: Partial<AnnounceSettings>) {
+    setAnnounce((a) => {
+      const next = { ...a, ...update };
+      announceRef.current?.updateSettings(next);
+      return next;
+    });
+  }
+
+  function previewAnnounce() {
+    void announceRef.current?.preview();
   }
 
   return (
@@ -165,6 +197,13 @@ export default function NoisePlayer() {
         settings={meditation}
         onChange={changeVoice}
         onPreview={previewVoice}
+        previewEnabled={playing}
+      />
+
+      <TimeAnnouncePanel
+        settings={announce}
+        onChange={changeAnnounce}
+        onPreview={previewAnnounce}
         previewEnabled={playing}
       />
     </section>
