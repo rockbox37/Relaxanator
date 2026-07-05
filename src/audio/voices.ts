@@ -64,13 +64,23 @@ function distantHorn(
   }
 }
 
+interface FeedbackReverbOptions {
+  /** Multiplier applied to each tap's dampHz (default 1). */
+  dampScale?: number;
+  /** Route wet taps through the per-tap damp filter instead of raw delay out. */
+  wetFromDamp?: boolean;
+}
+
 /** Multi-tap feedback delay for long reverb tails (train / ship horns). */
 function feedbackReverb(
   ctx: BaseAudioContext,
   source: AudioNode,
   wet: GainNode,
   feedbackBoost = 0,
+  options: FeedbackReverbOptions = {},
 ): AudioNode[] {
+  const dampScale = options.dampScale ?? 1;
+  const wetFromDamp = options.wetFromDamp ?? false;
   const nodes: AudioNode[] = [];
   const taps = [
     { delaySec: 0.067, feedback: 0.78, dampHz: 3400 },
@@ -86,13 +96,13 @@ function feedbackReverb(
     fb.gain.value = Math.min(0.92, tap.feedback + feedbackBoost);
     const damp = ctx.createBiquadFilter();
     damp.type = "lowpass";
-    damp.frequency.value = tap.dampHz;
+    damp.frequency.value = tap.dampHz * dampScale;
     damp.Q.value = 0.4;
     source.connect(delay);
     delay.connect(damp);
     damp.connect(fb);
     fb.connect(delay);
-    delay.connect(wet);
+    (wetFromDamp ? damp : delay).connect(wet);
     nodes.push(delay, fb, damp);
   }
   return nodes;
@@ -312,8 +322,14 @@ interface GatedTwoBlastOptions {
   wetGain?: number;
   feedbackBoost?: number;
   reverbTailSec?: number;
+  reverbSendFadeSec?: number;
+  reverbDampScale?: number;
+  reverbWetFromDamp?: boolean;
+  wetHighCutHz?: number;
   outputScale?: number;
   oscType?: OscillatorType;
+  tone1Partials?: Array<[ratio: number, gain: number]>;
+  tone2Partials?: Array<[ratio: number, gain: number]>;
 }
 
 /** Two hard-gated sequential horn blasts with heavy feedback-delay reverb. */
@@ -335,8 +351,21 @@ function gatedTwoBlastHorn(
   const wetGain = options.wetGain ?? 0.78;
   const feedbackBoost = options.feedbackBoost ?? 0;
   const reverbTailSec = options.reverbTailSec ?? 18;
+  const reverbSendFadeSec = options.reverbSendFadeSec ?? 3;
   const outputScale = options.outputScale ?? 0.62;
   const oscType = options.oscType ?? "sine";
+  const tone1Partials = options.tone1Partials ?? [
+    [1, 1],
+    [1.5, 0.44],
+    [2, 0.5],
+    [3, 0.12],
+  ];
+  const tone2Partials = options.tone2Partials ?? [
+    [1, 1],
+    [1.5, 0.42],
+    [2, 0.48],
+    [3, 0.1],
+  ];
 
   const tone1When = when;
   const tone2When = when + tone1DurSec;
@@ -358,27 +387,59 @@ function gatedTwoBlastHorn(
   const reverbSend = ctx.createGain();
   reverbSend.gain.setValueAtTime(1, when);
   reverbSend.gain.setValueAtTime(1, tone2When + tone2DurSec);
-  reverbSend.gain.exponentialRampToValueAtTime(0.0001, tone2When + tone2DurSec + 3);
+  reverbSend.gain.exponentialRampToValueAtTime(
+    0.0001,
+    tone2When + tone2DurSec + reverbSendFadeSec,
+  );
   bus.connect(reverbSend);
-  const reverbNodes = feedbackReverb(ctx, reverbSend, wet, feedbackBoost);
-  wet.connect(out);
+
+  let wetOut: AudioNode = wet;
+  const cleanupNodes: AudioNode[] = [out, dry, wet, bus, reverbSend];
+  if (options.wetHighCutHz != null) {
+    const wetCut = ctx.createBiquadFilter();
+    wetCut.type = "lowpass";
+    wetCut.frequency.value = options.wetHighCutHz;
+    wetCut.Q.value = 0.5;
+    wet.connect(wetCut);
+    wetOut = wetCut;
+    cleanupNodes.push(wetCut);
+  }
+
+  const reverbNodes = feedbackReverb(ctx, reverbSend, wet, feedbackBoost, {
+    dampScale: options.reverbDampScale,
+    wetFromDamp: options.reverbWetFromDamp,
+  });
+  wetOut.connect(out);
   dry.connect(out);
+  cleanupNodes.push(...reverbNodes);
 
-  const cleanupNodes: AudioNode[] = [out, dry, wet, bus, reverbSend, ...reverbNodes];
+  gatedHornBlast(
+    ctx,
+    bus,
+    tone1When,
+    1,
+    tone1F0,
+    tone1Partials,
+    tone1DurSec,
+    tone1LowpassHz,
+    attackSec,
+    0.9,
+    oscType,
+  );
 
-  gatedHornBlast(ctx, bus, tone1When, 1, tone1F0, [
-    [1, 1],
-    [1.5, 0.44],
-    [2, 0.5],
-    [3, 0.12],
-  ], tone1DurSec, tone1LowpassHz, attackSec, 0.9, oscType);
-
-  gatedHornBlast(ctx, bus, tone2When, 1, tone2F0, [
-    [1, 1],
-    [1.5, 0.42],
-    [2, 0.48],
-    [3, 0.1],
-  ], tone2DurSec, tone2LowpassHz, attackSec, 0.9, oscType);
+  gatedHornBlast(
+    ctx,
+    bus,
+    tone2When,
+    1,
+    tone2F0,
+    tone2Partials,
+    tone2DurSec,
+    tone2LowpassHz,
+    attackSec,
+    0.9,
+    oscType,
+  );
 
   const delayMs = Math.max(0, (sequenceEnd - ctx.currentTime) * 1000) + 5000;
   setTimeout(() => {
@@ -431,16 +492,32 @@ const fogHorn4: VoicePlayer = (ctx, dest, when, volume) => {
   // lower G2 long blast — classic 60s Cinesound tug/film horn (101 Dalmations,
   // Gerry Anderson). Triangle partials for warm vinyl character; much wetter
   // reverb than fog horns 2/3.
-  gatedTwoBlastHorn(ctx, dest, when, volume, FOG_HORN_4_TONE1_HZ, FOG_HORN_4_TONE2_HZ, 620, 520, {
+  gatedTwoBlastHorn(ctx, dest, when, volume, FOG_HORN_4_TONE1_HZ, FOG_HORN_4_TONE2_HZ, 480, 400, {
     attackSec: 0.05,
     tone1DurSec: 0.85,
     tone2DurSec: 2.15,
     dryGain: 0.08,
     wetGain: 0.92,
-    feedbackBoost: 0.1,
+    feedbackBoost: 0.06,
     reverbTailSec: 24,
+    reverbSendFadeSec: 1.2,
+    reverbDampScale: 0.48,
+    reverbWetFromDamp: true,
+    wetHighCutHz: 720,
     outputScale: 0.6,
     oscType: "triangle",
+    tone1Partials: [
+      [1, 1],
+      [1.5, 0.4],
+      [2, 0.42],
+      [3, 0.04],
+    ],
+    tone2Partials: [
+      [1, 1],
+      [1.5, 0.38],
+      [2, 0.4],
+      [3, 0.03],
+    ],
   });
 };
 
