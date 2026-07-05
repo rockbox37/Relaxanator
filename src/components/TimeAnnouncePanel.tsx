@@ -10,14 +10,14 @@ interface TimeAnnouncePanelProps {
   settings: AnnounceSettings;
   onChange: (update: Partial<AnnounceSettings>) => void;
   onPreview: () => void;
-  previewEnabled: boolean;
+  previewDisabled?: boolean;
 }
 
 export default function TimeAnnouncePanel({
   settings,
   onChange,
   onPreview,
-  previewEnabled,
+  previewDisabled = false,
 }: TimeAnnouncePanelProps) {
   return (
     <section className="meditation announce" aria-label="Time announcements">
@@ -76,12 +76,8 @@ export default function TimeAnnouncePanel({
           type="button"
           className="voice-preview"
           onClick={onPreview}
-          disabled={!previewEnabled}
-          title={
-            previewEnabled
-              ? "Hear the next announcement now"
-              : "Press Play first"
-          }
+          disabled={previewDisabled}
+          title="Hear the next announcement now"
         >
           ♪
         </button>

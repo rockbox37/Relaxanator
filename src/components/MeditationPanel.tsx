@@ -13,14 +13,14 @@ interface MeditationPanelProps {
   settings: MeditationSettings;
   onChange: (voiceId: string, update: Partial<VoiceSettings>) => void;
   onPreview: (voiceId: string) => void;
-  previewEnabled: boolean;
+  previewDisabled?: boolean;
 }
 
 export default function MeditationPanel({
   settings,
   onChange,
   onPreview,
-  previewEnabled,
+  previewDisabled = false,
 }: MeditationPanelProps) {
   return (
     <section className="meditation" aria-label="Meditation sounds">
@@ -82,8 +82,8 @@ export default function MeditationPanel({
                 type="button"
                 className="voice-preview"
                 onClick={() => onPreview(voice.id)}
-                disabled={!previewEnabled}
-                title={previewEnabled ? `Play ${voice.label} now` : "Press Play first"}
+                disabled={previewDisabled}
+                title={`Play ${voice.label} now`}
               >
                 ♪
               </button>

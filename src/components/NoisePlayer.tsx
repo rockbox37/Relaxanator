@@ -55,40 +55,58 @@ export default function NoisePlayer() {
     };
   }, []);
 
+  async function ensureEngines(): Promise<NoiseEngine | null> {
+    if (engineRef.current) return engineRef.current;
+    if (starting) return null;
+    setStarting(true);
+    try {
+      const engine = new NoiseEngine();
+      await engine.init(state);
+      engineRef.current = engine;
+      if (engine.context && engine.mixBus) {
+        const meditationEngine = new MeditationEngine(
+          engine.context,
+          engine.mixBus,
+          meditation,
+        );
+        meditationEngine.start();
+        meditationRef.current = meditationEngine;
+
+        const announceEngine = new AnnounceEngine(
+          engine.context,
+          engine.mixBus,
+          announce,
+        );
+        announceEngine.start();
+        announceRef.current = announceEngine;
+      }
+      return engine;
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  /** Resume AudioContext for preview without audible noise when not playing. */
+  async function ensurePreviewAudio(): Promise<boolean> {
+    const engine = await ensureEngines();
+    if (!engine) return false;
+    await engine.resume();
+    if (!playing) {
+      engine.setMasterVolume(0);
+    }
+    return true;
+  }
+
   async function togglePlay() {
     if (starting) return;
-    if (!engineRef.current) {
-      setStarting(true);
-      try {
-        const engine = new NoiseEngine();
-        await engine.init(state);
-        engineRef.current = engine;
-        if (engine.context && engine.mixBus) {
-          const meditationEngine = new MeditationEngine(
-            engine.context,
-            engine.mixBus,
-            meditation,
-          );
-          meditationEngine.start();
-          meditationRef.current = meditationEngine;
-
-          const announceEngine = new AnnounceEngine(
-            engine.context,
-            engine.mixBus,
-            announce,
-          );
-          announceEngine.start();
-          announceRef.current = announceEngine;
-        }
-      } finally {
-        setStarting(false);
-      }
-    }
+    const engine = await ensureEngines();
+    if (!engine) return;
     if (playing) {
-      await engineRef.current?.suspend();
+      await engine.suspend();
       setPlaying(false);
     } else {
-      await engineRef.current?.resume();
+      await engine.resume();
+      engine.setMasterVolume(state.masterVolume);
       setPlaying(true);
     }
   }
@@ -106,7 +124,9 @@ export default function NoisePlayer() {
   function changeMasterVolume(volume: number) {
     const clamped = clampVolume(volume);
     setState((s) => ({ ...s, masterVolume: clamped }));
-    engineRef.current?.setMasterVolume(clamped);
+    if (playing) {
+      engineRef.current?.setMasterVolume(clamped);
+    }
   }
 
   function changeVoice(voiceId: string, update: Partial<VoiceSettings>) {
@@ -117,7 +137,8 @@ export default function NoisePlayer() {
     });
   }
 
-  function previewVoice(voiceId: string) {
+  async function previewVoice(voiceId: string) {
+    if (!(await ensurePreviewAudio())) return;
     meditationRef.current?.preview(voiceId);
   }
 
@@ -129,8 +150,9 @@ export default function NoisePlayer() {
     });
   }
 
-  function previewAnnounce() {
-    void announceRef.current?.preview();
+  async function previewAnnounce() {
+    if (!(await ensurePreviewAudio())) return;
+    await announceRef.current?.preview();
   }
 
   return (
@@ -197,14 +219,14 @@ export default function NoisePlayer() {
         settings={meditation}
         onChange={changeVoice}
         onPreview={previewVoice}
-        previewEnabled={playing}
+        previewDisabled={starting}
       />
 
       <TimeAnnouncePanel
         settings={announce}
         onChange={changeAnnounce}
         onPreview={previewAnnounce}
-        previewEnabled={playing}
+        previewDisabled={starting}
       />
     </section>
   );
