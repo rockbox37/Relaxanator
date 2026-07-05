@@ -111,6 +111,22 @@ export default function NoisePlayer() {
     }
   }
 
+  /** Silence everything immediately; Play and preview can resume afterward. */
+  async function stopAllSounds() {
+    if (starting) return;
+    const engine = engineRef.current;
+    if (!engine) return;
+
+    await engine.suspend();
+    engine.setMasterVolume(0);
+    setPlaying(false);
+
+    meditationRef.current?.stop();
+    meditationRef.current?.start();
+    announceRef.current?.stop();
+    announceRef.current?.start();
+  }
+
   function selectColor(color: NoiseColor) {
     setState((s) => ({ ...s, color }));
     engineRef.current?.setColor(color);
@@ -158,15 +174,25 @@ export default function NoisePlayer() {
   return (
     <section className="player">
       <div className="transport">
-        <button
-          type="button"
-          className="play"
-          onClick={togglePlay}
-          disabled={starting}
-          aria-pressed={playing}
-        >
-          {starting ? "Starting…" : playing ? "Pause" : "Play"}
-        </button>
+        <div className="transport-controls">
+          <button
+            type="button"
+            className="play"
+            onClick={togglePlay}
+            disabled={starting}
+            aria-pressed={playing}
+          >
+            {starting ? "Starting…" : playing ? "Pause" : "Play"}
+          </button>
+          <button
+            type="button"
+            className="stop-all"
+            onClick={() => void stopAllSounds()}
+            disabled={starting}
+          >
+            Stop All Sounds
+          </button>
+        </div>
 
         <fieldset className="colors">
           <legend>Noise color</legend>
