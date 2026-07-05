@@ -92,11 +92,16 @@ const deepBell: VoicePlayer = (ctx, dest, when, volume) => {
 };
 
 const chime: VoicePlayer = (ctx, dest, when, volume) => {
-  struck(ctx, dest, when, volume * 0.6, 880, [
+  // Re-voiced much lower with a minor-third tierce and longer ring (#18):
+  // C4 fundamental keeps it a lighter strike than Bell (C3) and Deep Bell
+  // (F2) while sharing the same bittersweet minor-third character.
+  struck(ctx, dest, when, volume * 0.65, 261.63, [
     [1, 1],
-    [2.76, 0.5],
-    [5.4, 0.2],
-  ], 3);
+    [1.2, 0.5],
+    [2.0, 0.28],
+    [2.76, 0.16],
+    [5.4, 0.06],
+  ], 8);
 };
 
 const drone: VoicePlayer = (ctx, dest, when, volume) => {
