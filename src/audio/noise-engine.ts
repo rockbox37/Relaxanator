@@ -41,7 +41,7 @@ export class NoiseEngine {
   /**
    * Permanent announce output bus — wired directly to the destination,
    * bypassing the noise limiter so TTS never hits a cold compressor on
-   * first connect. Gain stays at 0 until AnnounceEngine ramps it.
+   * first connect. Unity gain: AnnounceEngine ramps its own outputBus.
    */
   get announceBus(): AudioNode | null {
     return this.announceOut;
@@ -84,7 +84,7 @@ export class NoiseEngine {
     limiter.release.value = 0.25;
 
     const announceOut = ctx.createGain();
-    announceOut.gain.value = 0;
+    announceOut.gain.value = 1;
 
     let tail: AudioNode = source;
     for (const band of bands) {
