@@ -7,7 +7,7 @@
   },
   "plan": {
     "title": "Meditation sound scheduler",
-    "status": "running",
+    "status": "completed",
     "narratives": {
       "Overview": "Periodic meditation sounds layered over the noise bed: bell, chime, drones, and omm voices now, with an extensible registry for deep tones inspired by Manding music (Mali/Guinea) to be specified later. Hybrid production: samples where realism matters (bell, chime), synthesis where flexibility matters (drones, omm, deep tones).",
       "Requirements": "FR-1: Sound library with bell and chime (samples) and drone and omm (synthesized) voices. FR-2: Per-sound enable, volume, interval, and optional randomized jitter, all saved into presets. FR-3: Sound registry is extensible so new voices (Manding-inspired deep tones) can be added without reworking the scheduler. NFR-1: Scheduling is driven by the AudioContext clock and stays accurate in background tabs. NFR-2: Tones mix over the noise bed without clipping (headroom/limiting on the master bus)."
@@ -15,21 +15,21 @@
     "items": [
       {
         "title": "Voice registry with sample and synth voice types",
-        "status": "pending",
+        "status": "completed",
         "narrative": {
           "Traces": "FR-1, FR-3"
         }
       },
       {
         "title": "Per-sound scheduler (interval, jitter, volume) on the audio clock",
-        "status": "pending",
+        "status": "completed",
         "narrative": {
           "Traces": "FR-2, NFR-1"
         }
       },
       {
         "title": "Mix bus headroom and scheduling UI",
-        "status": "pending",
+        "status": "completed",
         "narrative": {
           "Traces": "FR-2, NFR-2"
         }
@@ -42,6 +42,9 @@
         "TrustLevel": "external"
       }
     ],
-    "updated": "2026-07-05T02:56:26Z"
+    "updated": "2026-07-05T03:17:21Z",
+    "metadata": {
+      "completedAt": "2026-07-05T03:17:21Z"
+    }
   }
 }
