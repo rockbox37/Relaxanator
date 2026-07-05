@@ -6,6 +6,10 @@ import { ANNOUNCE_WORDS } from "../lib/announce";
 function mockAudioContext(state: AudioContextState = "running") {
   const decodeAudioData = vi.fn(async (buf: ArrayBuffer) => ({
     duration: 0.2,
+    length: 4410,
+    sampleRate: 22050,
+    numberOfChannels: 1,
+    getChannelData: () => new Float32Array(4410).fill(0.1),
     byteLength: buf.byteLength,
   }));
   return {
@@ -20,14 +24,16 @@ function mockAudioContext(state: AudioContextState = "running") {
         connect(next: { connect: (d: unknown) => unknown }) {
           return next;
         },
-        start(_when: number, _offset?: number) {},
+        start(_when: number, _offset?: number, _duration?: number) {},
+        stop(_when?: number) {},
         onended: null as (() => void) | null,
       };
     },
     createGain() {
       return {
         gain: {
-          value: 1,
+          value: 0,
+          cancelScheduledValues(_time: number) {},
           setValueAtTime(_value: number, _time: number) {},
           linearRampToValueAtTime(_value: number, _time: number) {},
         },
@@ -82,7 +88,7 @@ describe("AnnounceEngine preload", () => {
     expect(bufferSources).toBeGreaterThan(0);
   });
 
-  it("ramps the announce bus on first output, then steps gain on later phrases", async () => {
+  it("connects a permanent output bus at construction and ramps it on first output", async () => {
     const ctx = mockAudioContext();
     const setValueAtTime = vi.fn();
     const linearRampToValueAtTime = vi.fn();
@@ -104,9 +110,11 @@ describe("AnnounceEngine preload", () => {
       volume: 0.6,
     });
 
+    expect(gainCount).toBe(1);
+
     engine.start();
     await engine.preview();
-    expect(gainCount).toBeGreaterThan(0);
+    expect(gainCount).toBeGreaterThan(1);
     expect(setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
     const busRamp = linearRampToValueAtTime.mock.calls.find((c) => c[0] === 0.6);
     expect(busRamp).toBeDefined();
@@ -118,18 +126,21 @@ describe("AnnounceEngine preload", () => {
     expect(
       linearRampToValueAtTime.mock.calls.find((c) => c[0] === 0.6),
     ).toBeUndefined();
+    expect(setValueAtTime).toHaveBeenCalledWith(0.6, expect.any(Number));
   });
 
   it("delays the first word until after the settle offset", async () => {
     const ctx = mockAudioContext();
-    const startCalls: number[] = [];
+    const phraseStarts: number[] = [];
     const origCreate = ctx.createBufferSource.bind(ctx);
     ctx.createBufferSource = () => {
       const source = origCreate();
       const origStart = source.start.bind(source);
-      source.start = (when: number) => {
-        startCalls.push(when);
-        origStart(when);
+      source.start = (when: number, offset?: number, duration?: number) => {
+        if (duration === undefined) {
+          phraseStarts.push(when);
+        }
+        origStart(when, offset, duration);
       };
       return source;
     };
@@ -145,12 +156,12 @@ describe("AnnounceEngine preload", () => {
     engine.start();
     await engine.preview();
 
-    expect(startCalls.length).toBeGreaterThan(0);
-    expect(startCalls[0]).toBeCloseTo(0.05 + FIRST_OUTPUT_SETTLE_SEC);
+    expect(phraseStarts.length).toBeGreaterThan(0);
+    expect(phraseStarts[0]).toBeCloseTo(0.05 + FIRST_OUTPUT_SETTLE_SEC);
 
-    startCalls.length = 0;
+    phraseStarts.length = 0;
     await engine.preview();
-    expect(startCalls[0]).toBeCloseTo(0.05);
+    expect(phraseStarts[0]).toBeCloseTo(0.05);
   });
 
   it("resets the first-output ramp after stop()", async () => {
@@ -181,5 +192,36 @@ describe("AnnounceEngine preload", () => {
     expect(
       linearRampToValueAtTime.mock.calls.find((c) => c[0] === 0.6),
     ).toBeDefined();
+  });
+
+  it("primes the vocoder detune path after preload", async () => {
+    const ctx = mockAudioContext();
+    const detuneValues: number[] = [];
+    const origCreate = ctx.createBufferSource.bind(ctx);
+    ctx.createBufferSource = () => {
+      const source = origCreate();
+      Object.defineProperty(source.detune, "value", {
+        set(v: number) {
+          detuneValues.push(v);
+        },
+        get() {
+          return detuneValues.at(-1) ?? 0;
+        },
+      });
+      return source;
+    };
+
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await engine.preview();
+
+    expect(detuneValues).toContain(-600);
   });
 });

@@ -19,6 +19,7 @@ export class NoiseEngine {
   private bands: BiquadFilterNode[] = [];
   private master: GainNode | null = null;
   private mix: GainNode | null = null;
+  private announceOut: GainNode | null = null;
 
   get running(): boolean {
     return this.ctx?.state === "running";
@@ -35,6 +36,15 @@ export class NoiseEngine {
    */
   get mixBus(): AudioNode | null {
     return this.mix;
+  }
+
+  /**
+   * Permanent announce output bus — wired directly to the destination,
+   * bypassing the noise limiter so TTS never hits a cold compressor on
+   * first connect. Gain stays at 0 until AnnounceEngine ramps it.
+   */
+  get announceBus(): AudioNode | null {
+    return this.announceOut;
   }
 
   /** Create the graph. Must be called from a user gesture. */
@@ -61,7 +71,7 @@ export class NoiseEngine {
     });
 
     const master = ctx.createGain();
-    master.gain.value = clampVolume(state.masterVolume);
+    master.gain.value = 0;
 
     // Everything meets at the mix bus, then a gentle limiter keeps layered
     // sounds (noise + meditation voices) from clipping the output.
@@ -73,6 +83,9 @@ export class NoiseEngine {
     limiter.attack.value = 0.003;
     limiter.release.value = 0.25;
 
+    const announceOut = ctx.createGain();
+    announceOut.gain.value = 0;
+
     let tail: AudioNode = source;
     for (const band of bands) {
       tail.connect(band);
@@ -82,12 +95,14 @@ export class NoiseEngine {
     master.connect(mix);
     mix.connect(limiter);
     limiter.connect(ctx.destination);
+    announceOut.connect(ctx.destination);
 
     this.ctx = ctx;
     this.source = source;
     this.bands = bands;
     this.master = master;
     this.mix = mix;
+    this.announceOut = announceOut;
   }
 
   async resume(): Promise<void> {
@@ -95,29 +110,51 @@ export class NoiseEngine {
   }
 
   /**
-   * Wake the output limiter with a near-silent tick so the first announce
-   * phrase does not hit a cold compressor envelope.
+   * Prime the hardware output and both downstream paths (mix limiter + announce
+   * bus) with near-silent signal during the user gesture so the first audible
+   * vocoder word does not pop the destination or a cold graph edge.
    */
-  primeLimiter(): void {
+  primeAudioOutput(): void {
     const ctx = this.ctx;
     const mix = this.mix;
-    if (!ctx || !mix || ctx.state !== "running") return;
+    const announceOut = this.announceOut;
+    if (!ctx || !mix || !announceOut || ctx.state !== "running") return;
 
     const t = ctx.currentTime;
-    const frames = Math.max(1, Math.ceil(ctx.sampleRate * 0.01));
+    const tickSec = 0.01;
+
+    // Wake the audio device / destination (ctx.resume() click mitigation).
+    const osc = ctx.createOscillator();
+    const silent = ctx.createGain();
+    silent.gain.value = 0;
+    osc.connect(silent).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 1 / ctx.sampleRate);
+
+    const frames = Math.max(1, Math.ceil(ctx.sampleRate * tickSec));
     const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
     const samples = buffer.getChannelData(0);
     for (let i = 0; i < frames; i += 1) {
       samples[i] = (Math.random() * 2 - 1) * 0.0001;
     }
 
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    const gain = ctx.createGain();
-    gain.gain.value = 0.01;
-    source.connect(gain).connect(mix);
-    source.start(t);
-    source.stop(t + 0.01);
+    const primeMix = (dest: AudioNode) => {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.01;
+      source.connect(gain).connect(dest);
+      source.start(t);
+      source.stop(t + tickSec);
+    };
+
+    primeMix(mix);
+    primeMix(announceOut);
+  }
+
+  /** @deprecated Use {@link primeAudioOutput} — kept for call-site clarity. */
+  primeLimiter(): void {
+    this.primeAudioOutput();
   }
 
   async suspend(): Promise<void> {
@@ -153,5 +190,6 @@ export class NoiseEngine {
     this.bands = [];
     this.master = null;
     this.mix = null;
+    this.announceOut = null;
   }
 }
