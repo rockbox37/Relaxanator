@@ -10,6 +10,9 @@ export const HAL_OUTPUT_GAIN = 1;
 /** Slight pitch drop (cents) for Douglas Rain–style calm mid-register. */
 const HAL_DETUNE_CENTS = -75;
 
+/** Vocoder (Zarvox) pitch drop: 3 whole steps = 6 semitones below playbackRate pitch. */
+export const VOCODER_DETUNE_CENTS = -600;
+
 export type AnnounceWordHandle = {
   stopAt: number;
   lastNode: AudioNode;
@@ -26,10 +29,14 @@ function schedulePlain(
   when: number,
   playbackRate: number,
   volume: number,
+  detuneCents = 0,
 ): AnnounceWordHandle {
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.playbackRate.value = playbackRate;
+  if (detuneCents !== 0) {
+    source.detune.value = detuneCents;
+  }
   const gain = ctx.createGain();
   gain.gain.value = volume;
   source.connect(gain).connect(dest);
@@ -109,7 +116,20 @@ export function scheduleAnnounceWord(
   switch (voice.effect) {
     case "hal":
       return scheduleHal(ctx, buffer, dest, when, voice.playbackRate, volume);
-    default:
-      return schedulePlain(ctx, buffer, dest, when, voice.playbackRate, volume);
+    default: {
+      const detuneCents =
+        voice.id === "vocoder" || voice.dir === "zarvox"
+          ? VOCODER_DETUNE_CENTS
+          : 0;
+      return schedulePlain(
+        ctx,
+        buffer,
+        dest,
+        when,
+        voice.playbackRate,
+        volume,
+        detuneCents,
+      );
+    }
   }
 }
