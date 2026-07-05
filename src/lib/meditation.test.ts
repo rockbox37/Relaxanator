@@ -28,6 +28,7 @@ describe("MEDITATION_VOICES", () => {
       "omm",
       "fog-horn",
       "fog-horn-2",
+      "fog-horn-3",
       "ship-horn",
       "ship-horn-2",
       "train-horn",

@@ -267,6 +267,68 @@ const fogHorn2: VoicePlayer = (ctx, dest, when, volume) => {
   ], 17, 620, 0.05, 2.6, 0.88);
 };
 
+const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
+  // Classic two-tone fog signal (#26): low B1 blast, brief gap, high B2 blast,
+  // through heavy feedback-delay reverb — distinct from single-tone fog 1/2.
+  const attackSec = 0.1;
+  const holdSec = 2.8;
+  const gapSec = 0.35;
+  const decaySec = 18;
+
+  const tone1When = when;
+  const tone2When = when + attackSec + holdSec + gapSec;
+  const sequenceEnd = tone2When + attackSec + holdSec + decaySec + 0.1;
+
+  const out = ctx.createGain();
+  out.gain.value = volume * 0.62;
+  out.connect(dest);
+
+  const dry = ctx.createGain();
+  dry.gain.value = 0.22;
+  const wet = ctx.createGain();
+  wet.gain.value = 0.78;
+
+  const bus = ctx.createGain();
+  bus.gain.value = 1;
+  bus.connect(dry);
+
+  const reverbSend = ctx.createGain();
+  reverbSend.gain.setValueAtTime(1, when);
+  reverbSend.gain.setValueAtTime(1, tone2When + attackSec + holdSec);
+  reverbSend.gain.exponentialRampToValueAtTime(0.0001, tone2When + attackSec + holdSec + 3);
+  bus.connect(reverbSend);
+  const reverbNodes = feedbackReverb(ctx, reverbSend, wet);
+  wet.connect(out);
+  dry.connect(out);
+
+  const cleanupNodes: AudioNode[] = [out, dry, wet, bus, reverbSend, ...reverbNodes];
+
+  distantHorn(ctx, bus, tone1When, 1, 61.74, [
+    [1, 1],
+    [1.5, 0.38],
+    [2, 0.52],
+    [3, 0.14],
+  ], decaySec, 480, attackSec, holdSec, 0.92);
+
+  distantHorn(ctx, bus, tone2When, 1, 123.47, [
+    [1, 1],
+    [1.5, 0.4],
+    [2, 0.58],
+    [3, 0.18],
+  ], decaySec, 620, attackSec, holdSec, 0.92);
+
+  const delayMs = Math.max(0, (sequenceEnd - ctx.currentTime) * 1000) + 5000;
+  setTimeout(() => {
+    for (const node of cleanupNodes) {
+      try {
+        node.disconnect();
+      } catch {
+        /* already disconnected */
+      }
+    }
+  }, delayMs);
+};
+
 const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
   // Ship's horn (#23): D2 fundamental with strong quint partials for a
   // brassy maritime blast; brightest lowpass and highest output of the horns
@@ -394,6 +456,7 @@ const PLAYERS: Record<MeditationVoiceDef["synth"], VoicePlayer> = {
   omm,
   fogHorn,
   fogHorn2,
+  fogHorn3,
   shipHorn,
   shipHorn2,
   trainHorn,

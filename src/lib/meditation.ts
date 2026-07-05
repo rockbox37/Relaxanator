@@ -9,7 +9,7 @@ export interface MeditationVoiceDef {
   label: string;
   description: string;
   /** Key into the synth implementations in src/audio/voices.ts. */
-  synth: "bell" | "deepBell" | "chime" | "drone" | "omm" | "fogHorn" | "fogHorn2" | "shipHorn" | "shipHorn2" | "trainHorn";
+  synth: "bell" | "deepBell" | "chime" | "drone" | "omm" | "fogHorn" | "fogHorn2" | "fogHorn3" | "shipHorn" | "shipHorn2" | "trainHorn";
   defaultIntervalMin: number;
   defaultVolume: number;
 }
@@ -74,6 +74,14 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
     description: "Higher fog horn with a sharper attack and long slow decay",
     synth: "fogHorn2",
     defaultIntervalMin: 23,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "fog-horn-3",
+    label: "fog horn 3",
+    description: "Classic two-tone fog signal with heavy reverb",
+    synth: "fogHorn3",
+    defaultIntervalMin: 28,
     defaultVolume: 0.45,
   },
   {
