@@ -9,7 +9,7 @@ export interface MeditationVoiceDef {
   label: string;
   description: string;
   /** Key into the synth implementations in src/audio/voices.ts. */
-  synth: "bell" | "deepBell" | "chime" | "drone" | "omm";
+  synth: "bell" | "doomBell" | "chime" | "drone" | "omm" | "fogHorn" | "fogHorn2" | "fogHorn3" | "fogHorn4" | "shipHorn" | "shipHorn2" | "trainHorn";
   defaultIntervalMin: number;
   defaultVolume: number;
 }
@@ -29,10 +29,10 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
     defaultVolume: 0.5,
   },
   {
-    id: "deep-bell",
-    label: "Deep Bell",
+    id: "doom-bell",
+    label: "doom bell",
     description: "Very low bell with a minor-third shimmer and long decay",
-    synth: "deepBell",
+    synth: "doomBell",
     defaultIntervalMin: 20,
     defaultVolume: 0.5,
   },
@@ -58,6 +58,62 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
     description: "Deep vocal-like omm tone",
     synth: "omm",
     defaultIntervalMin: 5,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "fog-horn",
+    label: "fog horn",
+    description: "Distant, deep fog horn with a long slow decay",
+    synth: "fogHorn",
+    defaultIntervalMin: 25,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "fog-horn-2",
+    label: "fog horn 2",
+    description: "Two-tone fog signal — D then lower F♯ (1 s + 2 s blasts, minor sixth) with heavy reverb",
+    synth: "fogHorn2",
+    defaultIntervalMin: 23,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "fog-horn-3",
+    label: "fog horn 3",
+    description: "Two-tone fog signal — low F then lower D♭ (1 s + 2 s blasts) with heavy reverb",
+    synth: "fogHorn3",
+    defaultIntervalMin: 28,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "fog-horn-4",
+    label: "fog horn 4",
+    description: "Vintage film two-tone boat horn — C then lower G (0.85 s + 2.15 s blasts, perfect fourth) with vast reverb",
+    synth: "fogHorn4",
+    defaultIntervalMin: 26,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "ship-horn",
+    label: "ship's horn",
+    description: "Brassy ship's horn — F2 maritime blast with sharp attack and long decay",
+    synth: "shipHorn",
+    defaultIntervalMin: 22,
+    defaultVolume: 0.55,
+  },
+  {
+    id: "ship-horn-2",
+    label: "ship's horn 2",
+    description: "Higher brassy ship's horn with sharp attack and massive reverb",
+    synth: "shipHorn2",
+    defaultIntervalMin: 20,
+    defaultVolume: 0.55,
+  },
+  {
+    id: "train-horn",
+    label: "train horn",
+    description: "Multi-chime freight train horn with sharp attack and vast reverb",
+    synth: "trainHorn",
+    defaultIntervalMin: 18,
     defaultVolume: 0.45,
   },
 ];

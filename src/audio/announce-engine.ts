@@ -12,6 +12,7 @@ import {
   nextBoundaryMs,
   timeTokens,
 } from "@/lib/announce";
+import { scheduleAnnounceWord } from "@/audio/announce-voice";
 
 const PUMP_MS = 500;
 const LOOKAHEAD_MS = 1500;
@@ -104,20 +105,23 @@ export class AnnounceEngine {
     gain.connect(this.dest);
 
     let at = Math.max(when, this.ctx.currentTime);
-    let lastSource: AudioBufferSourceNode | null = null;
+    let lastNode: AudioNode | null = null;
     for (const token of tokens) {
       const buffer = words.get(token);
       if (!buffer) continue;
-      const source = this.ctx.createBufferSource();
-      source.buffer = buffer;
-      source.playbackRate.value = voice.playbackRate;
-      source.connect(gain);
-      source.start(at);
-      at += buffer.duration / voice.playbackRate + WORD_GAP_SEC;
-      lastSource = source;
+      const { stopAt, lastNode: node } = scheduleAnnounceWord(
+        this.ctx,
+        buffer,
+        gain,
+        at,
+        voice,
+        1,
+      );
+      at = stopAt + WORD_GAP_SEC;
+      lastNode = node;
     }
-    if (lastSource) {
-      lastSource.onended = () => gain.disconnect();
+    if (lastNode && "onended" in lastNode) {
+      (lastNode as AudioScheduledSourceNode).onended = () => gain.disconnect();
     } else {
       gain.disconnect();
     }

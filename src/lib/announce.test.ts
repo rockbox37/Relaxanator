@@ -22,12 +22,24 @@ describe("ANNOUNCE_VOICES", () => {
     const ids = ANNOUNCE_VOICES.map((v) => v.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain(DEFAULT_ANNOUNCE_VOICE_ID);
-    expect(getAnnounceVoice(DEFAULT_ANNOUNCE_VOICE_ID).playbackRate).toBeLessThan(1);
+    const vocoder = getAnnounceVoice(DEFAULT_ANNOUNCE_VOICE_ID);
+    expect(vocoder.dir).toBe("zarvox");
+    expect(vocoder.effect).toBe("plain");
+    expect(vocoder.playbackRate).toBe(0.82);
     expect(ids).toContain("speak-spell");
+    expect(ids).toContain("hal9000");
+    expect(ids).not.toContain("trinoids");
   });
 
   it("falls back to the default voice for unknown ids", () => {
-    expect(getAnnounceVoice("hal9000").id).toBe(DEFAULT_ANNOUNCE_VOICE_ID);
+    expect(getAnnounceVoice("trinoids").id).toBe(DEFAULT_ANNOUNCE_VOICE_ID);
+  });
+
+  it("defines HAL as a measured North American sprite set with warm filtering", () => {
+    const hal = getAnnounceVoice("hal9000");
+    expect(hal.dir).toBe("hal");
+    expect(hal.effect).toBe("hal");
+    expect(hal.playbackRate).toBe(0.88);
   });
 });
 

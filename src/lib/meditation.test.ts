@@ -18,9 +18,22 @@ function voice(overrides: Partial<VoiceSettings> = {}): VoiceSettings {
 }
 
 describe("MEDITATION_VOICES", () => {
-  it("registers bell, deep-bell, chime, drone, and omm with unique ids", () => {
+  it("registers all meditation voices with unique ids", () => {
     const ids = MEDITATION_VOICES.map((v) => v.id);
-    expect(ids).toEqual(["bell", "deep-bell", "chime", "drone", "omm"]);
+    expect(ids).toEqual([
+      "bell",
+      "doom-bell",
+      "chime",
+      "drone",
+      "omm",
+      "fog-horn",
+      "fog-horn-2",
+      "fog-horn-3",
+      "fog-horn-4",
+      "ship-horn",
+      "ship-horn-2",
+      "train-horn",
+    ]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -31,6 +44,18 @@ describe("MEDITATION_VOICES", () => {
       expect(v.defaultVolume).toBeLessThanOrEqual(1);
     }
   });
+
+  it("documents fog horn 2 as minor sixth interval", () => {
+    const fogHorn2 = MEDITATION_VOICES.find((v) => v.id === "fog-horn-2");
+    expect(fogHorn2?.description).toContain("minor sixth");
+    expect(fogHorn2?.description).not.toContain("whole step");
+  });
+
+  it("documents fog horn 4 as vintage film two-tone with perfect fourth", () => {
+    const fogHorn4 = MEDITATION_VOICES.find((v) => v.id === "fog-horn-4");
+    expect(fogHorn4?.description).toContain("Vintage film two-tone");
+    expect(fogHorn4?.description).toContain("perfect fourth");
+  });
 });
 
 describe("createDefaultMeditationSettings", () => {
@@ -38,7 +63,7 @@ describe("createDefaultMeditationSettings", () => {
     const settings = createDefaultMeditationSettings();
     expect(Object.keys(settings)).toHaveLength(MEDITATION_VOICES.length);
     expect(settings.bell.enabled).toBe(true);
-    expect(settings["deep-bell"].enabled).toBe(false);
+    expect(settings["doom-bell"].enabled).toBe(false);
     expect(settings.chime.enabled).toBe(false);
     expect(settings.drone.enabled).toBe(false);
     expect(settings.omm.enabled).toBe(false);
