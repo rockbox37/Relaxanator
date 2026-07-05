@@ -95,7 +95,7 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
   {
     id: "ship-horn",
     label: "ship's horn",
-    description: "Distant ship's horn with brassy low tones and long decay",
+    description: "Brassy ship's horn — F2 maritime blast with sharp attack and long decay",
     synth: "shipHorn",
     defaultIntervalMin: 22,
     defaultVolume: 0.55,

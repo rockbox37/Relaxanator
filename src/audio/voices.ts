@@ -445,15 +445,17 @@ const fogHorn4: VoicePlayer = (ctx, dest, when, volume) => {
 };
 
 const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
-  // Ship's horn (#23): D2 fundamental with strong quint partials for a
-  // brassy maritime blast; brightest lowpass and highest output of the horns
-  // for audibility on small speakers while keeping a long decay.
-  distantHorn(ctx, dest, when, volume, 73.42, [
+  // Ship's horn (#23): F2 fundamental (~19% above prior D2) with quint-heavy
+  // brass partials, sharper attack, and brighter lowpass for a clearer
+  // maritime blast — still dry vs ship horn 2's massive reverb.
+  distantHorn(ctx, dest, when, volume, 87.31, [
     [1, 1],
-    [1.5, 0.52],
-    [2, 0.32],
-    [3, 0.12],
-  ], 16, 820, 0.05, 2.5, 1.12);
+    [1.25, 0.24],
+    [1.5, 0.58],
+    [2, 0.4],
+    [2.5, 0.12],
+    [3, 0.14],
+  ], 15, 980, 0.035, 2.4, 1.08);
 };
 
 const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
