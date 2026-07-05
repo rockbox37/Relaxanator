@@ -39,7 +39,7 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
   {
     id: "chime",
     label: "Chime",
-    description: "Bright, quick chime",
+    description: "Low, ringing chime with a minor-third shimmer",
     synth: "chime",
     defaultIntervalMin: 7.5,
     defaultVolume: 0.4,
