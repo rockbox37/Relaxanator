@@ -18,9 +18,9 @@ function voice(overrides: Partial<VoiceSettings> = {}): VoiceSettings {
 }
 
 describe("MEDITATION_VOICES", () => {
-  it("registers bell, chime, drone, and omm with unique ids", () => {
+  it("registers bell, deep-bell, chime, drone, and omm with unique ids", () => {
     const ids = MEDITATION_VOICES.map((v) => v.id);
-    expect(ids).toEqual(["bell", "chime", "drone", "omm"]);
+    expect(ids).toEqual(["bell", "deep-bell", "chime", "drone", "omm"]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -38,6 +38,7 @@ describe("createDefaultMeditationSettings", () => {
     const settings = createDefaultMeditationSettings();
     expect(Object.keys(settings)).toHaveLength(MEDITATION_VOICES.length);
     expect(settings.bell.enabled).toBe(true);
+    expect(settings["deep-bell"].enabled).toBe(false);
     expect(settings.chime.enabled).toBe(false);
     expect(settings.drone.enabled).toBe(false);
     expect(settings.omm.enabled).toBe(false);
