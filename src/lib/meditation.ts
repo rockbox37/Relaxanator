@@ -71,7 +71,7 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
   {
     id: "fog-horn-2",
     label: "fog horn 2",
-    description: "Higher fog horn with a sharper attack and long slow decay",
+    description: "Two-tone fog signal — F then lower D (1 s + 2 s blasts, minor third) with heavy reverb",
     synth: "fogHorn2",
     defaultIntervalMin: 23,
     defaultVolume: 0.45,

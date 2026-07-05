@@ -255,19 +255,7 @@ const fogHorn: VoicePlayer = (ctx, dest, when, volume) => {
   ], 18, 480, 0.08, 2.8, 0.88);
 };
 
-const fogHorn2: VoicePlayer = (ctx, dest, when, volume) => {
-  // Higher fog horn (#26): B2 fundamental (octave above fog horn), slightly
-  // sharper attack, brighter lowpass, and a touch more 2nd/3rd partial for
-  // a distinct but still distant, long-decay fog-horn family tone.
-  distantHorn(ctx, dest, when, volume, 123.47, [
-    [1, 1],
-    [1.5, 0.4],
-    [2, 0.58],
-    [3, 0.18],
-  ], 17, 620, 0.05, 2.6, 0.88);
-};
-
-/** Hard-gated horn blast: fixed duration, no decay tail (fog horn 3). */
+/** Hard-gated horn blast: fixed duration, no decay tail (fog horns 2/3). */
 function gatedHornBlast(
   ctx: BaseAudioContext,
   dest: AudioNode,
@@ -314,15 +302,20 @@ function gatedHornBlast(
   }
 }
 
-const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
-  // Two-tone fog signal (#26): low F2 (1 s) then lower D♭2 (2 s), hard-gated
-  // sequential blasts through heavy feedback-delay reverb — distinct from
-  // sustained-decay B1/B2 fog horns 1/2.
+/** Two hard-gated sequential horn blasts with heavy feedback-delay reverb. */
+function gatedTwoBlastHorn(
+  ctx: BaseAudioContext,
+  dest: AudioNode,
+  when: number,
+  volume: number,
+  tone1F0: number,
+  tone2F0: number,
+  tone1LowpassHz: number,
+  tone2LowpassHz: number,
+): void {
   const attackSec = 0.07;
   const tone1DurSec = 1.0;
   const tone2DurSec = 2.0;
-  const tone1F0 = 87.31; // F2
-  const tone2F0 = 69.3; // D♭2, major third below F2
 
   const tone1When = when;
   const tone2When = when + tone1DurSec;
@@ -358,14 +351,14 @@ const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
     [1.5, 0.44],
     [2, 0.5],
     [3, 0.12],
-  ], tone1DurSec, 480, attackSec, 0.9);
+  ], tone1DurSec, tone1LowpassHz, attackSec, 0.9);
 
   gatedHornBlast(ctx, bus, tone2When, 1, tone2F0, [
     [1, 1],
     [1.5, 0.42],
     [2, 0.48],
     [3, 0.1],
-  ], tone2DurSec, 420, attackSec, 0.9);
+  ], tone2DurSec, tone2LowpassHz, attackSec, 0.9);
 
   const delayMs = Math.max(0, (sequenceEnd - ctx.currentTime) * 1000) + 5000;
   setTimeout(() => {
@@ -377,6 +370,19 @@ const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
       }
     }
   }, delayMs);
+}
+
+const fogHorn2: VoicePlayer = (ctx, dest, when, volume) => {
+  // Two-tone fog signal (#26): F3 (1 s) then lower D3 (2 s), hard-gated
+  // sequential blasts — minor third down, one octave above fog horn 3.
+  gatedTwoBlastHorn(ctx, dest, when, volume, 174.61, 146.83, 620, 560);
+};
+
+const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
+  // Two-tone fog signal (#26): low F2 (1 s) then lower D♭2 (2 s), hard-gated
+  // sequential blasts through heavy feedback-delay reverb — distinct from
+  // sustained-decay B1 fog horn 1 and higher minor-third F3/D3 fog horn 2.
+  gatedTwoBlastHorn(ctx, dest, when, volume, 87.31, 69.3, 480, 420);
 };
 
 const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
