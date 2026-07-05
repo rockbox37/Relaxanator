@@ -11,12 +11,12 @@ import {
   getAnnounceVoice,
   nextBoundaryMs,
   timeTokens,
+  wordGapAfterToken,
 } from "@/lib/announce";
 import { scheduleAnnounceWord } from "@/audio/announce-voice";
 
 const PUMP_MS = 500;
 const LOOKAHEAD_MS = 1500;
-const WORD_GAP_SEC = 0.12;
 
 export class AnnounceEngine {
   private settings: AnnounceSettings;
@@ -117,7 +117,7 @@ export class AnnounceEngine {
         voice,
         1,
       );
-      at = stopAt + WORD_GAP_SEC;
+      at = stopAt + wordGapAfterToken(token);
       lastNode = node;
     }
     if (lastNode && "onended" in lastNode) {

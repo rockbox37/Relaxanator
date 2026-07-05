@@ -5,12 +5,15 @@ import {
   ANNOUNCE_VOICES,
   ANNOUNCE_WORDS,
   DEFAULT_ANNOUNCE_VOICE_ID,
+  WORD_GAP_AFTER_ITS_SEC,
+  WORD_GAP_SEC,
   createDefaultAnnounceSettings,
   formatAnnouncement,
   formatHourAnnouncement,
   getAnnounceVoice,
   nextBoundaryMs,
   timeTokens,
+  wordGapAfterToken,
 } from "./announce";
 
 function localMs(h: number, m: number, s = 0): number {
@@ -131,5 +134,18 @@ describe("formatHourAnnouncement", () => {
     expect(formatHourAnnouncement(new Date(2026, 5, 15, 10, 0))).toBe(
       "It's ten o'clock",
     );
+  });
+});
+
+describe("wordGapAfterToken", () => {
+  it("halves the standard gap after the It's prefix", () => {
+    expect(WORD_GAP_AFTER_ITS_SEC).toBe(WORD_GAP_SEC / 2);
+    expect(wordGapAfterToken("its")).toBe(0.06);
+  });
+
+  it("keeps the standard gap between hour and minute or o'clock", () => {
+    expect(wordGapAfterToken("ten")).toBe(0.12);
+    expect(wordGapAfterToken("oclock")).toBe(0.12);
+    expect(wordGapAfterToken("thirty")).toBe(0.12);
   });
 });
