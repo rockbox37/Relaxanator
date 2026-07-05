@@ -40,6 +40,8 @@ export class AnnounceEngine {
   /** Always connected to dest — never connect/disconnect per phrase. */
   private readonly outputBus: GainNode;
   private vocoderPrimed = false;
+  /** Bumped on stop() so in-flight speak() aborts after preload. */
+  private speakGeneration = 0;
 
   constructor(
     private readonly ctx: BaseAudioContext,
@@ -84,6 +86,7 @@ export class AnnounceEngine {
     this.scheduledBoundaryMs = 0;
     this.hasScheduledOutput = false;
     this.vocoderPrimed = false;
+    this.speakGeneration += 1;
     this.outputBus.gain.value = 0;
   }
 
@@ -164,8 +167,10 @@ export class AnnounceEngine {
   }
 
   private async speak(tokens: string[], when: number): Promise<boolean> {
+    const generation = this.speakGeneration;
     const voice = getAnnounceVoice(this.settings.voiceId);
     await this.preload(voice.id);
+    if (generation !== this.speakGeneration) return false;
     const words = this.buffers.get(voice.dir);
     if (!words) return false;
 

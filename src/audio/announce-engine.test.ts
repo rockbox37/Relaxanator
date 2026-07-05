@@ -51,7 +51,7 @@ describe("AnnounceEngine preload", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        const word = url.split("/").pop()?.replace(".wav", "") ?? "word";
+        const word = new URL(url, "http://local").pathname.split("/").pop()?.replace(".wav", "") ?? "word";
         return {
           ok: true,
           arrayBuffer: async () => new TextEncoder().encode(word).buffer,

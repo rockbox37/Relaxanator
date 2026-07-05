@@ -31,6 +31,11 @@ function wordDurationSec(buffer: AudioBuffer, playbackRate: number): number {
   return buffer.duration / playbackRate;
 }
 
+type SchedulePlainOptions = {
+  detuneCents?: number;
+  firstWord?: boolean;
+};
+
 function schedulePlain(
   ctx: BaseAudioContext,
   buffer: AudioBuffer,
@@ -38,9 +43,9 @@ function schedulePlain(
   when: number,
   playbackRate: number,
   volume: number,
-  detuneCents = 0,
-  firstWord = false,
+  options: SchedulePlainOptions = {},
 ): AnnounceWordHandle {
+  const { detuneCents = 0, firstWord = false } = options;
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.playbackRate.value = playbackRate;
@@ -135,16 +140,10 @@ export function scheduleAnnounceWord(
         voice.id === "vocoder" || voice.dir === "zarvox"
           ? VOCODER_DETUNE_CENTS
           : 0;
-      return schedulePlain(
-        ctx,
-        buffer,
-        dest,
-        when,
-        voice.playbackRate,
-        volume,
+      return schedulePlain(ctx, buffer, dest, when, voice.playbackRate, volume, {
         detuneCents,
         firstWord,
-      );
+      });
     }
   }
 }
