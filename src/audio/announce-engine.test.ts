@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AnnounceEngine, FIRST_OUTPUT_RAMP_SEC } from "./announce-engine";
+import { AnnounceEngine, FIRST_OUTPUT_RAMP_SEC, FIRST_OUTPUT_SETTLE_SEC } from "./announce-engine";
 import { ANNOUNCE_WORDS } from "../lib/announce";
 
 function mockAudioContext(state: AudioContextState = "running") {
@@ -20,7 +20,7 @@ function mockAudioContext(state: AudioContextState = "running") {
         connect(next: { connect: (d: unknown) => unknown }) {
           return next;
         },
-        start(_when: number) {},
+        start(_when: number, _offset?: number) {},
         onended: null as (() => void) | null,
       };
     },
@@ -118,6 +118,39 @@ describe("AnnounceEngine preload", () => {
     expect(
       linearRampToValueAtTime.mock.calls.find((c) => c[0] === 0.6),
     ).toBeUndefined();
+  });
+
+  it("delays the first word until after the settle offset", async () => {
+    const ctx = mockAudioContext();
+    const startCalls: number[] = [];
+    const origCreate = ctx.createBufferSource.bind(ctx);
+    ctx.createBufferSource = () => {
+      const source = origCreate();
+      const origStart = source.start.bind(source);
+      source.start = (when: number) => {
+        startCalls.push(when);
+        origStart(when);
+      };
+      return source;
+    };
+
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await engine.preview();
+
+    expect(startCalls.length).toBeGreaterThan(0);
+    expect(startCalls[0]).toBeCloseTo(0.05 + FIRST_OUTPUT_SETTLE_SEC);
+
+    startCalls.length = 0;
+    await engine.preview();
+    expect(startCalls[0]).toBeCloseTo(0.05);
   });
 
   it("resets the first-output ramp after stop()", async () => {

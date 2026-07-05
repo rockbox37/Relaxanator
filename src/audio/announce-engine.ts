@@ -19,7 +19,10 @@ const PUMP_MS = 500;
 const LOOKAHEAD_MS = 1500;
 
 /** Fade-in when the announce bus first connects to a cold mix/limiter chain. */
-export const FIRST_OUTPUT_RAMP_SEC = 0.035;
+export const FIRST_OUTPUT_RAMP_SEC = 0.1;
+
+/** Delay before the first word — lets the bus ramp and limiter settle. */
+export const FIRST_OUTPUT_SETTLE_SEC = 0.05;
 
 export class AnnounceEngine {
   private settings: AnnounceSettings;
@@ -135,7 +138,7 @@ export class AnnounceEngine {
     }
     gain.connect(this.dest);
 
-    let cursor = at;
+    let cursor = firstOutput ? at + FIRST_OUTPUT_SETTLE_SEC : at;
     let lastNode: AudioNode | null = null;
     let scheduled = false;
     let firstWord = true;

@@ -17,7 +17,10 @@ export const VOCODER_DETUNE_CENTS = -600;
 export const PLAIN_ATTACK_SEC = 0.01;
 
 /** Longer attack on the first word of a session — cold mix/limiter needs more headroom. */
-export const FIRST_WORD_ATTACK_SEC = 0.04;
+export const FIRST_WORD_ATTACK_SEC = 0.06;
+
+/** Skip the leading edge of the first word buffer — trims DC / sprite edge clicks. */
+export const FIRST_WORD_BUFFER_SKIP_SEC = 0.003;
 
 export type AnnounceWordHandle = {
   stopAt: number;
@@ -46,12 +49,13 @@ function schedulePlain(
   }
   const gain = ctx.createGain();
   const attackSec = firstWord ? FIRST_WORD_ATTACK_SEC : PLAIN_ATTACK_SEC;
+  const skipSec = firstWord ? FIRST_WORD_BUFFER_SKIP_SEC : 0;
   gain.gain.setValueAtTime(0, when);
   gain.gain.linearRampToValueAtTime(volume, when + attackSec);
   source.connect(gain).connect(dest);
-  source.start(when);
+  source.start(when, skipSec);
   return {
-    stopAt: when + wordDurationSec(buffer, playbackRate),
+    stopAt: when + wordDurationSec(buffer, playbackRate) - skipSec,
     lastNode: source,
   };
 }

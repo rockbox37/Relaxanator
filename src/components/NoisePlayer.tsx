@@ -66,6 +66,7 @@ export default function NoisePlayer() {
       if (engine.context && engine.mixBus) {
         // Resume during the user gesture before routing announce into the mix bus.
         await engine.resume();
+        engine.primeLimiter();
 
         const meditationEngine = new MeditationEngine(
           engine.context,

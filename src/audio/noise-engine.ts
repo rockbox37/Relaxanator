@@ -94,6 +94,32 @@ export class NoiseEngine {
     await this.ctx?.resume();
   }
 
+  /**
+   * Wake the output limiter with a near-silent tick so the first announce
+   * phrase does not hit a cold compressor envelope.
+   */
+  primeLimiter(): void {
+    const ctx = this.ctx;
+    const mix = this.mix;
+    if (!ctx || !mix || ctx.state !== "running") return;
+
+    const t = ctx.currentTime;
+    const frames = Math.max(1, Math.ceil(ctx.sampleRate * 0.01));
+    const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
+    const samples = buffer.getChannelData(0);
+    for (let i = 0; i < frames; i += 1) {
+      samples[i] = (Math.random() * 2 - 1) * 0.0001;
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.01;
+    source.connect(gain).connect(mix);
+    source.start(t);
+    source.stop(t + 0.01);
+  }
+
   async suspend(): Promise<void> {
     await this.ctx?.suspend();
   }

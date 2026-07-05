@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import {
   FIRST_WORD_ATTACK_SEC,
+  FIRST_WORD_BUFFER_SKIP_SEC,
   HAL_OUTPUT_GAIN,
   PLAIN_ATTACK_SEC,
   VOCODER_DETUNE_CENTS,
@@ -34,7 +35,7 @@ function mockAudioContext() {
         connect(next: { connect: (d: unknown) => unknown }) {
           return next;
         },
-        start(_when: number) {},
+        start(_when: number, _offset?: number) {},
       };
       nodes.push(source);
       return source;
@@ -161,6 +162,23 @@ describe("scheduleAnnounceWord detune", () => {
       volume,
       when + FIRST_WORD_ATTACK_SEC,
     );
+  });
+
+  it("skips the leading edge of the first plain word buffer", () => {
+    const { ctx } = mockAudioContext();
+    const voice = getAnnounceVoice("vocoder");
+    const when = 1.5;
+    const start = vi.fn();
+    const origCreateSource = ctx.createBufferSource.bind(ctx);
+    ctx.createBufferSource = () => {
+      const source = origCreateSource();
+      source.start = start;
+      return source;
+    };
+
+    scheduleAnnounceWord(ctx, buffer, dest, when, voice, 0.6, true);
+
+    expect(start).toHaveBeenCalledWith(when, FIRST_WORD_BUFFER_SKIP_SEC);
   });
 });
 
