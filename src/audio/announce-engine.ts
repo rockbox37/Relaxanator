@@ -23,6 +23,8 @@ export class AnnounceEngine {
   private timer: ReturnType<typeof setInterval> | null = null;
   private scheduledBoundaryMs = 0;
   private buffers = new Map<string, Map<string, AudioBuffer>>();
+  /** In-flight sprite loads — speak/preview must await these, not an empty map. */
+  private preloadJobs = new Map<string, Promise<void>>();
 
   constructor(
     private readonly ctx: BaseAudioContext,
@@ -58,13 +60,24 @@ export class AnnounceEngine {
   stop(): void {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+    this.scheduledBoundaryMs = 0;
   }
 
   private async preload(voiceId: string): Promise<void> {
     const voice = getAnnounceVoice(voiceId);
     if (this.buffers.has(voice.dir)) return;
+
+    let job = this.preloadJobs.get(voice.dir);
+    if (!job) {
+      job = this.loadVoiceBuffers(voice);
+      this.preloadJobs.set(voice.dir, job);
+      void job.finally(() => this.preloadJobs.delete(voice.dir));
+    }
+    await job;
+  }
+
+  private async loadVoiceBuffers(voice: ReturnType<typeof getAnnounceVoice>): Promise<void> {
     const words = new Map<string, AudioBuffer>();
-    this.buffers.set(voice.dir, words);
     await Promise.all(
       ANNOUNCE_WORDS.map(async (word) => {
         try {
@@ -76,6 +89,7 @@ export class AnnounceEngine {
         }
       }),
     );
+    this.buffers.set(voice.dir, words);
   }
 
   private async pump(): Promise<void> {
@@ -84,21 +98,21 @@ export class AnnounceEngine {
     const boundaryMs = nextBoundaryMs(nowMs, this.settings.intervalMin);
     if (boundaryMs - nowMs > LOOKAHEAD_MS) return;
     if (boundaryMs === this.scheduledBoundaryMs) return;
-    this.scheduledBoundaryMs = boundaryMs;
 
     const boundary = new Date(boundaryMs);
     const when = this.ctx.currentTime + (boundaryMs - nowMs) / 1000;
-    await this.speak(
+    const scheduled = await this.speak(
       timeTokens(boundary.getHours(), boundary.getMinutes()),
       when,
     );
+    if (scheduled) this.scheduledBoundaryMs = boundaryMs;
   }
 
-  private async speak(tokens: string[], when: number): Promise<void> {
+  private async speak(tokens: string[], when: number): Promise<boolean> {
     const voice = getAnnounceVoice(this.settings.voiceId);
     await this.preload(voice.id);
     const words = this.buffers.get(voice.dir);
-    if (!words) return;
+    if (!words) return false;
 
     const gain = this.ctx.createGain();
     gain.gain.value = this.settings.volume;
@@ -106,9 +120,11 @@ export class AnnounceEngine {
 
     let at = Math.max(when, this.ctx.currentTime);
     let lastNode: AudioNode | null = null;
+    let scheduled = false;
     for (const token of tokens) {
       const buffer = words.get(token);
       if (!buffer) continue;
+      scheduled = true;
       const { stopAt, lastNode: node } = scheduleAnnounceWord(
         this.ctx,
         buffer,
@@ -120,10 +136,15 @@ export class AnnounceEngine {
       at = stopAt + wordGapAfterToken(token);
       lastNode = node;
     }
+    if (!scheduled) {
+      gain.disconnect();
+      return false;
+    }
     if (lastNode && "onended" in lastNode) {
       (lastNode as AudioScheduledSourceNode).onended = () => gain.disconnect();
     } else {
       gain.disconnect();
     }
+    return true;
   }
 }
