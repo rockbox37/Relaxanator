@@ -151,7 +151,7 @@ export function createDefaultMeditationSettings(): MeditationSettings {
     settings[voice.id] = {
       enabled: voice.id === "bell",
       intervalMin: voice.defaultIntervalMin,
-      jitter: true,
+      jitter: false,
       syncToClock: false,
       volume: voice.defaultVolume,
     };

@@ -89,6 +89,13 @@ describe("createDefaultMeditationSettings", () => {
       expect(settings[voiceId].syncToClock).toBe(false);
     }
   });
+
+  it("defaults every voice to vary (jitter) off", () => {
+    const settings = createDefaultMeditationSettings();
+    for (const voiceId of Object.keys(settings)) {
+      expect(settings[voiceId].jitter).toBe(false);
+    }
+  });
 });
 
 describe("clampIntervalMin", () => {
