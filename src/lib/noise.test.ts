@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { EQ_BAND_COUNT } from "./eq";
+import { EQ_BAND_COUNT, createFlatEqCurve } from "./eq";
 import {
   DEFAULT_MASTER_VOLUME,
+  EQ_ROLLOFF_DB_PER_OCTAVE_BY_COLOR,
   NOISE_COLORS,
   clampVolume,
   colorToIndex,
   createDefaultNoiseState,
+  eqCurveForColor,
 } from "./noise";
 
 describe("NOISE_COLORS", () => {
@@ -41,6 +43,33 @@ describe("colorToIndex", () => {
 
   it("falls back to white for unknown persisted values", () => {
     expect(colorToIndex("magenta" as Parameters<typeof colorToIndex>[0])).toBe(0);
+  });
+});
+
+describe("eqCurveForColor", () => {
+  it("gives white a flat curve", () => {
+    expect(eqCurveForColor("white")).toEqual(createFlatEqCurve());
+  });
+
+  it("gives every color a full-length curve", () => {
+    for (const color of NOISE_COLORS) {
+      expect(eqCurveForColor(color.id)).toHaveLength(EQ_BAND_COUNT);
+    }
+  });
+
+  it("rolls off darker colors more steeply (white < pink < brown)", () => {
+    const bass = (color: (typeof NOISE_COLORS)[number]["id"]) =>
+      eqCurveForColor(color)[0].gainDb;
+    const treble = (color: (typeof NOISE_COLORS)[number]["id"]) =>
+      eqCurveForColor(color)[EQ_BAND_COUNT - 1].gainDb;
+    expect(bass("white")).toBeLessThan(bass("pink"));
+    expect(bass("pink")).toBeLessThanOrEqual(bass("brown"));
+    expect(treble("white")).toBeGreaterThan(treble("pink"));
+    expect(treble("pink")).toBeGreaterThanOrEqual(treble("brown"));
+  });
+
+  it("uses the classic 0 / 3 / 6 dB-per-octave slopes", () => {
+    expect(EQ_ROLLOFF_DB_PER_OCTAVE_BY_COLOR).toEqual({ white: 0, pink: 3, brown: 6 });
   });
 });
 

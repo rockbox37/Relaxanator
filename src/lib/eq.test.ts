@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   EQ_BAND_COUNT,
   EQ_BAND_FREQUENCIES,
+  EQ_CENTER_BAND_INDEX,
   EQ_GAIN_MAX_DB,
   EQ_GAIN_MIN_DB,
   clampGainDb,
   createFlatEqCurve,
   formatFrequency,
+  slopedEqCurve,
   withBandGain,
 } from "./eq";
 
@@ -54,6 +56,57 @@ describe("createFlatEqCurve", () => {
     const b = createFlatEqCurve();
     expect(a).not.toBe(b);
     expect(a[0]).not.toBe(b[0]);
+  });
+});
+
+describe("slopedEqCurve", () => {
+  it("is flat when the slope is zero", () => {
+    const curve = slopedEqCurve(0);
+    expect(curve).toEqual(createFlatEqCurve());
+  });
+
+  it("keeps the frequency layout intact", () => {
+    const curve = slopedEqCurve(3);
+    expect(curve).toHaveLength(EQ_BAND_COUNT);
+    expect(curve.map((b) => b.frequency)).toEqual([...EQ_BAND_FREQUENCIES]);
+  });
+
+  it("boosts bass and cuts treble for a positive rolloff", () => {
+    const curve = slopedEqCurve(3);
+    expect(curve[0].gainDb).toBeGreaterThan(0);
+    expect(curve[EQ_BAND_COUNT - 1].gainDb).toBeLessThan(0);
+    for (let i = 1; i < curve.length; i += 1) {
+      expect(curve[i].gainDb).toBeLessThanOrEqual(curve[i - 1].gainDb);
+    }
+  });
+
+  it("applies a constant dB step per octave (band) around the pivot", () => {
+    const curve = slopedEqCurve(3);
+    for (let i = 0; i < curve.length; i += 1) {
+      expect(curve[i].gainDb).toBeCloseTo(clampGainDb(3 * (EQ_CENTER_BAND_INDEX - i)), 6);
+    }
+  });
+
+  it("stays symmetric about zero across the band range", () => {
+    const curve = slopedEqCurve(3);
+    for (let i = 0; i < curve.length; i += 1) {
+      expect(curve[i].gainDb).toBeCloseTo(-curve[curve.length - 1 - i].gainDb, 6);
+    }
+  });
+
+  it("saturates to a shelf at the slider limits for steep slopes", () => {
+    const curve = slopedEqCurve(6);
+    expect(curve[0].gainDb).toBe(EQ_GAIN_MAX_DB);
+    expect(curve[EQ_BAND_COUNT - 1].gainDb).toBe(EQ_GAIN_MIN_DB);
+    expect(curve.every((b) => b.gainDb >= EQ_GAIN_MIN_DB && b.gainDb <= EQ_GAIN_MAX_DB)).toBe(
+      true,
+    );
+  });
+
+  it("honors a custom pivot band", () => {
+    const curve = slopedEqCurve(2, 0);
+    expect(curve[0].gainDb).toBe(0);
+    expect(curve[1].gainDb).toBeCloseTo(-2, 6);
   });
 });
 

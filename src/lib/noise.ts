@@ -2,7 +2,7 @@
  * Noise-engine state model: colors, volume, and the serializable player
  * state. Pure logic — the Web Audio wiring lives in src/audio/.
  */
-import { type EqBand, createFlatEqCurve } from "./eq";
+import { type EqBand, createFlatEqCurve, slopedEqCurve } from "./eq";
 
 export const NOISE_COLORS = [
   { id: "white", label: "White", description: "Even energy across all frequencies" },
@@ -11,6 +11,24 @@ export const NOISE_COLORS = [
 ] as const;
 
 export type NoiseColor = (typeof NOISE_COLORS)[number]["id"];
+
+/**
+ * Signature EQ tilt (dB per octave) for each noise color. White is flat; pink
+ * rolls off ~3 dB/oct and brown ~6 dB/oct — the classic power-spectrum slopes,
+ * expressed as an EQ curve so selecting a color snaps the sliders to a starting
+ * shape the user can then tweak. Kept as a plain map so a future saved session
+ * preset can carry its own curve through the same "select preset → snap" path.
+ */
+export const EQ_ROLLOFF_DB_PER_OCTAVE_BY_COLOR: Record<NoiseColor, number> = {
+  white: 0,
+  pink: 3,
+  brown: 6,
+};
+
+/** The default EQ curve a noise color snaps the sliders to when selected. */
+export function eqCurveForColor(color: NoiseColor): EqBand[] {
+  return slopedEqCurve(EQ_ROLLOFF_DB_PER_OCTAVE_BY_COLOR[color]);
+}
 
 export const DEFAULT_MASTER_VOLUME = 0.6;
 
