@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EQ_BAND_COUNT, createFlatEqCurve } from "./eq";
 import {
   DEFAULT_MASTER_VOLUME,
+  DEFAULT_NOISE_COLOR,
   EQ_ROLLOFF_DB_PER_OCTAVE_BY_COLOR,
   NOISE_COLORS,
   clampVolume,
@@ -74,11 +75,19 @@ describe("eqCurveForColor", () => {
 });
 
 describe("createDefaultNoiseState", () => {
-  it("defaults to brown noise at moderate volume with a flat curve", () => {
+  it("defaults to brown noise at moderate volume", () => {
     const state = createDefaultNoiseState();
-    expect(state.color).toBe("brown");
+    expect(DEFAULT_NOISE_COLOR).toBe("brown");
+    expect(state.color).toBe(DEFAULT_NOISE_COLOR);
     expect(state.masterVolume).toBe(DEFAULT_MASTER_VOLUME);
     expect(state.eqCurve).toHaveLength(EQ_BAND_COUNT);
-    expect(state.eqCurve.every((b) => b.gainDb === 0)).toBe(true);
+  });
+
+  it("seeds the EQ curve from the default color, not flat", () => {
+    const state = createDefaultNoiseState();
+    expect(state.eqCurve).toEqual(eqCurveForColor(DEFAULT_NOISE_COLOR));
+    // Brown rolls off, so the startup curve is not flat.
+    expect(state.eqCurve).not.toEqual(createFlatEqCurve());
+    expect(state.eqCurve.some((b) => b.gainDb !== 0)).toBe(true);
   });
 });

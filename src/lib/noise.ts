@@ -2,7 +2,7 @@
  * Noise-engine state model: colors, volume, and the serializable player
  * state. Pure logic — the Web Audio wiring lives in src/audio/.
  */
-import { type EqBand, createFlatEqCurve, slopedEqCurve } from "./eq";
+import { type EqBand, slopedEqCurve } from "./eq";
 
 export const NOISE_COLORS = [
   { id: "white", label: "White", description: "Even energy across all frequencies" },
@@ -11,6 +11,9 @@ export const NOISE_COLORS = [
 ] as const;
 
 export type NoiseColor = (typeof NOISE_COLORS)[number]["id"];
+
+/** The color the player starts on — its curve also seeds the default EQ state. */
+export const DEFAULT_NOISE_COLOR: NoiseColor = "brown";
 
 /**
  * Signature EQ tilt (dB per octave) for each noise color. White is flat; pink
@@ -53,8 +56,10 @@ export function colorToIndex(color: NoiseColor): number {
 
 export function createDefaultNoiseState(): NoiseState {
   return {
-    color: "brown",
+    color: DEFAULT_NOISE_COLOR,
     masterVolume: DEFAULT_MASTER_VOLUME,
-    eqCurve: createFlatEqCurve(),
+    // Seed the curve from the default color so startup (sliders + applied audio
+    // EQ) matches the shape a user would get by selecting that color.
+    eqCurve: eqCurveForColor(DEFAULT_NOISE_COLOR),
   };
 }
