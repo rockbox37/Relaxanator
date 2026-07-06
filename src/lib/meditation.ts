@@ -123,6 +123,14 @@ export interface VoiceSettings {
   intervalMin: number;
   /** Randomize each interval by up to ±15% so the rhythm feels organic. */
   jitter: boolean;
+  /**
+   * Anchor ringing to the wall clock (#33): fire at multiples of the interval
+   * measured from the top of the local hour (e.g. a 5-min interval rings at
+   * :00, :05, :10, …) instead of free-running from when playback started.
+   * Jitter is ignored while this is on. Default false preserves the original
+   * relative-interval behavior.
+   */
+  syncToClock: boolean;
   volume: number;
 }
 
@@ -144,6 +152,7 @@ export function createDefaultMeditationSettings(): MeditationSettings {
       enabled: voice.id === "bell",
       intervalMin: voice.defaultIntervalMin,
       jitter: true,
+      syncToClock: false,
       volume: voice.defaultVolume,
     };
   }
@@ -167,18 +176,76 @@ export function computeNextFire(
   return fromSec + Math.max(1, intervalSec + jitterSec);
 }
 
+/**
+ * Epoch-ms of the next clock-aligned fire strictly after `nowMs`, for a
+ * sync-to-clock voice (#33). Fires land on multiples of the interval measured
+ * from the top of the local hour: a 5-min interval → :00/:05/:10/…, a 15-min
+ * interval → :00/:15/:30/:45.
+ *
+ * Anchoring is re-established at the top of every hour, so intervals that do
+ * not evenly divide 60 min degrade gracefully: e.g. a 7-min interval fires at
+ * :00/:07/…/:56 and then re-anchors to the next :00 (the final slot before the
+ * hour is short) rather than drifting across hours. Uses local-time Date math
+ * for the hour anchor so it stays correct across DST transitions.
+ */
+export function nextClockFireMs(nowMs: number, intervalMin: number): number {
+  const intervalMs = clampIntervalMin(intervalMin) * 60_000;
+
+  const hourStart = new Date(nowMs);
+  hourStart.setMinutes(0, 0, 0);
+  const hourStartMs = hourStart.getTime();
+
+  // Top of the next local hour (DST-safe: adds a wall-clock hour, not 3.6e6ms).
+  const nextHour = new Date(hourStartMs);
+  nextHour.setHours(nextHour.getHours() + 1);
+  const nextHourMs = nextHour.getTime();
+
+  // Smallest multiple of the interval strictly after now, within this hour.
+  const step = Math.floor((nowMs - hourStartMs) / intervalMs) + 1;
+  const candidate = hourStartMs + step * intervalMs;
+
+  // Re-anchor at the top of the hour when the interval overshoots it.
+  return Math.min(candidate, nextHourMs);
+}
+
+/**
+ * Next clock-aligned fire as an audio-clock time (seconds), given the current
+ * audio clock `nowSec` and the wall clock `nowMs` that samples it. Mirrors the
+ * wall-clock→audio-clock mapping in AnnounceEngine so scheduling stays
+ * sample-accurate in throttled background tabs. `fromSec` is the audio-clock
+ * instant to search after (now, or the time a voice just fired).
+ */
+export function computeNextClockFire(
+  fromSec: number,
+  nowSec: number,
+  nowMs: number,
+  intervalMin: number,
+): number {
+  const fromMs = nowMs + (fromSec - nowSec) * 1000;
+  const boundaryMs = nextClockFireMs(fromMs, intervalMin);
+  return nowSec + (boundaryMs - nowMs) / 1000;
+}
+
 /** Map of voiceId -> next scheduled fire time (audio-clock seconds). */
 export type FireSchedule = Record<string, number>;
 
-/** Initial schedule: every enabled voice waits one full interval from now. */
+/**
+ * Initial schedule: free-running voices wait one full interval from now;
+ * sync-to-clock voices (#33) wait for the next wall-clock boundary. `nowMs`
+ * samples the wall clock alongside the audio clock `nowSec` for the mapping.
+ */
 export function initFireSchedule(
   settings: MeditationSettings,
   nowSec: number,
+  nowMs: number = Date.now(),
   rng: () => number = Math.random,
 ): FireSchedule {
   const schedule: FireSchedule = {};
   for (const [voiceId, voice] of Object.entries(settings)) {
-    if (voice.enabled) schedule[voiceId] = computeNextFire(nowSec, voice, rng);
+    if (!voice.enabled) continue;
+    schedule[voiceId] = voice.syncToClock
+      ? computeNextClockFire(nowSec, nowSec, nowMs, voice.intervalMin)
+      : computeNextFire(nowSec, voice, rng);
   }
   return schedule;
 }
@@ -192,13 +259,16 @@ export interface DueEvent {
 /**
  * Collect events due within [nowSec, nowSec + lookaheadSec) and return the
  * advanced schedule. Disabled voices are dropped; newly enabled voices are
- * seeded one interval out. Pure — the pump loop feeds it the audio clock.
+ * seeded one interval out (free-running) or at the next wall-clock boundary
+ * (sync-to-clock, #33). `nowMs` samples the wall clock alongside the audio
+ * clock `nowSec`. Pure — the pump loop feeds it both clocks.
  */
 export function collectDueEvents(
   schedule: FireSchedule,
   settings: MeditationSettings,
   nowSec: number,
   lookaheadSec: number,
+  nowMs: number = Date.now(),
   rng: () => number = Math.random,
 ): { events: DueEvent[]; schedule: FireSchedule } {
   const events: DueEvent[] = [];
@@ -206,15 +276,26 @@ export function collectDueEvents(
 
   for (const [voiceId, voice] of Object.entries(settings)) {
     if (!voice.enabled) continue;
-    let fireAt = schedule[voiceId];
-    if (fireAt === undefined) {
-      fireAt = computeNextFire(nowSec, voice, rng);
-    }
-    // A long suspend can leave fireAt far in the past; fire once, then
-    // resume the normal cadence rather than burst-firing to catch up.
-    while (fireAt < nowSec + lookaheadSec) {
-      events.push({ voiceId, whenSec: Math.max(fireAt, nowSec) });
-      fireAt = computeNextFire(Math.max(fireAt, nowSec), voice, rng);
+    const nextFire = (fromSec: number): number =>
+      voice.syncToClock
+        ? computeNextClockFire(fromSec, nowSec, nowMs, voice.intervalMin)
+        : computeNextFire(fromSec, voice, rng);
+
+    let fireAt = schedule[voiceId] ?? nextFire(nowSec);
+    if (fireAt < nowSec) {
+      // A long suspend left the schedule stale. Ring once now as a catch-up,
+      // then resume the cadence at the next fire beyond this lookahead window
+      // rather than burst-firing every missed step. For a synced voice this
+      // also skips a boundary that is imminent on resume (e.g. resuming 0.3s
+      // before :05), so the catch-up ring and that boundary don't double up.
+      events.push({ voiceId, whenSec: nowSec });
+      fireAt = nextFire(nowSec);
+      while (fireAt < nowSec + lookaheadSec) fireAt = nextFire(fireAt);
+    } else {
+      while (fireAt < nowSec + lookaheadSec) {
+        events.push({ voiceId, whenSec: fireAt });
+        fireAt = nextFire(fireAt);
+      }
     }
     next[voiceId] = fireAt;
   }

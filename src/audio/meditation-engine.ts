@@ -35,7 +35,11 @@ export class MeditationEngine {
 
   start(): void {
     if (this.timer) return;
-    this.schedule = initFireSchedule(this.settings, this.ctx.currentTime);
+    this.schedule = initFireSchedule(
+      this.settings,
+      this.ctx.currentTime,
+      Date.now(),
+    );
     this.timer = setInterval(() => this.pump(), PUMP_MS);
   }
 
@@ -62,6 +66,7 @@ export class MeditationEngine {
       this.settings,
       this.ctx.currentTime,
       LOOKAHEAD_SEC,
+      Date.now(),
     );
     this.schedule = schedule;
     for (const event of events) {
