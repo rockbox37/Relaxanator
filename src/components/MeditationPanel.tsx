@@ -57,13 +57,33 @@ export default function MeditationPanel({
                 min
               </label>
 
-              <label className="voice-jitter" title="Vary each interval by up to ±15%">
+              <label
+                className="voice-jitter"
+                title={
+                  state.syncToClock
+                    ? "Disabled while synced to the clock"
+                    : "Vary each interval by up to ±15%"
+                }
+              >
                 <input
                   type="checkbox"
-                  checked={state.jitter}
+                  checked={state.jitter && !state.syncToClock}
+                  disabled={state.syncToClock}
                   onChange={(e) => onChange(voice.id, { jitter: e.target.checked })}
                 />
                 vary
+              </label>
+
+              <label
+                className="voice-sync"
+                title="Ring on the wall clock, anchored to the top of the hour (e.g. :00, :05, :10…)"
+              >
+                <input
+                  type="checkbox"
+                  checked={state.syncToClock}
+                  onChange={(e) => onChange(voice.id, { syncToClock: e.target.checked })}
+                />
+                clock
               </label>
 
               <label className="voice-volume">

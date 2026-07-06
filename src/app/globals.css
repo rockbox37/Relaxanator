@@ -256,11 +256,17 @@ main > p {
   padding: 0.25rem 0.4rem;
 }
 
-.voice-jitter {
+.voice-jitter,
+.voice-sync {
   display: inline-flex;
   gap: 0.3rem;
   align-items: center;
   color: var(--muted);
+}
+
+.voice-jitter:has(input:disabled) {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .voice-volume input {
