@@ -3,7 +3,7 @@
  * apex (relaxanator.com) and the www subdomain, so we pick the apex as the one
  * canonical origin and permanently redirect www → apex. This module is the pure
  * host → redirect-target decision; the Next.js edge wiring lives in
- * src/middleware.ts and imports `canonicalRedirectTarget` from here so the
+ * src/proxy.ts and imports `canonicalRedirectTarget` from here so the
  * branching logic stays deterministic and unit-tested.
  */
 
