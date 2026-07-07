@@ -5,7 +5,7 @@
  * Deliberately thin: all decisions live in src/lib (tested); this class only
  * maps state onto AudioNode parameters. Runs in the browser only.
  */
-import { EQ_BAND_FREQUENCIES } from "@/lib/eq";
+import { EQ_BAND_FREQUENCIES, type EqBand } from "@/lib/eq";
 import { type NoiseState, clampVolume, colorToIndex } from "@/lib/noise";
 
 /** Seconds for setTargetAtTime smoothing — click-free slider drags. */
@@ -205,6 +205,15 @@ export class NoiseEngine {
     const band = this.bands[bandIndex];
     if (!this.ctx || !band) return;
     band.gain.setTargetAtTime(gainDb, this.ctx.currentTime, SMOOTHING);
+  }
+
+  /**
+   * Snap every band to a whole curve at once (e.g. when a preset is selected),
+   * reusing the smoothed per-band ramp so the transition stays click-free.
+   */
+  setEqCurve(curve: readonly EqBand[]): void {
+    if (!this.ctx) return;
+    curve.forEach((band, i) => this.setBandGain(i, band.gainDb));
   }
 
   setMasterVolume(volume: number): void {

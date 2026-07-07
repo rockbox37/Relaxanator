@@ -31,6 +31,28 @@ export function createFlatEqCurve(): EqBand[] {
   return EQ_BAND_FREQUENCIES.map((frequency) => ({ frequency, gainDb: 0 }));
 }
 
+/** Center band index — the pivot a sloped curve rotates around (bass boost / treble cut). */
+export const EQ_CENTER_BAND_INDEX = (EQ_BAND_COUNT - 1) / 2;
+
+/**
+ * A curve with a constant dB-per-octave slope, pivoting around a fixed band so
+ * the response tilts without a net level change. Because bands are octave
+ * spaced, one band step equals one octave. A positive `rolloffDbPerOctave`
+ * models a high-frequency rolloff (bass boosted, treble cut) — the shape of
+ * pink/brown noise. Zero yields a flat curve. Per-band gains are clamped to the
+ * slider range, so steep slopes saturate to a shelf at the extremes.
+ */
+export function slopedEqCurve(
+  rolloffDbPerOctave: number,
+  pivotBandIndex: number = EQ_CENTER_BAND_INDEX,
+): EqBand[] {
+  return EQ_BAND_FREQUENCIES.map((frequency, i) => {
+    const gainDb = clampGainDb(rolloffDbPerOctave * (pivotBandIndex - i));
+    // Normalize -0 (from 0 * negative) so a flat slope equals createFlatEqCurve().
+    return { frequency, gainDb: gainDb === 0 ? 0 : gainDb };
+  });
+}
+
 /**
  * Return a copy of the curve with one band's gain replaced (clamped).
  * Out-of-range indexes return the curve unchanged.

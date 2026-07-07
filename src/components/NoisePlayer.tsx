@@ -6,6 +6,7 @@ import { AnnounceEngine } from "@/audio/announce-engine";
 import { MeditationEngine } from "@/audio/meditation-engine";
 import { NoiseEngine } from "@/audio/noise-engine";
 import {
+  type EqBand,
   EQ_GAIN_MAX_DB,
   EQ_GAIN_MIN_DB,
   formatFrequency,
@@ -25,6 +26,7 @@ import {
   type NoiseColor,
   clampVolume,
   createDefaultNoiseState,
+  eqCurveForColor,
 } from "@/lib/noise";
 import {
   SLEEP_FADE_SEC,
@@ -219,9 +221,20 @@ export default function NoisePlayer() {
     }
   }
 
+  /**
+   * Snap the EQ sliders (state) and the audible filter gains to a whole curve.
+   * The single "select preset → sliders snap" path — colors use it today, and a
+   * future saved session preset can reuse it with its own stored curve.
+   */
+  function applyEqCurve(curve: EqBand[]) {
+    setState((s) => ({ ...s, eqCurve: curve }));
+    engineRef.current?.setEqCurve(curve);
+  }
+
   function selectColor(color: NoiseColor) {
     setState((s) => ({ ...s, color }));
     engineRef.current?.setColor(color);
+    applyEqCurve(eqCurveForColor(color));
   }
 
   function changeBandGain(bandIndex: number, gainDb: number) {
