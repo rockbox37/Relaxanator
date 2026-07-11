@@ -10,6 +10,9 @@ export const HAL_OUTPUT_GAIN = 1;
 /** Slight pitch drop (cents) for Douglas Rain–style calm mid-register. */
 const HAL_DETUNE_CENTS = -75;
 
+/** Very light pitch drop for the movie-accurate HAL — warmth without going synthetic. */
+const NEUTRAL_DETUNE_CENTS = -20;
+
 /** Vocoder (Zarvox) pitch drop: 3 whole steps = 6 semitones below playbackRate pitch. */
 export const VOCODER_DETUNE_CENTS = -600;
 
@@ -123,6 +126,49 @@ function scheduleHal(
   };
 }
 
+/**
+ * Neutral computer tone (movie-accurate HAL, #40): a natural baritone with only
+ * light warming — a gentle top rolloff and soft compression for evenness across
+ * word sprites. Deliberately far lighter than scheduleHal: no mid boost, no
+ * telephone-band limiting. The point is calm and natural, not obviously synthetic.
+ */
+function scheduleNeutral(
+  ctx: BaseAudioContext,
+  buffer: AudioBuffer,
+  dest: AudioNode,
+  when: number,
+  playbackRate: number,
+  volume: number,
+): AnnounceWordHandle {
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.playbackRate.value = playbackRate;
+  source.detune.value = NEUTRAL_DETUNE_CENTS;
+
+  const lowPass = ctx.createBiquadFilter();
+  lowPass.type = "lowpass";
+  lowPass.frequency.value = 6500;
+  lowPass.Q.value = 0.6;
+
+  const compressor = ctx.createDynamicsCompressor();
+  compressor.threshold.value = -22;
+  compressor.knee.value = 10;
+  compressor.ratio.value = 2;
+  compressor.attack.value = 0.015;
+  compressor.release.value = 0.2;
+
+  const gain = ctx.createGain();
+  gain.gain.value = volume;
+
+  source.connect(lowPass).connect(compressor).connect(gain).connect(dest);
+  source.start(when);
+
+  return {
+    stopAt: when + wordDurationSec(buffer, playbackRate),
+    lastNode: source,
+  };
+}
+
 export function scheduleAnnounceWord(
   ctx: BaseAudioContext,
   buffer: AudioBuffer,
@@ -135,6 +181,8 @@ export function scheduleAnnounceWord(
   switch (voice.effect) {
     case "hal":
       return scheduleHal(ctx, buffer, dest, when, voice.playbackRate, volume);
+    case "neutral":
+      return scheduleNeutral(ctx, buffer, dest, when, voice.playbackRate, volume);
     default: {
       const detuneCents =
         voice.id === "vocoder" || voice.dir === "zarvox"

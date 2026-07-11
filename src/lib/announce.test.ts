@@ -31,6 +31,7 @@ describe("ANNOUNCE_VOICES", () => {
     expect(vocoder.effect).toBe("plain");
     expect(vocoder.playbackRate).toBe(1.025);
     expect(ids).toContain("speak-spell");
+    expect(ids).toContain("big-robot");
     expect(ids).toContain("hal9000");
     expect(ids).not.toContain("trinoids");
   });
@@ -39,11 +40,18 @@ describe("ANNOUNCE_VOICES", () => {
     expect(getAnnounceVoice("trinoids").id).toBe(DEFAULT_ANNOUNCE_VOICE_ID);
   });
 
-  it("defines HAL as a measured North American sprite set with warm filtering", () => {
+  it("defines Big Robot as the processed-robot sprite set with warm filtering", () => {
+    const bigRobot = getAnnounceVoice("big-robot");
+    expect(bigRobot.dir).toBe("hal");
+    expect(bigRobot.effect).toBe("hal");
+    expect(bigRobot.playbackRate).toBe(0.88);
+  });
+
+  it("defines HAL 9000 as a calm natural baritone with light neutral processing", () => {
     const hal = getAnnounceVoice("hal9000");
-    expect(hal.dir).toBe("hal");
-    expect(hal.effect).toBe("hal");
-    expect(hal.playbackRate).toBe(0.88);
+    expect(hal.dir).toBe("daniel");
+    expect(hal.effect).toBe("neutral");
+    expect(hal.playbackRate).toBe(0.96);
   });
 });
 

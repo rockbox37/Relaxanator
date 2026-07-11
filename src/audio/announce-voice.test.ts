@@ -106,13 +106,22 @@ describe("scheduleAnnounceWord detune", () => {
     expect(source?.playbackRate?.value).toBe(1);
   });
 
-  it("keeps HAL detune separate from vocoder detune", () => {
+  it("keeps Big Robot (hal effect) detune separate from vocoder detune", () => {
     const { ctx, nodes } = mockAudioContext();
-    const voice = getAnnounceVoice("hal9000");
+    const voice = getAnnounceVoice("big-robot");
     scheduleAnnounceWord(ctx, buffer, dest, 0, voice, 0.6);
     const source = nodes.find((n) => n.type === "source");
     expect(source?.detune?.value).toBe(-75);
     expect(source?.playbackRate?.value).toBe(0.88);
+  });
+
+  it("gives HAL 9000 (neutral effect) light detune and its own playback rate", () => {
+    const { ctx, nodes } = mockAudioContext();
+    const voice = getAnnounceVoice("hal9000");
+    scheduleAnnounceWord(ctx, buffer, dest, 0, voice, 0.6);
+    const source = nodes.find((n) => n.type === "source");
+    expect(source?.detune?.value).toBe(-20);
+    expect(source?.playbackRate?.value).toBe(0.96);
   });
 
   it("applies a short linear attack on plain (vocoder) word gain", () => {
