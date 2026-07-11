@@ -17,10 +17,13 @@ OUT_ROOT="public/audio/tts"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-# voice-dir:macos-voice pairs (hal uses Ralph en_US — calm mid-register, not British)
-VOICES="zarvox:Zarvox fred:Fred hal:Ralph"
+# voice-dir:macos-voice pairs. "hal" (now surfaced as "Big Robot") uses Ralph;
+# "daniel" is the movie-accurate HAL 9000 — a calm, natural baritone (#40).
+VOICES="zarvox:Zarvox fred:Fred hal:Ralph daniel:Daniel"
 # Measured HAL delivery (words per minute); default say rate is ~175.
 HAL_SAY_RATE=155
+# Movie-accurate HAL: unhurried but not sedated.
+DANIEL_SAY_RATE=150
 
 # word-id:spoken-text pairs (word ids are the filenames the app requests)
 WORDS="its:It's one:one two:two three:three four:four five:five six:six seven:seven
@@ -41,6 +44,8 @@ for voice_pair in $VOICES; do
     wav="$OUT_ROOT/$dir/$word.wav"
     if [ "$dir" = "hal" ]; then
       say -v "$voice" -r "$HAL_SAY_RATE" -o "$aiff" "$text"
+    elif [ "$dir" = "daniel" ]; then
+      say -v "$voice" -r "$DANIEL_SAY_RATE" -o "$aiff" "$text"
     else
       say -v "$voice" -o "$aiff" "$text"
     fi
