@@ -77,7 +77,7 @@ export default function TimeAnnouncePanel({
           className="voice-preview"
           onClick={onPreview}
           disabled={previewDisabled}
-          title="Hear the next announcement now"
+          title="Hear the current time now"
         >
           ♪
         </button>

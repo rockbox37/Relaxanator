@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AnnounceEngine, FIRST_OUTPUT_RAMP_SEC, FIRST_OUTPUT_SETTLE_SEC } from "./announce-engine";
+import * as announce from "../lib/announce";
 import { ANNOUNCE_WORDS } from "../lib/announce";
 
 function mockAudioContext(state: AudioContextState = "running") {
@@ -192,6 +193,31 @@ describe("AnnounceEngine preload", () => {
     expect(
       linearRampToValueAtTime.mock.calls.find((c) => c[0] === 0.6),
     ).toBeDefined();
+  });
+
+  it("preview speaks the current wall-clock time, not the next interval boundary", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 15, 14, 47, 30));
+
+    const ctx = mockAudioContext();
+    const timeTokensSpy = vi.spyOn(announce, "timeTokens");
+
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await engine.preview();
+
+    expect(timeTokensSpy).toHaveBeenCalledWith(14, 47, expect.any(Object));
+    expect(timeTokensSpy).not.toHaveBeenCalledWith(15, 0, expect.any(Object));
+
+    timeTokensSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it("primes the vocoder detune path after preload", async () => {
