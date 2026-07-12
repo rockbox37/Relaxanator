@@ -70,13 +70,11 @@ export class AnnounceEngine {
     }
   }
 
-  /** Speak the upcoming boundary's time immediately (UI preview). */
+  /** Speak the current wall-clock time immediately (UI preview / audition). */
   async preview(): Promise<void> {
-    const boundary = new Date(
-      nextBoundaryMs(Date.now(), this.settings.intervalMin),
-    );
+    const now = new Date();
     await this.speak(
-      timeTokens(boundary.getHours(), boundary.getMinutes(), {
+      timeTokens(now.getHours(), now.getMinutes(), {
         hour12: !systemPrefers24Hour(),
       }),
       this.ctx.currentTime + 0.05,
