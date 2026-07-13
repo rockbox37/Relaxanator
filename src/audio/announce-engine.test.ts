@@ -76,7 +76,7 @@ describe("AnnounceEngine preload", () => {
 
     const dest = { connect: () => dest } as unknown as AudioNode;
     const engine = new AnnounceEngine(ctx, dest, {
-      enabled: true,
+      enabled: false,
       intervalMin: 60,
       voiceId: "vocoder",
       volume: 0.6,
@@ -105,7 +105,7 @@ describe("AnnounceEngine preload", () => {
 
     const dest = { connect: () => dest } as unknown as AudioNode;
     const engine = new AnnounceEngine(ctx, dest, {
-      enabled: true,
+      enabled: false,
       intervalMin: 60,
       voiceId: "vocoder",
       volume: 0.6,
@@ -148,7 +148,7 @@ describe("AnnounceEngine preload", () => {
 
     const dest = { connect: () => dest } as unknown as AudioNode;
     const engine = new AnnounceEngine(ctx, dest, {
-      enabled: true,
+      enabled: false,
       intervalMin: 60,
       voiceId: "vocoder",
       volume: 0.6,
@@ -177,7 +177,7 @@ describe("AnnounceEngine preload", () => {
 
     const dest = { connect: () => dest } as unknown as AudioNode;
     const engine = new AnnounceEngine(ctx, dest, {
-      enabled: true,
+      enabled: false,
       intervalMin: 60,
       voiceId: "vocoder",
       volume: 0.6,
@@ -204,7 +204,7 @@ describe("AnnounceEngine preload", () => {
 
     const dest = { connect: () => dest } as unknown as AudioNode;
     const engine = new AnnounceEngine(ctx, dest, {
-      enabled: true,
+      enabled: false,
       intervalMin: 60,
       voiceId: "vocoder",
       volume: 0.6,
@@ -239,7 +239,7 @@ describe("AnnounceEngine preload", () => {
 
     const dest = { connect: () => dest } as unknown as AudioNode;
     const engine = new AnnounceEngine(ctx, dest, {
-      enabled: true,
+      enabled: false,
       intervalMin: 60,
       voiceId: "vocoder",
       volume: 0.6,
@@ -296,6 +296,29 @@ describe("AnnounceEngine pump scheduling", () => {
     engine.stop();
   });
 
+  it("schedules early in the interval window, not only in the last 60s (#47)", async () => {
+    vi.useFakeTimers();
+    // 10 minutes before the hour — outside PR #46's fixed 60s lookahead.
+    vi.setSystemTime(new Date(2026, 0, 15, 14, 50, 0));
+
+    const ctx = mockAudioContext();
+    const timeTokensSpy = vi.spyOn(announce, "timeTokens");
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(timeTokensSpy).toHaveBeenCalledWith(15, 0, expect.any(Object));
+    timeTokensSpy.mockRestore();
+    engine.stop();
+  });
+
   it("catch-up speaks a boundary missed by timer throttling", async () => {
     vi.useFakeTimers();
     // 2s after the hour — nextBoundaryMs alone would wait until 16:00.
@@ -312,10 +335,38 @@ describe("AnnounceEngine pump scheduling", () => {
     });
 
     engine.start();
-    await vi.advanceTimersByTimeAsync(600);
+    await vi.advanceTimersByTimeAsync(0);
 
     expect(timeTokensSpy).toHaveBeenCalledWith(15, 0, expect.any(Object));
-    expect(timeTokensSpy).not.toHaveBeenCalledWith(16, 0, expect.any(Object));
+    // Full-interval lookahead may also enqueue the following hour onto the
+    // audio clock; that is intentional. Assert we did catch the missed :00.
+    expect(
+      timeTokensSpy.mock.calls.some(
+        (c) => c[0] === 15 && c[1] === 0,
+      ),
+    ).toBe(true);
+    timeTokensSpy.mockRestore();
+    engine.stop();
+  });
+
+  it("catch-up recovers after a >60s oversleep within the interval (#47)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 15, 15, 1, 30));
+
+    const ctx = mockAudioContext();
+    const timeTokensSpy = vi.spyOn(announce, "timeTokens");
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(timeTokensSpy).toHaveBeenCalledWith(15, 0, expect.any(Object));
     timeTokensSpy.mockRestore();
     engine.stop();
   });
@@ -335,11 +386,11 @@ describe("AnnounceEngine pump scheduling", () => {
     });
 
     engine.start();
-    await vi.advanceTimersByTimeAsync(600);
+    await vi.advanceTimersByTimeAsync(0);
     expect(timeTokensSpy).toHaveBeenCalledTimes(1);
 
     engine.resync();
-    await vi.advanceTimersByTimeAsync(600);
+    await vi.advanceTimersByTimeAsync(0);
     expect(timeTokensSpy).toHaveBeenCalledTimes(2);
 
     timeTokensSpy.mockRestore();

@@ -84,6 +84,8 @@ export default function NoisePlayer() {
   breakSettingsRef.current = breaks;
   const [playing, setPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
+  /** Bumped when AudioContext engines are first created — wires recovery listeners. */
+  const [audioEpoch, setAudioEpoch] = useState(0);
   const [sleepMinutes, setSleepMinutes] = useState(SLEEP_TIMER_OFF);
   const [sleepRemaining, setSleepRemaining] = useState<number | null>(null);
 
@@ -112,6 +114,44 @@ export default function NoisePlayer() {
       engineRef.current = null;
     };
   }, []);
+
+  /**
+   * Tab foreground / AudioContext wake: wall time advanced while timers were
+   * throttled or the context was interrupted — re-map the next announce
+   * boundary onto the live audio clock (#47).
+   */
+  useEffect(() => {
+    const resyncIfRunning = () => {
+      const ctx = engineRef.current?.context;
+      if (ctx?.state === "running") {
+        announceRef.current?.resync();
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      const engine = engineRef.current;
+      const ctx = engine?.context;
+      if (!ctx) return;
+      void (async () => {
+        // Only force-resume on tab focus while the UI thinks we're playing —
+        // never from statechange, or an intentional Pause would immediately
+        // fight itself back to running.
+        if (ctx.state !== "running" && playing) {
+          await engine.resume();
+        }
+        resyncIfRunning();
+      })();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    const ctx = engineRef.current?.context;
+    ctx?.addEventListener("statechange", resyncIfRunning);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      ctx?.removeEventListener("statechange", resyncIfRunning);
+    };
+  }, [playing, audioEpoch]);
 
   async function ensureEngines(): Promise<NoiseEngine | null> {
     if (engineRef.current) return engineRef.current;
@@ -153,6 +193,7 @@ export default function NoisePlayer() {
         breakEngine.start();
         breakRef.current = breakEngine;
       }
+      setAudioEpoch((n) => n + 1);
       return engine;
     } finally {
       setStarting(false);

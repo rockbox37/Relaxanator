@@ -124,6 +124,31 @@ export function nextBoundaryMs(nowMs: number, intervalMin: number): number {
 }
 
 /**
+ * How far ahead of a wall-clock boundary the announce pump should enqueue
+ * onto the audio timeline. Floor is 60s; otherwise one full interval so a
+ * throttled background tab still schedules the next civil-time mark early
+ * enough that setInterval sleeping most of the window cannot skip it.
+ */
+export function scheduleLookaheadMs(intervalMin: number): number {
+  const step = Math.max(1, Math.floor(intervalMin));
+  return Math.max(60_000, step * 60_000);
+}
+
+/**
+ * How long after a boundary we will still catch up if the pump overslept.
+ * Capped well below a full interval so we do not re-speak the *previous*
+ * mark while waiting inside the next window (e.g. at :50 with hourly).
+ */
+export function scheduleMissGraceMs(intervalMin: number): number {
+  return Math.min(5 * 60_000, scheduleLookaheadMs(intervalMin));
+}
+
+/** @deprecated Prefer {@link scheduleLookaheadMs}. */
+export function scheduleHorizonMs(intervalMin: number): number {
+  return scheduleLookaheadMs(intervalMin);
+}
+
+/**
  * Boundary that was just missed when the pump overslept past it (e.g. a
  * background tab's setInterval was throttled beyond the lookahead window).
  * Returns that boundary's epoch ms when `nowMs` is within `graceMs` after it;
