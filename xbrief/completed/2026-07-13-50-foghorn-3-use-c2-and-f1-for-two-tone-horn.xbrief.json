@@ -5,7 +5,7 @@
   },
   "plan": {
     "title": "Foghorn 3: use C2 and F1 for two-tone horn",
-    "status": "running",
+    "status": "completed",
     "narratives": {
       "Description": "Foghorn 3: use C2 and F1 for two-tone horn",
       "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/50",
@@ -38,6 +38,9 @@
         "title": "Issue #50: Foghorn 3: use C2 and F1 for two-tone horn"
       }
     ],
-    "updated": "2026-07-13T18:06:34Z"
+    "updated": "2026-07-13T18:07:59Z",
+    "metadata": {
+      "completedAt": "2026-07-13T18:07:59Z"
+    }
   }
 }
