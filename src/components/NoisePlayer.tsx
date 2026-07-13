@@ -77,11 +77,17 @@ export default function NoisePlayer() {
   const [activeBreak, setActiveBreak] = useState<ActiveBreak | null>(null);
   const [notificationHint, setNotificationHint] = useState<string | undefined>();
   const announceSettingsRef = useRef(announce);
-  announceSettingsRef.current = announce;
   const meditationSettingsRef = useRef(meditation);
-  meditationSettingsRef.current = meditation;
   const breakSettingsRef = useRef(breaks);
-  breakSettingsRef.current = breaks;
+  useEffect(() => {
+    announceSettingsRef.current = announce;
+  }, [announce]);
+  useEffect(() => {
+    meditationSettingsRef.current = meditation;
+  }, [meditation]);
+  useEffect(() => {
+    breakSettingsRef.current = breaks;
+  }, [breaks]);
   const [playing, setPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
   /** Bumped when AudioContext engines are first created — wires recovery listeners. */

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSerwist } from "@serwist/turbopack";
 
 const nextConfig: NextConfig = {
   // Self-contained server bundle for the Fly.io Docker image.
@@ -9,4 +10,4 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: process.cwd(),
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);
