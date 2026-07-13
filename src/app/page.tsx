@@ -17,8 +17,8 @@ export default function Home() {
         <h1>Relaxanator</h1>
       </header>
       <p>
-        Colored background noise with a 10-band equalizer. Meditation sounds
-        and break prompts are on the way.
+        Colored background noise with a 10-band equalizer, meditation sounds,
+        break prompts, and optional time announcements.
       </p>
       <NoisePlayer />
     </main>

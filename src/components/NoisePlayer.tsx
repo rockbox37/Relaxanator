@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { AnnounceEngine } from "@/audio/announce-engine";
+import { BreakEngine } from "@/audio/break-engine";
 import { MeditationEngine } from "@/audio/meditation-engine";
 import { NoiseEngine } from "@/audio/noise-engine";
 import {
@@ -16,6 +17,15 @@ import {
   type AnnounceSettings,
   createDefaultAnnounceSettings,
 } from "@/lib/announce";
+import {
+  type BreakKind,
+  type BreakSettings,
+  type BreakTypeSettings,
+  createDefaultBreakSettings,
+} from "@/lib/breaks";
+import {
+  requestNotificationPermission,
+} from "@/lib/break-notifications";
 import {
   type MeditationSettings,
   type VoiceSettings,
@@ -43,6 +53,8 @@ import {
   sleepRemainingSec,
 } from "@/lib/sleep-timer";
 
+import BreakBanner, { type ActiveBreak } from "./BreakBanner";
+import BreakPanel from "./BreakPanel";
 import MeditationPanel from "./MeditationPanel";
 import TimeAnnouncePanel from "./TimeAnnouncePanel";
 
@@ -53,6 +65,7 @@ export default function NoisePlayer() {
   const engineRef = useRef<NoiseEngine | null>(null);
   const meditationRef = useRef<MeditationEngine | null>(null);
   const announceRef = useRef<AnnounceEngine | null>(null);
+  const breakRef = useRef<BreakEngine | null>(null);
   const [state, setState] = useState(createDefaultNoiseState);
   const [meditation, setMeditation] = useState<MeditationSettings>(
     createDefaultMeditationSettings,
@@ -60,10 +73,15 @@ export default function NoisePlayer() {
   const [announce, setAnnounce] = useState<AnnounceSettings>(
     createDefaultAnnounceSettings,
   );
+  const [breaks, setBreaks] = useState<BreakSettings>(createDefaultBreakSettings);
+  const [activeBreak, setActiveBreak] = useState<ActiveBreak | null>(null);
+  const [notificationHint, setNotificationHint] = useState<string | undefined>();
   const announceSettingsRef = useRef(announce);
   announceSettingsRef.current = announce;
   const meditationSettingsRef = useRef(meditation);
   meditationSettingsRef.current = meditation;
+  const breakSettingsRef = useRef(breaks);
+  breakSettingsRef.current = breaks;
   const [playing, setPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
   const [sleepMinutes, setSleepMinutes] = useState(SLEEP_TIMER_OFF);
@@ -84,6 +102,8 @@ export default function NoisePlayer() {
   useEffect(() => {
     return () => {
       if (sleepPumpRef.current) clearInterval(sleepPumpRef.current);
+      breakRef.current?.stop();
+      breakRef.current = null;
       announceRef.current?.stop();
       announceRef.current = null;
       meditationRef.current?.stop();
@@ -121,6 +141,17 @@ export default function NoisePlayer() {
         );
         announceEngine.start();
         announceRef.current = announceEngine;
+
+        const breakEngine = new BreakEngine(
+          engine.context,
+          engine.mixBus,
+          breakSettingsRef.current,
+        );
+        breakEngine.setOnFire(({ kind, message }) => {
+          setActiveBreak({ kind, message });
+        });
+        breakEngine.start();
+        breakRef.current = breakEngine;
       }
       return engine;
     } finally {
@@ -176,6 +207,8 @@ export default function NoisePlayer() {
     meditationRef.current?.start();
     announceRef.current?.stop();
     announceRef.current?.start();
+    breakRef.current?.stop();
+    breakRef.current?.start();
   }
 
   async function togglePlay() {
@@ -188,6 +221,8 @@ export default function NoisePlayer() {
       // keeps moving while the audio clock freezes.
       announceRef.current?.stop();
       announceRef.current?.start();
+      breakRef.current?.stop();
+      breakRef.current?.start();
       await engine.suspend();
       setPlaying(false);
     } else {
@@ -215,6 +250,8 @@ export default function NoisePlayer() {
     meditationRef.current?.start();
     announceRef.current?.stop();
     announceRef.current?.start();
+    breakRef.current?.stop();
+    breakRef.current?.start();
   }
 
   function changeSleepMinutes(minutes: number) {
@@ -294,8 +331,75 @@ export default function NoisePlayer() {
     await announceRef.current?.preview();
   }
 
+  function changeBreakType(kind: BreakKind, update: Partial<BreakTypeSettings>) {
+    setBreaks((b) => {
+      const next: BreakSettings = {
+        ...b,
+        types: { ...b.types, [kind]: { ...b.types[kind], ...update } },
+      };
+      breakSettingsRef.current = next;
+      breakRef.current?.updateSettings(next);
+      return next;
+    });
+  }
+
+  function changeBreakSettings(update: Partial<BreakSettings>) {
+    setBreaks((b) => {
+      const next = { ...b, ...update };
+      breakSettingsRef.current = next;
+      breakRef.current?.updateSettings(next);
+      return next;
+    });
+  }
+
+  async function toggleBreakNotifications(enabled: boolean) {
+    if (!enabled) {
+      setNotificationHint(undefined);
+      changeBreakSettings({ notificationsEnabled: false });
+      return;
+    }
+    const permission = await requestNotificationPermission();
+    if (permission === "granted") {
+      setNotificationHint(undefined);
+      changeBreakSettings({ notificationsEnabled: true });
+      return;
+    }
+    // Graceful deny / unsupported — keep the feature usable via banner + cue.
+    changeBreakSettings({ notificationsEnabled: false });
+    if (permission === "unsupported") {
+      setNotificationHint(
+        "Browser notifications are not available here — in-app banner still works.",
+      );
+    } else {
+      setNotificationHint(
+        "Notification permission denied — in-app banner and audio cue still work.",
+      );
+    }
+  }
+
+  async function previewBreakCue() {
+    if (!(await ensurePreviewAudio())) return;
+    breakRef.current?.preview();
+  }
+
+  function dismissBreakBanner() {
+    setActiveBreak(null);
+  }
+
+  function snoozeBreakBanner() {
+    if (!activeBreak) return;
+    breakRef.current?.snooze(activeBreak.kind);
+    setActiveBreak(null);
+  }
+
   return (
     <section className="player">
+      <BreakBanner
+        breakPrompt={activeBreak}
+        onDismiss={dismissBreakBanner}
+        onSnooze={snoozeBreakBanner}
+        snoozeMin={breaks.snoozeMin}
+      />
       <div className="transport">
         <div className="transport-controls">
           <button
@@ -408,6 +512,16 @@ export default function NoisePlayer() {
         onChange={changeVoice}
         onPreview={previewVoice}
         previewDisabled={starting}
+      />
+
+      <BreakPanel
+        settings={breaks}
+        onChangeType={changeBreakType}
+        onChangeSettings={changeBreakSettings}
+        onPreview={previewBreakCue}
+        onToggleNotifications={toggleBreakNotifications}
+        previewDisabled={starting}
+        notificationHint={notificationHint}
       />
 
       <TimeAnnouncePanel
