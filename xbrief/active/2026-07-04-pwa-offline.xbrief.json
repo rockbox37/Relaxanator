@@ -8,7 +8,7 @@
   },
   "plan": {
     "title": "PWA and offline support",
-    "status": "pending",
+    "status": "running",
     "narratives": {
       "Overview": "Make Relaxanator installable and fully functional offline: web app manifest, service worker precaching the app shell and audio samples.",
       "Requirements": "FR-1: Web app manifest with icons; app is installable (Add to Home Screen / Dock). FR-2: Service worker precaches the app shell and audio sample assets. NFR-1: After first load, all features work with no network. NFR-2: Passes Lighthouse PWA installability checks.",
@@ -42,6 +42,6 @@
       "ac-locked",
       "refinement-2026-07-13"
     ],
-    "updated": "2026-07-13T19:00:06Z"
+    "updated": "2026-07-13T19:00:44Z"
   }
 }
