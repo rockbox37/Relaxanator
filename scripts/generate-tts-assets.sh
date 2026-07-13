@@ -17,13 +17,18 @@ OUT_ROOT="public/audio/tts"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-# voice-dir:macos-voice pairs. "hal" (now surfaced as "Big Robot") uses Ralph;
-# "daniel" is the movie-accurate HAL 9000 — a calm, natural baritone (#40).
-VOICES="zarvox:Zarvox fred:Fred hal:Ralph daniel:Daniel"
+# "dir|macos-voice" pairs, one per line (voice names may contain spaces, so we
+# split on "|", not whitespace). "hal" (now surfaced as "Big Robot") uses Ralph;
+# "reed" is the movie-accurate HAL 9000 — a calm, neutral North American
+# baritone (#40). Reed has a UK namesake, so name the US variant explicitly.
+VOICES="zarvox|Zarvox
+fred|Fred
+hal|Ralph
+reed|Reed (English (US))"
 # Measured HAL delivery (words per minute); default say rate is ~175.
 HAL_SAY_RATE=155
 # Movie-accurate HAL: unhurried but not sedated.
-DANIEL_SAY_RATE=150
+REED_SAY_RATE=150
 
 # word-id:spoken-text pairs (word ids are the filenames the app requests)
 WORDS="its:It's one:one two:two three:three four:four five:five six:six seven:seven
@@ -33,9 +38,8 @@ zero:zero thirteen:thirteen fourteen:fourteen sixteen:sixteen
 seventeen:seventeen eighteen:eighteen nineteen:nineteen twenty:twenty
 twentyone:twenty-one twentytwo:twenty-two twentythree:twenty-three"
 
-for voice_pair in $VOICES; do
-  dir=${voice_pair%%:*}
-  voice=${voice_pair#*:}
+printf '%s\n' "$VOICES" | while IFS='|' read -r dir voice; do
+  [ -n "$dir" ] || continue
   mkdir -p "$OUT_ROOT/$dir"
   for word_pair in $WORDS; do
     word=${word_pair%%:*}
@@ -44,8 +48,8 @@ for voice_pair in $VOICES; do
     wav="$OUT_ROOT/$dir/$word.wav"
     if [ "$dir" = "hal" ]; then
       say -v "$voice" -r "$HAL_SAY_RATE" -o "$aiff" "$text"
-    elif [ "$dir" = "daniel" ]; then
-      say -v "$voice" -r "$DANIEL_SAY_RATE" -o "$aiff" "$text"
+    elif [ "$dir" = "reed" ]; then
+      say -v "$voice" -r "$REED_SAY_RATE" -o "$aiff" "$text"
     else
       say -v "$voice" -o "$aiff" "$text"
     fi

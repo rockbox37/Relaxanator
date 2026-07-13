@@ -17,12 +17,20 @@ Scoped work, ranked queue, and tracked bugs live in authoritative sources — no
 
 (Optional) Ephemeral shell quirks or uncommitted local artifacts only — not tracked work state.
 
-<!-- deft:managed-section v3 sha=unknown refreshed=2026-07-04T20:27:37Z session=1b41211925a4 -->
+<!-- deft:managed-section v3 sha=unknown refreshed=2026-07-12T23:31:00Z session=4e6990f39144 -->
 # Deft — AI Development Framework
 
 Deft is installed in .deft/core/. Full guidelines: .deft/core/main.md
 
 ! If any .deft/core/.agents/skills/ path referenced in this file cannot be read (missing file, stale path from a previous framework version, or a deprecation redirect stub), read .deft/core/QUICK-START.md instead and follow it. QUICK-START refreshes this section idempotently for the current framework version.
+
+## Cold-start bootstrap (#2273)
+
+! If `deft` / `directive` will not run on this machine, recover BEFORE following any instruction below. Directive runs from an npm-installed engine; the recovery ladder is payload-independent and always lives in the **Cold-start bootstrap** block at the top of the project's committed `README.md` (never gitignored, present on a fresh clone even when `.deft/core/` is absent). Read it there and follow the global-first ladder.
+
+! Global-first ladder (prose; no committed shell shim — you are the interpreter). Work top-down; stop at the first rung that yields a working `directive`, keyed off the `package.json` pin: (1) try `directive doctor`; (2) else if `.deft/.cli/<platform>` holds an intact engine at/above the pin, use it; (3) else `npm i -g @deftai/directive` (Node ≥ 20); (4) else, when the global npm prefix is not writable (sandbox), `npm install --prefix .deft/.cli/<platform> @deftai/directive@<pinned>`; (5) else install from a staged tarball / vendored payload.
+
+⊗ Point cold-start recovery at a path inside `.deft/core/` — that is the exact payload absent when recovery is needed. The reachable-on-a-fresh-clone recovery surface is `README.md`, never the vendored payload.
 
 ## Pre-Cutover Check (run before First Session / Returning Sessions)
 
@@ -30,7 +38,7 @@ Deft is installed in .deft/core/. Full guidelines: .deft/core/main.md
 
 **Pre-cutover detected** if ANY of the following are true:
 
-- ./SPECIFICATION.md exists and is neither a deprecation redirect nor a current generated spec export. A current generated spec export contains `<!-- Purpose: rendered specification -->` and `<!-- Source of truth: xbrief/specification.xbrief.json -->`, and `./xbrief/specification.xbrief.json` plus all five lifecycle folders exist. This mirrors `.deft/core/scripts/_precutover.py`.
+- ./SPECIFICATION.md exists and is neither a deprecation redirect nor a current generated spec export. A current generated spec export contains `<!-- Purpose: rendered specification -->` and `<!-- Source of truth: xbrief/specification.xbrief.json -->`, and `./xbrief/specification.xbrief.json` plus all five lifecycle folders exist.
 - ./PROJECT.md exists and is not a deprecation redirect (`<!-- deft:deprecated-redirect -->` or `<!-- Purpose: deprecation redirect -->`).
 - ./xbrief/ exists but any of the five lifecycle subfolders (proposed/, pending/, active/, completed/, cancelled/) is missing
 
@@ -40,13 +48,15 @@ Deft is installed in .deft/core/. Full guidelines: .deft/core/main.md
 
 ## First Session
 
-Check what exists before doing anything else:
+! Check what exists before doing anything else -- do NOT respond to any user request until the correct phase fires:
 
 **USER.md missing** (~/.config/deft/USER.md or %APPDATA%\deft\USER.md):
-→ Read .deft/core/.agents/skills/deft-directive-setup/SKILL.md and start Phase 1 (user preferences)
+! Read .deft/core/.agents/skills/deft-directive-setup/SKILL.md and immediately start Phase 1 (user preferences). Do not wait for a user prompt.
 
-**USER.md exists, PROJECT-DEFINITION.xbrief.json missing** (./xbrief/):
-→ Read .deft/core/.agents/skills/deft-directive-setup/SKILL.md and start Phase 2 (project definition)
+**USER.md exists, `xbrief/PROJECT-DEFINITION.xbrief.json` missing**:
+! Read .deft/core/.agents/skills/deft-directive-setup/SKILL.md and immediately start Phase 2 (project definition). This branch MUST fire even when USER.md already exists from a prior install or another project -- a pre-existing USER.md is not a reason to skip Phase 2 on a greenfield project.
+
+⊗ Respond to any user query (greet, answer questions, take requests) before the correct phase has completed -- first-session phase routing is mandatory, not advisory.
 
 ## Returning Sessions
 
@@ -87,7 +97,7 @@ Check what exists before doing anything else:
 
 ## WIP cap
 
-The `plan.policy.wipCap` field caps the number of in-flight scope xBRIEFs (`xbrief/pending/` + `xbrief/active/`). The framework default is 10 (per umbrella #1119 Current Shape v3). When the cap is reached, `deft scope:promote` refuses with a relief hint pointing at `deft scope:demote --batch --older-than-days 30` (D1 / #1121). Operators can override the cap from the consumer side via `deft triage:welcome --onboard` (the Phase 4 wipCap prompt) or by inspecting / editing the typed field via `deft policy:show --field=wipCap`.
+The `plan.policy.wipCap` field caps the number of in-flight scope xBRIEFs (`xbrief/pending/` + `xbrief/active/`). The framework default is 20 (#2319; raised from the original 10 per umbrella #1119 Current Shape v3). When the cap is reached, `deft scope:promote` refuses with a relief hint pointing at `deft scope:demote --batch --older-than-days 30` (D1 / #1121). Operators can override the cap from the consumer side via `deft triage:welcome --onboard` (the Phase 4 wipCap prompt) or by inspecting / editing the typed field via `deft policy:show --field=wipCap`.
 
 ## xBRIEF layout (#2034 / #2110)
 
@@ -109,6 +119,15 @@ Rationale + cross-references: `.deft/core/docs/analysis/2026-07-02-agents-md-inc
 
 - ! Fetch issue comments via REST (`gh api repos/<owner>/<repo>/issues/<N>/comments`), read the `## Current shape (as of pass-N)` comment, and any linked context or `LockedDecisions` xBRIEF referenced there — following the reading order body -> current-shape comment -> amendment comments (claim-cites-state-surface, #2066). Prefer the deterministic read path: `deft umbrella:current-shape <N>` (or `task umbrella:current-shape <N>`) — it locates the canonical comment, validates #1152 sections, and never falls back to the issue body.
 - ⊗ Conclude umbrella or epic status from the issue body alone. Any "X is done" / "X is the blocker" assertion about an umbrella MUST cite the current-shape comment or another state artifact, not the body.
+
+## Deterministic questions runtime obligation (#1470)
+
+Rationale + cross-references: `.deft/core/content/contracts/deterministic-questions.md` (#767); closes the agent-runtime enforcement gap on issue #1470.
+
+- ! ANY agent-initiated structured question — whether via host `ask_user_question` / `AskQuestion` tooling or a numbered menu rendered in chat — inside OR outside any skill flow MUST include `Discuss` and `Back` as the final two options, in that order, and MUST obey the Discuss-pause semantic documented verbatim in `.deft/core/content/contracts/deterministic-questions.md`.
+- ! Before emitting any structured or numbered question, self-check: confirm `Discuss` and `Back` are present as the final two options; if not, add them before calling the tool or rendering the menu. Host-native `Other` / free-text affordances are NOT substitutes for `Discuss` (#767 / #431).
+- ⊗ Emit a structured or numbered question without `Discuss` and `Back` as the final two options — including ad-hoc orchestration approvals, dispatch confirmations, and decision walkthroughs outside interview/setup/refinement skills.
+- ⊗ Treat the host UI's automatic `Other` option as the stop-and-discuss escape hatch — `Other` widens the answer space; `Discuss` exits the deterministic flow entirely (see contract).
 
 ## Issue body→comments reading (#2143)
 
@@ -141,6 +160,33 @@ Deft ships versioned content packs (e.g. lessons learned from prior work) under 
 
 Skill routing (which skill answers which trigger) is not a table in this policy section. To pick a skill, scan the **Skills Index** (Level-0) in `.deft/core/REFERENCES.md` — it lists every skill under `.deft/core/.agents/skills/` with a one-sentence description and trigger keywords, unified with the framework doc routing so you consult one place to decide what to load. Read a `SKILL.md` (Level-1) only when the index indicates a match. Before improvising a multi-step workflow, scan the skills catalog first — skills are versioned and tested. The `welcome` / `onboard triage` trigger invokes `deft triage:welcome --onboard` (N3 / #1143); for `lessons` / `prior art`, discover packs with `deft packs:slice --list-packs` then load the relevant slice (see Content packs above).
 
+## Review-surface precedence (#2308)
+
+! When the active host harness exposes its own review-labeled surfaces -- Cursor's `bugbot` / `security-review` Task **subagent types**, the `review-bugbot` / `review-security` **skills**, or any future host equivalent -- the orchestrator MUST route review work through the canonical `deft-directive-review-cycle` skill. A generic "review this" / "get this reviewed" / "use sub-agents for reviews" request maps to `deft-directive-review-cycle` by intent, not literal keyword (extends #1862 / #2261).
+
+~ Host review tools MAY be folded in as *advisory* finding sources inside the review cycle (the #2019 harness-aware-reviewer path) -- their findings are batched alongside Greptile / bot findings, never treated as the review of record.
+
+⊗ Substitute a host-native review subagent type or `review-*` skill for `deft-directive-review-cycle` as the review surface -- the host review tools are advisory inputs, not a replacement. This is the 3rd recurrence of the #1862 / #2261 intent-routing / wrong-review-surface class (see also #2019, #2018).
+
+## Value feedback and attribution (#1709)
+
+- ! `plan.policy.valueFeedback.enabled` defaults OFF for non-org repos -- while off, every downstream path (emit-only ledger, budgeted session readback, upstream gap escalation) short-circuits with zero token spend. Opt-in for any repo via `deft policy:enable-value-feedback -- --confirm` after the capability-cost disclosure prints. Inspect with `deft policy:show --field=valueFeedback`.
+- ! Trusted-org local auto-enable (#2376) -- for a repo whose GitHub origin belongs to a company-owned org (built-in default `deftai`; extend via the `DEFT_VALUE_AUTOENABLE_ORGS` env override), LOCAL emit + session readback resolve ON with `source=org-auto` and network/upstream OFF, with NO per-repo or per-machine confirmation: org membership IS the consent for local, no-egress collection on company-owned resources. An explicit typed `valueFeedback` block always wins (including `enabled: false`); a non-matching org or no origin remote stays OFF (fail-safe).
+- ! Attribution records are enriched at emit time (#2376) with `repo`, `directive_version`, `install_id` (a stable per-checkout uuid under gitignored `.deft-cache/`), and `schema_version`, so a later collector can aggregate cross-repo without re-deriving provenance.
+- ! Value claims MUST be attributed-only -- point to concrete logged events ("encoding gate caught 2 corruptions"), never vague quality claims. Silence when the ledger has nothing attributable for the session slot.
+- ! Budgeted awareness -- at most one session readback line when `sessionLine` is allowed; repeat suppression uses a 4-hour window per attribution event id (parity with #1279 triage welcome debounce). Pull-based detail is `deft value:show`, not pushed.
+- ! Gap escalation to `deftai/directive` is confirmation-gated -- route conversational filing through `deft-directive-feedback`; the agent drafts + dedups; the operator approves before `deft feedback:file -- --confirm`. Use `Refs #1709` in upstream bodies, not `Closes`.
+- ! Gap escalation is consumer-only -- no-op inside the directive maintainer repo unless `DEFT_VALUE_SELF_DOGFOOD=1`. Trusted-org auto-enable still turns LOCAL emit ON inside the maintainer repo, but session readback stays gated behind `DEFT_VALUE_SELF_DOGFOOD=1`.
+- ⊗ Enable any NETWORK or upstream value-feedback surface (upstream gap escalation / `deft feedback:file`) without operator confirmation -- trusted-org auto-enable authorizes LOCAL, no-egress collection ONLY.
+- ⊗ File upstream framework-gap issues without operator confirmation or past duplicate detection.
+- ⊗ Treat unattributed self-promotion as value feedback -- if there is no ledger event, emit nothing.
+
+## Eval and framework health (#1703)
+
+- ! Three tiers: **Tier 0** `deft eval:health` (static gate score + contradictory-gate detector; ledger: `.eval/results/health-history.jsonl`). **Tier 1** CRUD telemetry on scope transitions (`.eval/results/crud-metrics.jsonl`, automatic). **Tier 2** `deft eval:run` / `deft eval:report` (golden corpus champion–challenger + holdout tripwire).
+- ! Run `deft eval:health` when orienting, after gate/policy/doc changes, or when session start emits a budgeted `[eval]` nudge (score drop or contradictory gate; 4-hour debounce, parity #1279/#1709). Tier 2 is for maintainer release eval (`eval:run -- --model M`; `eval:report -- --champion V --challenger V --model M`).
+- ⊗ Discover eval only via CHANGELOG/`deft --list` — AGENTS.md and `deft triage:help` are canonical. ⊗ Treat Tier 1 telemetry as operator-invoked.
+
 ## Branch policy & branch verification
 
 Three consumer-facing surfaces enforce the branch-policy contract (#746 / #747):
@@ -157,7 +203,7 @@ When the active project's `xbrief/PROJECT-DEFINITION.xbrief.json` has `plan.poli
 
 > "[deft policy] Direct commits to the default branch are ENABLED (source: typed). Branch-protection policy is OFF."
 
-This phrasing comes from `.deft/core/scripts/policy.py::disclosure_line` and stays in lockstep with the typed surface (#746). When the policy is OFF (default; `allowDirectCommitsToMaster=false`), no session-start disclosure is required -- the absence of the disclosure line itself signals the default-enforcing state.
+This phrasing is produced by `deft policy:show --field=allowDirectCommitsToMaster` and stays in lockstep with the typed surface (#746). When the policy is OFF (default; `allowDirectCommitsToMaster=false`), no session-start disclosure is required -- the absence of the disclosure line itself signals the default-enforcing state.
 
 Override paths (`deft policy:show` / `deft policy:enforce-branches` / `deft policy:allow-direct-commits -- --confirm` / `DEFT_ALLOW_DEFAULT_BRANCH_COMMIT=1`) are detailed in the Branch policy & branch verification section above.
 
@@ -213,5 +259,5 @@ Directive product commands use the `/deft:directive:*` namespace (#418 / #1670).
 
 **CLI compatibility:**
 
-The legacy Python `.deft/core/run` CLI is deprecated and is no longer a load-bearing operator path (#1933 Option 1, deprecate-by-disuse). Use the agent-driven setup skill for first-time setup and project/spec generation; if `deft` or `directive` will not run, read `.deft/core/UPGRADING.md`.
+The legacy Python `.deft/core/run` CLI is deprecated and is no longer a load-bearing operator path (#1933 Option 1, deprecate-by-disuse). Use the agent-driven setup skill for first-time setup and project/spec generation; if `deft` or `directive` will not run, follow the payload-independent recovery ladder in the `## Cold-start bootstrap (#2273)` section above (top of the project's `README.md`), not a path inside `.deft/core/`.
 <!-- /deft:managed-section -->
