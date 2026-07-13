@@ -13,6 +13,9 @@ import {
   getAnnounceVoice,
   missedBoundaryMs,
   nextBoundaryMs,
+  scheduleHorizonMs,
+  scheduleLookaheadMs,
+  scheduleMissGraceMs,
   systemPrefers24Hour,
   timeTokens,
   wordGapAfterToken,
@@ -113,6 +116,34 @@ describe("missedBoundaryMs", () => {
   it("catches a pump that lands exactly on the boundary", () => {
     // nextBoundaryMs is strictly-after, so without catch-up :00 would skip.
     expect(missedBoundaryMs(localMs(15, 0), 60, 60_000)).toBe(localMs(15, 0));
+  });
+
+  it("with a full-interval grace, recovers after a >60s timer sleep (#47)", () => {
+    // PR #46 used a fixed 60s grace — a 90s oversleep still dropped the hour.
+    expect(missedBoundaryMs(localMs(15, 1, 30), 60, 60_000)).toBeNull();
+    expect(
+      missedBoundaryMs(localMs(15, 1, 30), 60, scheduleMissGraceMs(60)),
+    ).toBe(localMs(15, 0));
+  });
+});
+
+describe("scheduleLookaheadMs / scheduleMissGraceMs", () => {
+  it("lookahead is at least 60s and otherwise one full interval", () => {
+    expect(scheduleLookaheadMs(15)).toBe(15 * 60_000);
+    expect(scheduleLookaheadMs(60)).toBe(60 * 60_000);
+    expect(scheduleLookaheadMs(1)).toBe(60_000);
+    expect(scheduleHorizonMs(60)).toBe(scheduleLookaheadMs(60));
+  });
+
+  it("miss grace caps at 5 minutes so mid-window does not re-speak the prior mark", () => {
+    expect(scheduleMissGraceMs(60)).toBe(5 * 60_000);
+    expect(scheduleMissGraceMs(15)).toBe(5 * 60_000);
+    expect(scheduleMissGraceMs(1)).toBe(60_000);
+    // At :50 hourly, a full-interval grace would wrongly return :00.
+    expect(missedBoundaryMs(localMs(14, 50), 60, scheduleLookaheadMs(60))).toBe(
+      localMs(14, 0),
+    );
+    expect(missedBoundaryMs(localMs(14, 50), 60, scheduleMissGraceMs(60))).toBeNull();
   });
 });
 

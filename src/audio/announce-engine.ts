@@ -1,12 +1,12 @@
 /**
  * Playback wiring for time announcements (#17). A 500ms pump watches the
- * wall clock; when the next boundary falls inside the lookahead window it
- * maps that wall-clock instant onto the audio clock and schedules the word
- * sprites sample-accurately. Scheduling onto the audio clock early (tens of
- * seconds ahead) keeps announcements reliable in throttled background tabs,
- * where setInterval may fire far less often than PUMP_MS. A grace catch-up
- * covers the case where the pump overslept past the boundary. Word sprites
- * are decoded once per voice.
+ * wall clock; when the next boundary falls inside a full-interval lookahead
+ * window it maps that wall-clock instant onto the audio clock and schedules
+ * the word sprites sample-accurately. Scheduling onto the audio clock early
+ * (up to one full interval ahead) keeps announcements reliable in throttled
+ * background tabs, where setInterval may fire far less often than PUMP_MS. A
+ * capped miss-grace catch-up covers the case where the pump overslept past
+ * the boundary. Word sprites are decoded once per voice.
  */
 import {
   ANNOUNCE_WORDS,
@@ -14,6 +14,8 @@ import {
   getAnnounceVoice,
   missedBoundaryMs,
   nextBoundaryMs,
+  scheduleLookaheadMs,
+  scheduleMissGraceMs,
   systemPrefers24Hour,
   timeTokens,
   wordGapAfterToken,
@@ -26,12 +28,12 @@ import {
 
 const PUMP_MS = 500;
 /**
- * How far ahead of a wall-clock boundary we enqueue onto the audio timeline.
- * Must exceed typical background-tab timer throttling (often ≥1s, sometimes
- * much longer) or the pump wakes up after the boundary and never fires.
+ * Minimum schedule lookahead (ms). Prefer {@link scheduleLookaheadMs} — a fixed
+ * 60s window is not enough when background timers sleep for most of an
+ * interval (see #47 residual after PR #46).
  */
 export const LOOKAHEAD_MS = 60_000;
-/** After oversleeping a boundary, still speak it if within this grace window. */
+/** Minimum miss-grace floor (ms). Prefer {@link scheduleMissGraceMs}. */
 export const MISS_GRACE_MS = 60_000;
 
 /** Fade-in when the announce bus first carries audible output. */
@@ -72,11 +74,14 @@ export class AnnounceEngine {
     if (this.timer) return;
     void this.preload(this.settings.voiceId);
     this.timer = setInterval(() => void this.pump(), PUMP_MS);
+    // Don't wait a full PUMP_MS before the first schedule attempt.
+    void this.pump();
   }
 
   updateSettings(settings: AnnounceSettings): void {
     const voiceChanged = settings.voiceId !== this.settings.voiceId;
     const intervalChanged = settings.intervalMin !== this.settings.intervalMin;
+    const enabledNow = settings.enabled && !this.settings.enabled;
     this.settings = settings;
     if (voiceChanged) {
       this.vocoderPrimed = false;
@@ -84,6 +89,7 @@ export class AnnounceEngine {
     }
     // Interval change invalidates a boundary reserved for the old cadence.
     if (intervalChanged) this.scheduledBoundaryMs = 0;
+    if (enabledNow || intervalChanged) void this.pump();
   }
 
   /** Speak the current wall-clock time immediately (UI preview / audition). */
@@ -105,6 +111,7 @@ export class AnnounceEngine {
    */
   resync(): void {
     this.scheduledBoundaryMs = 0;
+    void this.pump();
   }
 
   stop(): void {
@@ -186,14 +193,16 @@ export class AnnounceEngine {
 
     const nowMs = Date.now();
     const intervalMin = this.settings.intervalMin;
-    const missed = missedBoundaryMs(nowMs, intervalMin, MISS_GRACE_MS);
+    const lookaheadMs = scheduleLookaheadMs(intervalMin);
+    const missGraceMs = scheduleMissGraceMs(intervalMin);
+    const missed = missedBoundaryMs(nowMs, intervalMin, missGraceMs);
     const boundaryMs =
       missed !== null && missed !== this.scheduledBoundaryMs
         ? missed
         : nextBoundaryMs(nowMs, intervalMin);
 
     if (boundaryMs === this.scheduledBoundaryMs) return;
-    if (boundaryMs > nowMs && boundaryMs - nowMs > LOOKAHEAD_MS) return;
+    if (boundaryMs > nowMs && boundaryMs - nowMs > lookaheadMs) return;
 
     // Reserve before awaiting preload so concurrent pumps don't double-speak.
     this.scheduledBoundaryMs = boundaryMs;
