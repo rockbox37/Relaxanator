@@ -123,6 +123,23 @@ export function nextBoundaryMs(nowMs: number, intervalMin: number): number {
   return candidate.getTime();
 }
 
+/**
+ * Boundary that was just missed when the pump overslept past it (e.g. a
+ * background tab's setInterval was throttled beyond the lookahead window).
+ * Returns that boundary's epoch ms when `nowMs` is within `graceMs` after it;
+ * otherwise null so the caller waits for the next future boundary.
+ */
+export function missedBoundaryMs(
+  nowMs: number,
+  intervalMin: number,
+  graceMs: number,
+): number | null {
+  if (graceMs <= 0) return null;
+  const candidate = nextBoundaryMs(nowMs - graceMs, intervalMin);
+  if (candidate <= nowMs && nowMs - candidate <= graceMs) return candidate;
+  return null;
+}
+
 /** Hour words for 12-hour speech, indexed by `hour24 % 12` (0 -> "twelve"). */
 const HOUR_WORDS = [
   "twelve", // hour 0

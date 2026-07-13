@@ -251,3 +251,98 @@ describe("AnnounceEngine preload", () => {
     expect(detuneValues).toContain(-600);
   });
 });
+
+describe("AnnounceEngine pump scheduling", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const word =
+          new URL(url, "http://local").pathname.split("/").pop()?.replace(".wav", "") ??
+          "word";
+        return {
+          ok: true,
+          arrayBuffer: async () => new TextEncoder().encode(word).buffer,
+        };
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("schedules when the next boundary is inside the long lookahead window", async () => {
+    vi.useFakeTimers();
+    // 45s before the hour — outside the old 1.5s window, inside LOOKAHEAD_MS.
+    vi.setSystemTime(new Date(2026, 0, 15, 14, 59, 15));
+
+    const ctx = mockAudioContext();
+    const timeTokensSpy = vi.spyOn(announce, "timeTokens");
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(timeTokensSpy).toHaveBeenCalledWith(15, 0, expect.any(Object));
+    timeTokensSpy.mockRestore();
+    engine.stop();
+  });
+
+  it("catch-up speaks a boundary missed by timer throttling", async () => {
+    vi.useFakeTimers();
+    // 2s after the hour — nextBoundaryMs alone would wait until 16:00.
+    vi.setSystemTime(new Date(2026, 0, 15, 15, 0, 2));
+
+    const ctx = mockAudioContext();
+    const timeTokensSpy = vi.spyOn(announce, "timeTokens");
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(timeTokensSpy).toHaveBeenCalledWith(15, 0, expect.any(Object));
+    expect(timeTokensSpy).not.toHaveBeenCalledWith(16, 0, expect.any(Object));
+    timeTokensSpy.mockRestore();
+    engine.stop();
+  });
+
+  it("resync clears a reserved boundary so the next pump can re-schedule", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 15, 14, 59, 15));
+
+    const ctx = mockAudioContext();
+    const timeTokensSpy = vi.spyOn(announce, "timeTokens");
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(timeTokensSpy).toHaveBeenCalledTimes(1);
+
+    engine.resync();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(timeTokensSpy).toHaveBeenCalledTimes(2);
+
+    timeTokensSpy.mockRestore();
+    engine.stop();
+  });
+});

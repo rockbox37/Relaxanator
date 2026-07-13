@@ -60,6 +60,10 @@ export default function NoisePlayer() {
   const [announce, setAnnounce] = useState<AnnounceSettings>(
     createDefaultAnnounceSettings,
   );
+  const announceSettingsRef = useRef(announce);
+  announceSettingsRef.current = announce;
+  const meditationSettingsRef = useRef(meditation);
+  meditationSettingsRef.current = meditation;
   const [playing, setPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
   const [sleepMinutes, setSleepMinutes] = useState(SLEEP_TIMER_OFF);
@@ -105,7 +109,7 @@ export default function NoisePlayer() {
         const meditationEngine = new MeditationEngine(
           engine.context,
           engine.mixBus,
-          meditation,
+          meditationSettingsRef.current,
         );
         meditationEngine.start();
         meditationRef.current = meditationEngine;
@@ -113,7 +117,7 @@ export default function NoisePlayer() {
         const announceEngine = new AnnounceEngine(
           engine.context,
           engine.announceBus,
-          announce,
+          announceSettingsRef.current,
         );
         announceEngine.start();
         announceRef.current = announceEngine;
@@ -180,10 +184,15 @@ export default function NoisePlayer() {
     if (!engine) return;
     if (playing) {
       clearSleepTimer();
+      // Drop far-ahead audio-clock schedules before suspending — wall time
+      // keeps moving while the audio clock freezes.
+      announceRef.current?.stop();
+      announceRef.current?.start();
       await engine.suspend();
       setPlaying(false);
     } else {
       await engine.resume();
+      announceRef.current?.resync();
       engine.setMasterVolume(state.masterVolume);
       setPlaying(true);
       if (sleepMinutes > 0) armSleep(sleepMinutes, engine);
@@ -264,11 +273,20 @@ export default function NoisePlayer() {
   }
 
   function changeAnnounce(update: Partial<AnnounceSettings>) {
-    setAnnounce((a) => {
-      const next = { ...a, ...update };
-      announceRef.current?.updateSettings(next);
-      return next;
-    });
+    const next = { ...announceSettingsRef.current, ...update };
+    announceSettingsRef.current = next;
+    announceRef.current?.updateSettings(next);
+    setAnnounce(next);
+    // Enabling needs a running AudioContext + pump; the checkbox gesture
+    // is enough to resume. Re-push settings after ensure in case creation
+    // raced, then resync so the next boundary is mapped from wall clock.
+    if (update.enabled === true) {
+      void (async () => {
+        await ensurePreviewAudio();
+        announceRef.current?.updateSettings(announceSettingsRef.current);
+        announceRef.current?.resync();
+      })();
+    }
   }
 
   async function previewAnnounce() {
