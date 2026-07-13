@@ -6,7 +6,7 @@
   },
   "plan": {
     "title": "Time announcements not triggering when expected",
-    "status": "proposed",
+    "status": "running",
     "narratives": {
       "Description": "Time announcements not triggering when expected",
       "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/47",
@@ -21,6 +21,7 @@
         "type": "x-xbrief/github-issue",
         "title": "Issue #47: Time announcements not triggering when expected"
       }
-    ]
+    ],
+    "updated": "2026-07-13T17:53:36Z"
   }
 }
