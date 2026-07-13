@@ -283,19 +283,29 @@ const omm: VoicePlayer = (ctx, dest, when, volume) => {
   fundamental.onended = () => env.disconnect();
 };
 
+/** B1 — fog horn 1 first blast (1 s). */
+export const FOG_HORN_1_TONE1_HZ = 61.74;
+/** E1 — fog horn 1 second blast (2 s); perfect fifth (7 semitones) below tone 1. */
+export const FOG_HORN_1_TONE2_HZ = 41.21;
+export const FOG_HORN_1_INTERVAL_SEMITONES = 7;
+
 const fogHorn: VoicePlayer = (ctx, dest, when, volume) => {
-  // Distant fog horn (#22): low B1 fundamental with strong quint/2nd body,
-  // a short sustained blast, brighter lowpass than before, and higher output
-  // so the tone reads on small speakers while staying deeper than ship/train.
-  distantHorn(ctx, dest, when, volume, 61.74, [
-    [1, 1],
-    [1.5, 0.38],
-    [2, 0.52],
-    [3, 0.14],
-  ], 18, 480, 0.08, 2.8, 0.88);
+  // Two-tone fog signal (#54): B1 (1 s) then E1 (2 s), hard-gated sequential
+  // blasts — perfect fifth down (7 semitones), aligned with fog horns 2–4.
+  // Keeps B1 as the high of the pair from the prior single-blast distant horn.
+  gatedTwoBlastHorn(
+    ctx,
+    dest,
+    when,
+    volume,
+    FOG_HORN_1_TONE1_HZ,
+    FOG_HORN_1_TONE2_HZ,
+    480,
+    420,
+  );
 };
 
-/** Hard-gated horn blast: fixed duration, no decay tail (fog horns 2–4). */
+/** Hard-gated horn blast: fixed duration, no decay tail (fog horns 1–4). */
 function gatedHornBlast(
   ctx: BaseAudioContext,
   dest: AudioNode,
@@ -475,13 +485,13 @@ function gatedTwoBlastHorn(
 
 /** D3 — fog horn 2 first blast (1 s). */
 export const FOG_HORN_2_TONE1_HZ = 146.83;
-/** F♯2/G♭2 — fog horn 2 second blast (2 s); minor sixth (8 semitones) below tone 1. */
-export const FOG_HORN_2_TONE2_HZ = 92.5;
-export const FOG_HORN_2_INTERVAL_SEMITONES = 8;
+/** G2 — fog horn 2 second blast (2 s); perfect fifth (7 semitones) below tone 1. */
+export const FOG_HORN_2_TONE2_HZ = 98.0;
+export const FOG_HORN_2_INTERVAL_SEMITONES = 7;
 
 const fogHorn2: VoicePlayer = (ctx, dest, when, volume) => {
-  // Two-tone fog signal (#26): D3 (1 s) then F♯2 (2 s), hard-gated sequential
-  // blasts — minor sixth down (8 semitones).
+  // Two-tone fog signal (#54): D3 (1 s) then G2 (2 s), hard-gated sequential
+  // blasts — perfect fifth down (7 semitones), aligned with fog horn 3.
   gatedTwoBlastHorn(
     ctx,
     dest,
@@ -503,7 +513,7 @@ export const FOG_HORN_3_INTERVAL_SEMITONES = 7;
 const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
   // Two-tone fog signal (#50): C2 (1 s) then F1 (2 s), hard-gated sequential
   // blasts through heavy feedback-delay reverb — perfect fifth down (7
-  // semitones); distinct from B1 fog horn 1 and D3/F♯2 fog horn 2.
+  // semitones); canonical interval for all fog horns (#54).
   gatedTwoBlastHorn(
     ctx,
     dest,
@@ -518,15 +528,15 @@ const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
 
 /** C3 — fog horn 4 first blast (0.85 s); vintage film tugboat horn. */
 export const FOG_HORN_4_TONE1_HZ = 130.81;
-/** G2 — fog horn 4 second blast (2.15 s); perfect fourth below tone 1. */
-export const FOG_HORN_4_TONE2_HZ = 98.0;
-export const FOG_HORN_4_INTERVAL_SEMITONES = 5;
+/** F2 — fog horn 4 second blast (2.15 s); perfect fifth (7 semitones) below tone 1. */
+export const FOG_HORN_4_TONE2_HZ = 87.31;
+export const FOG_HORN_4_INTERVAL_SEMITONES = 7;
 
 const fogHorn4: VoicePlayer = (ctx, dest, when, volume) => {
-  // Vintage two-tone boat horn (#26, ref 5KwjDwt5m3w): C3 short blast then
-  // lower G2 long blast — classic 60s Cinesound tug/film horn (101 Dalmations,
-  // Gerry Anderson). Triangle partials for warm vinyl character; much wetter
-  // reverb than fog horns 2/3.
+  // Vintage two-tone boat horn (#54, ref 5KwjDwt5m3w): C3 short blast then
+  // lower F2 long blast — perfect fifth down (7 semitones), aligned with fog
+  // horn 3; classic 60s Cinesound tug/film character retained. Triangle
+  // partials for warm vinyl; much wetter reverb than fog horns 2/3.
   gatedTwoBlastHorn(ctx, dest, when, volume, FOG_HORN_4_TONE1_HZ, FOG_HORN_4_TONE2_HZ, 480, 400, {
     attackSec: 0.05,
     tone1DurSec: 0.85,
