@@ -3,25 +3,27 @@
     "version": "0.6",
     "author": "agent:deft-directive-setup",
     "description": "Scope xBRIEF",
-    "created": "2026-07-04T21:05:00Z"
+    "created": "2026-07-04T21:05:00Z",
+    "updated": "2026-07-13T18:59:01Z"
   },
   "plan": {
     "title": "PWA and offline support",
     "status": "proposed",
     "narratives": {
       "Overview": "Make Relaxanator installable and fully functional offline: web app manifest, service worker precaching the app shell and audio samples.",
-      "Requirements": "FR-1: Web app manifest with icons; app is installable (Add to Home Screen / Dock). FR-2: Service worker precaches the app shell and audio sample assets. NFR-1: After first load, all features work with no network. NFR-2: Passes Lighthouse PWA installability checks."
+      "Requirements": "FR-1: Web app manifest with icons; app is installable (Add to Home Screen / Dock). FR-2: Service worker precaches the app shell and audio sample assets. NFR-1: After first load, all features work with no network. NFR-2: Passes Lighthouse PWA installability checks.",
+      "LockedDecisions": "Refinement 2026-07-13 (#5 Evaluate lock): (1) AC locked as FR-1–2 + NFR-1–2 as written in Requirements — no MVP carve-outs. (2) FR-2 sample precache: all shipped sample files under public/ (and any sample paths the app already loads from that tree). (3) Install UX for MVP: manifest + service worker only; rely on browser-native install / Add to Home Screen / Dock — no custom in-app Install affordance or beforeinstallprompt UI in this scope."
     },
     "items": [
       {
-        "title": "Manifest + icons + install flow",
+        "title": "Manifest + icons + native install (A2HS/Dock)",
         "status": "pending",
         "narrative": {
           "Traces": "FR-1, NFR-2"
         }
       },
       {
-        "title": "Service worker precaching (app shell + samples)",
+        "title": "Service worker precaching (app shell + all public/ samples)",
         "status": "pending",
         "narrative": {
           "Traces": "FR-2, NFR-1"
@@ -32,8 +34,13 @@
       {
         "uri": "https://github.com/rockbox37/Relaxanator/issues/5",
         "type": "x-xbrief/github-issue",
-        "TrustLevel": "external"
+        "TrustLevel": "external",
+        "title": "Issue #5: PWA and offline support"
       }
+    ],
+    "tags": [
+      "ac-locked",
+      "refinement-2026-07-13"
     ]
   }
 }
