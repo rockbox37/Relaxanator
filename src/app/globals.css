@@ -303,6 +303,65 @@ main > p {
   color: var(--muted);
 }
 
+.break-custom-label input[type="text"] {
+  width: 7.5rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.25rem 0.4rem;
+}
+
+.break-globals {
+  margin-top: 0.75rem;
+}
+
+.break-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(127, 200, 169, 0.12);
+  border: 1px solid rgba(127, 200, 169, 0.35);
+  border-radius: 8px;
+}
+
+.break-banner-message {
+  margin: 0;
+  font-weight: 600;
+  flex: 1 1 12rem;
+}
+
+.break-banner-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.break-banner-snooze,
+.break-banner-dismiss {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.break-banner-snooze {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.break-banner-dismiss:hover,
+.break-banner-snooze:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 @media (max-width: 560px) {
   .eq {
     grid-template-columns: repeat(5, 1fr);

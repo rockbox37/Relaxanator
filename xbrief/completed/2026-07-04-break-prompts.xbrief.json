@@ -1,0 +1,57 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:deft-directive-setup",
+    "description": "Scope xBRIEF",
+    "created": "2026-07-04T21:05:00Z",
+    "updated": "2026-07-13T16:16:00Z"
+  },
+  "plan": {
+    "title": "Break prompts",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Configurable prompts to stretch, walk, and drink water: a gentle audio cue through the already-playing stream, an in-app banner, and optional browser notifications.",
+      "Requirements": "FR-1: Configurable break types (stretch, walk, water, custom label) each with its own interval and enable toggle. FR-2: Audio cue plays through the master bus when a break fires. FR-3: Optional Notification API alerts with graceful degradation when permission is denied. FR-4: In-app banner with dismiss and snooze. NFR-1: Prompts fire reliably while the tab is backgrounded (audio-clock-driven, not setTimeout-only).",
+      "LockedDecisions": "Refinement 2026-07-13 (#2 Evaluate lock): (1) AC locked as FR-1–4 + NFR-1 as written in Requirements — no MVP carve-outs. (2) Scope boundary with #6 Whole-session presets: this scope (#2) owns break runtime behavior and the break settings UI; #6 only persists those settings inside presets (save/apply), and does not implement break scheduling, cues, banner, or notifications. (3) Cue channels for MVP: audio cue + in-app banner are required; browser notifications remain optional with graceful deny (FR-3)."
+    },
+    "items": [
+      {
+        "title": "Break schedule model and per-type configuration UI",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-1"
+        }
+      },
+      {
+        "title": "Audio cue + in-app banner with snooze/dismiss",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-2, FR-4, NFR-1"
+        }
+      },
+      {
+        "title": "Browser notifications with permission fallback",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-3"
+        }
+      }
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/2",
+        "type": "x-xbrief/github-issue",
+        "TrustLevel": "external",
+        "title": "Issue #2: Break prompts"
+      }
+    ],
+    "tags": [
+      "ac-locked",
+      "refinement-2026-07-13"
+    ],
+    "updated": "2026-07-13T16:56:35Z",
+    "metadata": {
+      "completedAt": "2026-07-13T16:56:35Z"
+    }
+  }
+}
