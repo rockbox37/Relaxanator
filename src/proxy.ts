@@ -25,6 +25,7 @@ export function proxy(request: NextRequest): NextResponse {
 export const config = {
   // Run on every request except Next internals and static assets — the host
   // check is cheap and we want the redirect to cover any deep link. Excluding
-  // _next/* and the favicon keeps build/runtime assets on their own origin.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // _next/*, favicon, and the Serwist SW route keeps build/runtime assets
+  // (and service-worker registration) on their own origin.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|serwist/).*)"],
 };
