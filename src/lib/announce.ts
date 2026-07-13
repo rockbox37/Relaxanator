@@ -38,8 +38,7 @@ export const ANNOUNCE_VOICES: readonly AnnounceVoiceDef[] = [
   },
   {
     // Formerly labelled "HAL 9000" (#40): a good processed-robot voice, but it
-    // never sounded like the film. Kept as-is; only the label/id changed so the
-    // "hal9000" id can describe the movie-accurate voice below.
+    // never sounded like the film. Kept as-is under an honest name.
     id: "big-robot",
     label: "Big Robot",
     dir: "hal",
@@ -47,11 +46,12 @@ export const ANNOUNCE_VOICES: readonly AnnounceVoiceDef[] = [
     effect: "hal",
   },
   {
-    // Movie-accurate HAL 9000 (#40): a calm, neutral North American baritone
-    // (macOS Reed) with only light warming — HAL's voice is notable for how
-    // *natural* and unhurried it is, not how synthetic.
-    id: "hal9000",
-    label: "HAL 9000",
+    // A calm, neutral North American baritone (macOS Reed) with only light
+    // warming. Originally added as a movie-accurate "HAL 9000" (#40, #44), but
+    // it doesn't really evoke the film — so it's labelled honestly as "Reed"
+    // rather than promising a HAL it can't deliver.
+    id: "reed",
+    label: "Reed",
     dir: "reed",
     playbackRate: 0.96,
     effect: "neutral",
