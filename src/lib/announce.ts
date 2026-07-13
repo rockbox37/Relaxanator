@@ -47,12 +47,12 @@ export const ANNOUNCE_VOICES: readonly AnnounceVoiceDef[] = [
     effect: "hal",
   },
   {
-    // Movie-accurate HAL 9000 (#40): a calm, natural baritone (macOS Daniel)
-    // with only light warming — HAL's voice is notable for how *natural* and
-    // unhurried it is, not how synthetic.
+    // Movie-accurate HAL 9000 (#40): a calm, neutral North American baritone
+    // (macOS Reed) with only light warming — HAL's voice is notable for how
+    // *natural* and unhurried it is, not how synthetic.
     id: "hal9000",
     label: "HAL 9000",
-    dir: "daniel",
+    dir: "reed",
     playbackRate: 0.96,
     effect: "neutral",
   },

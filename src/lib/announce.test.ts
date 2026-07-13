@@ -49,7 +49,7 @@ describe("ANNOUNCE_VOICES", () => {
 
   it("defines HAL 9000 as a calm natural baritone with light neutral processing", () => {
     const hal = getAnnounceVoice("hal9000");
-    expect(hal.dir).toBe("daniel");
+    expect(hal.dir).toBe("reed");
     expect(hal.effect).toBe("neutral");
     expect(hal.playbackRate).toBe(0.96);
   });
