@@ -65,6 +65,13 @@ describe("MEDITATION_VOICES", () => {
     expect(fogHorn2?.description).not.toContain("whole step");
   });
 
+  it("documents fog horn 3 as C/F perfect fifth (not F/D♭)", () => {
+    const fogHorn3 = MEDITATION_VOICES.find((v) => v.id === "fog-horn-3");
+    expect(fogHorn3?.description).toContain("perfect fifth");
+    expect(fogHorn3?.description).toMatch(/C then lower F/i);
+    expect(fogHorn3?.description).not.toMatch(/D[♭b]/i);
+  });
+
   it("documents fog horn 4 as vintage film two-tone with perfect fourth", () => {
     const fogHorn4 = MEDITATION_VOICES.find((v) => v.id === "fog-horn-4");
     expect(fogHorn4?.description).toContain("Vintage film two-tone");

@@ -494,11 +494,26 @@ const fogHorn2: VoicePlayer = (ctx, dest, when, volume) => {
   );
 };
 
+/** C2 — fog horn 3 first blast (1 s). */
+export const FOG_HORN_3_TONE1_HZ = 65.41;
+/** F1 — fog horn 3 second blast (2 s); perfect fifth (7 semitones) below tone 1. */
+export const FOG_HORN_3_TONE2_HZ = 43.66;
+export const FOG_HORN_3_INTERVAL_SEMITONES = 7;
+
 const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
-  // Two-tone fog signal (#26): low F2 (1 s) then lower D♭2 (2 s), hard-gated
-  // sequential blasts through heavy feedback-delay reverb — distinct from
-  // sustained-decay B1 fog horn 1 and higher D3/F♯2 fog horn 2 (8 semitones apart).
-  gatedTwoBlastHorn(ctx, dest, when, volume, 87.31, 69.3, 480, 420);
+  // Two-tone fog signal (#50): C2 (1 s) then F1 (2 s), hard-gated sequential
+  // blasts through heavy feedback-delay reverb — perfect fifth down (7
+  // semitones); distinct from B1 fog horn 1 and D3/F♯2 fog horn 2.
+  gatedTwoBlastHorn(
+    ctx,
+    dest,
+    when,
+    volume,
+    FOG_HORN_3_TONE1_HZ,
+    FOG_HORN_3_TONE2_HZ,
+    480,
+    420,
+  );
 };
 
 /** C3 — fog horn 4 first blast (0.85 s); vintage film tugboat horn. */
