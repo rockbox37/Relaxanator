@@ -5,7 +5,7 @@
   },
   "plan": {
     "title": "Align all fog horns to Foghorn 3's tone interval",
-    "status": "running",
+    "status": "completed",
     "narratives": {
       "Description": "Align all fog horns to Foghorn 3's tone interval",
       "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/54",
@@ -42,6 +42,9 @@
         "title": "Issue #54: Align all fog horns to Foghorn 3's tone interval"
       }
     ],
-    "updated": "2026-07-13T21:21:16Z"
+    "updated": "2026-07-13T21:25:24Z",
+    "metadata": {
+      "completedAt": "2026-07-13T21:25:24Z"
+    }
   }
 }
