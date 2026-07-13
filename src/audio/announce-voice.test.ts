@@ -115,9 +115,9 @@ describe("scheduleAnnounceWord detune", () => {
     expect(source?.playbackRate?.value).toBe(0.88);
   });
 
-  it("gives HAL 9000 (neutral effect) light detune and its own playback rate", () => {
+  it("gives Reed (neutral effect) light detune and its own playback rate", () => {
     const { ctx, nodes } = mockAudioContext();
-    const voice = getAnnounceVoice("hal9000");
+    const voice = getAnnounceVoice("reed");
     scheduleAnnounceWord(ctx, buffer, dest, 0, voice, 0.6);
     const source = nodes.find((n) => n.type === "source");
     expect(source?.detune?.value).toBe(-20);

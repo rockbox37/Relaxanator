@@ -10,7 +10,7 @@ export const HAL_OUTPUT_GAIN = 1;
 /** Slight pitch drop (cents) for Douglas Rain–style calm mid-register. */
 const HAL_DETUNE_CENTS = -75;
 
-/** Very light pitch drop for the movie-accurate HAL — warmth without going synthetic. */
+/** Very light pitch drop for the neutral (Reed) voice — warmth without going synthetic. */
 const NEUTRAL_DETUNE_CENTS = -20;
 
 /** Vocoder (Zarvox) pitch drop: 3 whole steps = 6 semitones below playbackRate pitch. */
@@ -127,7 +127,7 @@ function scheduleHal(
 }
 
 /**
- * Neutral computer tone (movie-accurate HAL, #40): a natural baritone with only
+ * Neutral computer tone (the "Reed" voice, #40): a natural baritone with only
  * light warming — a gentle top rolloff and soft compression for evenness across
  * word sprites. Deliberately far lighter than scheduleHal: no mid boost, no
  * telephone-band limiting. The point is calm and natural, not obviously synthetic.

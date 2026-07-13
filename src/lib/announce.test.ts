@@ -32,7 +32,7 @@ describe("ANNOUNCE_VOICES", () => {
     expect(vocoder.playbackRate).toBe(1.025);
     expect(ids).toContain("speak-spell");
     expect(ids).toContain("big-robot");
-    expect(ids).toContain("hal9000");
+    expect(ids).toContain("reed");
     expect(ids).not.toContain("trinoids");
   });
 
@@ -47,11 +47,11 @@ describe("ANNOUNCE_VOICES", () => {
     expect(bigRobot.playbackRate).toBe(0.88);
   });
 
-  it("defines HAL 9000 as a calm natural baritone with light neutral processing", () => {
-    const hal = getAnnounceVoice("hal9000");
-    expect(hal.dir).toBe("reed");
-    expect(hal.effect).toBe("neutral");
-    expect(hal.playbackRate).toBe(0.96);
+  it("defines Reed as a calm natural baritone with light neutral processing", () => {
+    const reed = getAnnounceVoice("reed");
+    expect(reed.dir).toBe("reed");
+    expect(reed.effect).toBe("neutral");
+    expect(reed.playbackRate).toBe(0.96);
   });
 });
 
