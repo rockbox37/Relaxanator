@@ -1,0 +1,26 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #47",
+    "updated": "2026-07-13T17:55:00Z"
+  },
+  "plan": {
+    "title": "Time announcements not triggering when expected",
+    "status": "proposed",
+    "narratives": {
+      "Description": "Time announcements not triggering when expected",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/47",
+      "Overview": "## Symptom\n\nTime announce is not triggering when it should. Announcements that should fire at the configured interval do not play (or do not fire when expected).\n\n## Expected behavior\n\nWith Announce enabled and a configured interval, time announcements should fire on schedule during playback.\n\n## Context (prior related fix)\n\nEarlier today, PR #46 was merged addressing related symptoms:\n\n- Too-short wall-clock lookahead under background timer throttling\n- Enable-before-Play race leaving AnnounceEngine with `enabled=false`\n\n- PR: https://github.com/rockbox37/Relaxanator/pull/46\n- Merge commit on `main`: `e14cabf`\n\nIf this report is still being filed after that merge, treat it as either a **regression**, an **incomplete fix**, or a **different scenario**. Investigators should verify whether residual timing/enable races remain, or whether a new path is involved.\n\n## Suggested repro hints\n\n1. Enable Announce (and set an interval).\n2. Start playback (Play) — also try enabling Announce *before* Play (prior race path).\n3. Leave the tab in the background long enough for an announcement window (background timer throttling).\n4. Observe whether announcements fire when expected.\n\n## Notes\n\n- Do not assume PR #46 fully resolved this until reproduced against current `main` (`e14cabf` or later).",
+      "Requirements": "FR-1: With Announce enabled and a configured interval, during playback the engine schedules and speaks time announcements at the next wall-clock interval boundary (and subsequent boundaries).\nFR-2: Enabling Announce before pressing Play still results in announcements firing once audio is running (no stuck silent engine / enable race).\nFR-3: When the tab is backgrounded long enough for timer throttling around an announcement window, the boundary still fires via lookahead scheduling and/or miss catch-up within the grace window.\nNFR-1: Automated tests cover lookahead scheduling, miss catch-up, and resync; the #46 scenarios must not regress.",
+      "LockedDecisions": "Refinement 2026-07-13 (#47 Evaluate lock): (1) AC locked as FR-1–3 + NFR-1 from the issue body + PR #46 prior-fix context — no product-scope expansion beyond announce firing reliability. (2) Treat post-e14cabf report as residual incomplete fix, regression, or alternate path; root-cause against current main before changing behavior. (3) Out of scope: new intervals/voices/UI copy, preset persistence (#6), break prompts."
+    },
+    "items": [],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/47",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #47: Time announcements not triggering when expected"
+      }
+    ]
+  }
+}
