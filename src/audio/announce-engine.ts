@@ -2,13 +2,17 @@
  * Playback wiring for time announcements (#17). A 500ms pump watches the
  * wall clock; when the next boundary falls inside the lookahead window it
  * maps that wall-clock instant onto the audio clock and schedules the word
- * sprites sample-accurately, so the announcement lands on the boundary even
- * in throttled background tabs. Word sprites are decoded once per voice.
+ * sprites sample-accurately. Scheduling onto the audio clock early (tens of
+ * seconds ahead) keeps announcements reliable in throttled background tabs,
+ * where setInterval may fire far less often than PUMP_MS. A grace catch-up
+ * covers the case where the pump overslept past the boundary. Word sprites
+ * are decoded once per voice.
  */
 import {
   ANNOUNCE_WORDS,
   type AnnounceSettings,
   getAnnounceVoice,
+  missedBoundaryMs,
   nextBoundaryMs,
   systemPrefers24Hour,
   timeTokens,
@@ -21,7 +25,14 @@ import {
 } from "@/audio/announce-voice";
 
 const PUMP_MS = 500;
-const LOOKAHEAD_MS = 1500;
+/**
+ * How far ahead of a wall-clock boundary we enqueue onto the audio timeline.
+ * Must exceed typical background-tab timer throttling (often ≥1s, sometimes
+ * much longer) or the pump wakes up after the boundary and never fires.
+ */
+export const LOOKAHEAD_MS = 60_000;
+/** After oversleeping a boundary, still speak it if within this grace window. */
+export const MISS_GRACE_MS = 60_000;
 
 /** Fade-in when the announce bus first carries audible output. */
 export const FIRST_OUTPUT_RAMP_SEC = 0.1;
@@ -43,6 +54,8 @@ export class AnnounceEngine {
   private vocoderPrimed = false;
   /** Bumped on stop() so in-flight speak() aborts after preload. */
   private speakGeneration = 0;
+  /** True while pump() is awaiting speak — prevents overlapping schedules. */
+  private scheduling = false;
 
   constructor(
     private readonly ctx: BaseAudioContext,
@@ -63,11 +76,14 @@ export class AnnounceEngine {
 
   updateSettings(settings: AnnounceSettings): void {
     const voiceChanged = settings.voiceId !== this.settings.voiceId;
+    const intervalChanged = settings.intervalMin !== this.settings.intervalMin;
     this.settings = settings;
     if (voiceChanged) {
       this.vocoderPrimed = false;
       void this.preload(settings.voiceId);
     }
+    // Interval change invalidates a boundary reserved for the old cadence.
+    if (intervalChanged) this.scheduledBoundaryMs = 0;
   }
 
   /** Speak the current wall-clock time immediately (UI preview / audition). */
@@ -81,14 +97,27 @@ export class AnnounceEngine {
     );
   }
 
+  /**
+   * Drop any reserved wall-clock boundary so the next pump re-maps from
+   * wall clock → audio clock. Call after AudioContext resume: a long suspend
+   * freezes the audio clock while wall time advances, so a far-ahead schedule
+   * would otherwise fire at the wrong civil time.
+   */
+  resync(): void {
+    this.scheduledBoundaryMs = 0;
+  }
+
   stop(): void {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     this.scheduledBoundaryMs = 0;
     this.hasScheduledOutput = false;
     this.vocoderPrimed = false;
+    this.scheduling = false;
     this.speakGeneration += 1;
-    this.outputBus.gain.value = 0;
+    const t = this.ctx.currentTime;
+    this.outputBus.gain.cancelScheduledValues(t);
+    this.outputBus.gain.setValueAtTime(0, t);
   }
 
   private async preload(voiceId: string): Promise<void> {
@@ -153,20 +182,38 @@ export class AnnounceEngine {
 
   private async pump(): Promise<void> {
     if (!this.settings.enabled || this.ctx.state !== "running") return;
-    const nowMs = Date.now();
-    const boundaryMs = nextBoundaryMs(nowMs, this.settings.intervalMin);
-    if (boundaryMs - nowMs > LOOKAHEAD_MS) return;
-    if (boundaryMs === this.scheduledBoundaryMs) return;
+    if (this.scheduling) return;
 
-    const boundary = new Date(boundaryMs);
-    const when = this.ctx.currentTime + (boundaryMs - nowMs) / 1000;
-    const scheduled = await this.speak(
-      timeTokens(boundary.getHours(), boundary.getMinutes(), {
-        hour12: !systemPrefers24Hour(),
-      }),
-      when,
-    );
-    if (scheduled) this.scheduledBoundaryMs = boundaryMs;
+    const nowMs = Date.now();
+    const intervalMin = this.settings.intervalMin;
+    const missed = missedBoundaryMs(nowMs, intervalMin, MISS_GRACE_MS);
+    const boundaryMs =
+      missed !== null && missed !== this.scheduledBoundaryMs
+        ? missed
+        : nextBoundaryMs(nowMs, intervalMin);
+
+    if (boundaryMs === this.scheduledBoundaryMs) return;
+    if (boundaryMs > nowMs && boundaryMs - nowMs > LOOKAHEAD_MS) return;
+
+    // Reserve before awaiting preload so concurrent pumps don't double-speak.
+    this.scheduledBoundaryMs = boundaryMs;
+    this.scheduling = true;
+    try {
+      const boundary = new Date(boundaryMs);
+      const when =
+        boundaryMs <= nowMs
+          ? this.ctx.currentTime + 0.05
+          : this.ctx.currentTime + (boundaryMs - nowMs) / 1000;
+      const scheduled = await this.speak(
+        timeTokens(boundary.getHours(), boundary.getMinutes(), {
+          hour12: !systemPrefers24Hour(),
+        }),
+        when,
+      );
+      if (!scheduled) this.scheduledBoundaryMs = 0;
+    } finally {
+      this.scheduling = false;
+    }
   }
 
   private async speak(tokens: string[], when: number): Promise<boolean> {

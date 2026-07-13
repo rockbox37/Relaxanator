@@ -11,6 +11,7 @@ import {
   formatAnnouncement,
   formatHourAnnouncement,
   getAnnounceVoice,
+  missedBoundaryMs,
   nextBoundaryMs,
   systemPrefers24Hour,
   timeTokens,
@@ -90,6 +91,28 @@ describe("nextBoundaryMs", () => {
     const lateNight = new Date(2026, 5, 15, 23, 50).getTime();
     const nextMidnight = new Date(2026, 5, 16, 0, 0).getTime();
     expect(nextBoundaryMs(lateNight, 60)).toBe(nextMidnight);
+  });
+});
+
+describe("missedBoundaryMs", () => {
+  it("returns the boundary just overslept within grace", () => {
+    expect(missedBoundaryMs(localMs(15, 0, 2), 60, 60_000)).toBe(localMs(15, 0));
+    expect(missedBoundaryMs(localMs(14, 45, 30), 15, 60_000)).toBe(
+      localMs(14, 45),
+    );
+  });
+
+  it("returns null when still before the next boundary", () => {
+    expect(missedBoundaryMs(localMs(14, 47), 60, 60_000)).toBeNull();
+  });
+
+  it("returns null when the miss is older than grace", () => {
+    expect(missedBoundaryMs(localMs(15, 2), 60, 60_000)).toBeNull();
+  });
+
+  it("catches a pump that lands exactly on the boundary", () => {
+    // nextBoundaryMs is strictly-after, so without catch-up :00 would skip.
+    expect(missedBoundaryMs(localMs(15, 0), 60, 60_000)).toBe(localMs(15, 0));
   });
 });
 
