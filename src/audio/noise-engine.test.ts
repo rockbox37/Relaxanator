@@ -9,7 +9,11 @@ function mockAudioContext() {
   const ctx = {
     sampleRate: 48_000,
     currentTime: 0,
+    state: "running" as AudioContextState,
     destination: {},
+    resume: vi.fn(async () => {
+      ctx.state = "running";
+    }),
     audioWorklet: {
       addModule: vi.fn(async () => {}),
     },
@@ -57,7 +61,9 @@ function mockAudioContext() {
     },
     createBuffer() {
       return {
-        getChannelData: () => new Float32Array(1),
+        getChannelData: () => ({
+          fill: vi.fn(),
+        }),
       };
     },
     createBufferSource() {
@@ -109,5 +115,47 @@ describe("NoiseEngine announce routing", () => {
     const announceBus = engine.announceBus as { gain: { value: number } } | null;
     expect(announceBus).not.toBeNull();
     expect(announceBus!.gain.value).toBe(1);
+  });
+
+  it("unlocks AudioContext before awaiting worklet addModule (#83)", async () => {
+    const ctx = mockAudioContext();
+    ctx.state = "suspended";
+    let unlockBeforeAwait = false;
+    const resume = vi.fn(async () => {
+      ctx.state = "running";
+    });
+    ctx.resume = resume;
+
+    ctx.audioWorklet.addModule = vi.fn(async () => {
+      // If resume was invoked synchronously before this await, gesture unlock worked.
+      unlockBeforeAwait = resume.mock.calls.length > 0;
+    });
+
+    vi.stubGlobal(
+      "AudioContext",
+      vi.fn(function AudioContext() {
+        return ctx;
+      }),
+    );
+    vi.stubGlobal(
+      "AudioWorkletNode",
+      vi.fn(function AudioWorkletNode() {
+        return {
+          parameters: {
+            get: () => ({ setValueAtTime: vi.fn() }),
+          },
+          connect() {
+            return this;
+          },
+        };
+      }),
+    );
+
+    const engine = new NoiseEngine();
+    await engine.init(createDefaultNoiseState());
+
+    expect(unlockBeforeAwait).toBe(true);
+    expect(resume).toHaveBeenCalled();
+    expect(ctx.state).toBe("running");
   });
 });

@@ -1,0 +1,31 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF for GitHub issue #83",
+    "created": "2026-07-14T20:35:00Z",
+    "updated": "2026-07-14T20:35:00Z"
+  },
+  "plan": {
+    "title": "No audio on iPhone (noise + meditation); Chrome OK",
+    "status": "completed",
+    "narratives": {
+      "Description": "On iPhone, colored noise and meditation sounds produce no audible output. Chrome desktop works.",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/83",
+      "Overview": "iOS Safari keeps AudioContext suspended unless create+resume (and preferably a silent buffer kick) run synchronously inside the user-gesture stack. NoiseEngine.init currently awaits audioWorklet.addModule before any resume, which breaks the gesture chain on iOS so both noise and meditation stay silent.",
+      "Requirements": "FR-1: Starting colored noise on iPhone produces audible output after Play.\nFR-2: Meditation sounds play audibly when previewed/scheduled after unlock.\nFR-3: Desktop Chrome behavior unchanged.\nFR-4: Document any remaining iOS caveats (silent switch) in PR notes.\nNFR-1: Unit tests for unlock/create helpers.",
+      "LockedDecisions": "Root cause hypothesis: await addModule before resume() loses the iOS user-gesture unlock. Fix: create AudioContext (webkit fallback) + sync unlockAudioContext (resume + silent buffer) before any await; re-unlock after worklet load; keep primeAudioOutput for cold-graph priming."
+    },
+    "items": [],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/83",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #83: No audio on iPhone (noise + meditation); Chrome OK"
+      }
+    ],
+    "updated": "2026-07-14T20:34:44Z",
+    "metadata": {
+      "completedAt": "2026-07-14T20:34:44Z"
+    }
+  }
+}
