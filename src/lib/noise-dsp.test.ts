@@ -79,6 +79,13 @@ describe("createGenerator", () => {
     const byWhite = samples(createWhiteGenerator(seededRng(3)), 64);
     expect(byUnknown).toEqual(byWhite);
   });
+
+  it("maps dark-brown to the brown generator (EQ carries the darker shelf)", () => {
+    expect(NOISE_COLOR_ORDER).toEqual(["white", "pink", "brown", "dark-brown"]);
+    const brown = samples(createGenerator("brown", seededRng(11)), 128);
+    const darkBrown = samples(createGenerator("dark-brown", seededRng(11)), 128);
+    expect(darkBrown).toEqual(brown);
+  });
 });
 
 describe("fillBuffer", () => {
