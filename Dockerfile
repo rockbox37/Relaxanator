@@ -8,6 +8,10 @@ COPY src ./src
 COPY public ./public
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
+# Fail the image build if NFT omitted @swc/helpers ESM (Node 22 module-sync).
+# next.config outputFileTracingIncludes must keep this path present.
+RUN test -f .next/standalone/node_modules/@swc/helpers/esm/_interop_require_default.js \
+  || (echo "FATAL: standalone missing @swc/helpers esm/_interop_require_default.js" && exit 1)
 
 # Runtime stage: only the standalone output, running as a non-root user.
 FROM node:22-alpine AS runner
