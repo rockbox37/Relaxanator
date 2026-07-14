@@ -1,5 +1,7 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 import {
   BREAK_TYPES,
   MAX_BREAK_INTERVAL_MIN,
@@ -12,13 +14,21 @@ import {
   clampBreakIntervalMin,
   clampSnoozeMin,
 } from "@/lib/breaks";
+import {
+  MAX_BREAK_DAILY_GOAL,
+  MIN_BREAK_DAILY_GOAL,
+  breakGoalProgressRatio,
+  isBreakDailyGoalMet,
+} from "@/lib/break-daily-goal";
 import type { BreakTallies } from "@/lib/break-tallies";
 
 interface BreakPanelProps {
   settings: BreakSettings;
   tallies: BreakTallies;
+  dailyGoal: number;
   onChangeType: (kind: BreakKind, update: Partial<BreakTypeSettings>) => void;
   onChangeSettings: (update: Partial<BreakSettings>) => void;
+  onChangeDailyGoal: (goal: number) => void;
   onClearTally: (kind: BreakKind) => void;
   onClearAllTallies: () => void;
   onPreview: () => void;
@@ -27,11 +37,34 @@ interface BreakPanelProps {
   notificationHint?: string;
 }
 
+function GoalCelebrateIcon() {
+  return (
+    <svg
+      className="break-tally-celebrate-icon"
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        fill="currentColor"
+        d="M12 2.2l1.35 6.05 5.65 2.55-5.65 2.55L12 19.4l-1.35-6.05L5 10.8l5.65-2.55L12 2.2z"
+      />
+      <circle cx="4.2" cy="5.2" r="1.1" fill="currentColor" opacity="0.85" />
+      <circle cx="19.5" cy="4.8" r="0.9" fill="currentColor" opacity="0.75" />
+      <circle cx="20.2" cy="14.5" r="1" fill="currentColor" opacity="0.8" />
+    </svg>
+  );
+}
+
 export default function BreakPanel({
   settings,
   tallies,
+  dailyGoal,
   onChangeType,
   onChangeSettings,
+  onChangeDailyGoal,
   onClearTally,
   onClearAllTallies,
   onPreview,
@@ -167,27 +200,78 @@ export default function BreakPanel({
             Clear all
           </button>
         </div>
+
+        <label className="break-daily-goal">
+          <span className="break-daily-goal-label">Daily Goal</span>
+          <input
+            type="range"
+            min={MIN_BREAK_DAILY_GOAL}
+            max={MAX_BREAK_DAILY_GOAL}
+            step={1}
+            value={dailyGoal}
+            onChange={(e) => onChangeDailyGoal(Number(e.target.value))}
+            aria-label="Daily goal per break category"
+            aria-valuemin={MIN_BREAK_DAILY_GOAL}
+            aria-valuemax={MAX_BREAK_DAILY_GOAL}
+            aria-valuenow={dailyGoal}
+            aria-valuetext={`${dailyGoal} per category`}
+          />
+          <span className="break-daily-goal-value" aria-hidden="true">
+            {dailyGoal}
+          </span>
+        </label>
+
         <ul className="break-tally-list">
           {BREAK_TYPES.map((def) => {
             const count = tallies[def.id] ?? 0;
+            const progress = breakGoalProgressRatio(count, dailyGoal);
+            const goalMet = isBreakDailyGoalMet(count, dailyGoal);
             return (
               <li key={def.id} className="break-tally-row">
-                <span className="break-tally-label">{def.label}</span>
-                <span
-                  className="break-tally-count"
-                  aria-label={`${def.label} completed ${count}`}
+                <div className="break-tally-meta">
+                  <span className="break-tally-label">{def.label}</span>
+                  <span
+                    className="break-tally-count"
+                    aria-label={`${def.label} completed ${count}`}
+                  >
+                    {count}
+                  </span>
+                  <button
+                    type="button"
+                    className="break-tally-clear"
+                    onClick={() => onClearTally(def.id)}
+                    disabled={count === 0}
+                    aria-label={`Clear ${def.label} tally`}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div
+                  className={
+                    goalMet
+                      ? "break-tally-bar is-met"
+                      : "break-tally-bar"
+                  }
+                  style={
+                    {
+                      ["--progress" as string]: progress,
+                    } as CSSProperties
+                  }
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={dailyGoal}
+                  aria-valuenow={Math.min(count, dailyGoal)}
+                  aria-label={`${def.label} ${count} of ${dailyGoal} toward daily goal`}
                 >
-                  {count}
-                </span>
-                <button
-                  type="button"
-                  className="break-tally-clear"
-                  onClick={() => onClearTally(def.id)}
-                  disabled={count === 0}
-                  aria-label={`Clear ${def.label} tally`}
-                >
-                  Clear
-                </button>
+                  <div className="break-tally-bar-track">
+                    <div className="break-tally-bar-fill" />
+                  </div>
+                  {goalMet && (
+                    <span className="break-tally-celebrate" title="Daily goal met">
+                      <GoalCelebrateIcon />
+                    </span>
+                  )}
+                </div>
               </li>
             );
           })}

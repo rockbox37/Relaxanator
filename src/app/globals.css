@@ -402,20 +402,53 @@ main > p {
   font-weight: 600;
 }
 
+.break-daily-goal {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.break-daily-goal-label {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.break-daily-goal input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+
+.break-daily-goal-value {
+  min-width: 1.4rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
 .break-tally-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.35rem;
+  gap: 0.55rem;
 }
 
 .break-tally-row {
   display: grid;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.break-tally-meta {
+  display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 0.75rem;
-  font-size: 0.9rem;
 }
 
 .break-tally-label {
@@ -427,6 +460,66 @@ main > p {
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
+}
+
+.break-tally-bar {
+  --progress: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 0.85rem;
+}
+
+.break-tally-bar-track {
+  position: relative;
+  flex: 1;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.break-tally-bar-fill {
+  height: 100%;
+  width: calc(var(--progress) * 100%);
+  border-radius: inherit;
+  /* Cool slate → warm teal as fill grows toward the goal */
+  background: hsl(
+    calc(205 - (var(--progress) * 55)),
+    calc(38% + (var(--progress) * 18%)),
+    calc(46% + (var(--progress) * 10%))
+  );
+  transition:
+    width 0.22s ease,
+    background 0.22s ease;
+}
+
+.break-tally-bar.is-met .break-tally-bar-fill {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(127, 200, 169, 0.45);
+}
+
+.break-tally-celebrate {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+  flex-shrink: 0;
+  animation: break-tally-celebrate-in 0.35s ease-out;
+}
+
+.break-tally-celebrate-icon {
+  display: block;
+}
+
+@keyframes break-tally-celebrate-in {
+  from {
+    opacity: 0;
+    transform: scale(0.55) rotate(-18deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
 }
 
 .break-tally-clear,
