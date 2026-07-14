@@ -12,11 +12,15 @@ import {
   clampBreakIntervalMin,
   clampSnoozeMin,
 } from "@/lib/breaks";
+import type { BreakTallies } from "@/lib/break-tallies";
 
 interface BreakPanelProps {
   settings: BreakSettings;
+  tallies: BreakTallies;
   onChangeType: (kind: BreakKind, update: Partial<BreakTypeSettings>) => void;
   onChangeSettings: (update: Partial<BreakSettings>) => void;
+  onClearTally: (kind: BreakKind) => void;
+  onClearAllTallies: () => void;
   onPreview: () => void;
   onToggleNotifications: (enabled: boolean) => void;
   previewDisabled?: boolean;
@@ -25,13 +29,21 @@ interface BreakPanelProps {
 
 export default function BreakPanel({
   settings,
+  tallies,
   onChangeType,
   onChangeSettings,
+  onClearTally,
+  onClearAllTallies,
   onPreview,
   onToggleNotifications,
   previewDisabled = false,
   notificationHint,
 }: BreakPanelProps) {
+  const totalCompleted = BREAK_TYPES.reduce(
+    (sum, def) => sum + (tallies[def.id] ?? 0),
+    0,
+  );
+
   return (
     <section className="meditation breaks" aria-label="Break prompts">
       <h2>Break prompts</h2>
@@ -141,6 +153,45 @@ export default function BreakPanel({
         >
           ♪
         </button>
+      </div>
+
+      <div className="break-tallies" aria-label="Completed breaks">
+        <div className="break-tallies-header">
+          <h3>Completed</h3>
+          <button
+            type="button"
+            className="break-tally-clear-all"
+            onClick={onClearAllTallies}
+            disabled={totalCompleted === 0}
+          >
+            Clear all
+          </button>
+        </div>
+        <ul className="break-tally-list">
+          {BREAK_TYPES.map((def) => {
+            const count = tallies[def.id] ?? 0;
+            return (
+              <li key={def.id} className="break-tally-row">
+                <span className="break-tally-label">{def.label}</span>
+                <span
+                  className="break-tally-count"
+                  aria-label={`${def.label} completed ${count}`}
+                >
+                  {count}
+                </span>
+                <button
+                  type="button"
+                  className="break-tally-clear"
+                  onClick={() => onClearTally(def.id)}
+                  disabled={count === 0}
+                  aria-label={`Clear ${def.label} tally`}
+                >
+                  Clear
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
       {notificationHint && (

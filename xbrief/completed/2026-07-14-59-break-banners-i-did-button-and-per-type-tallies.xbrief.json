@@ -1,0 +1,55 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #59",
+    "updated": "2026-07-14T16:10:29Z"
+  },
+  "plan": {
+    "title": "Break banners: \"I did.\" button and per-type tallies",
+    "status": "completed",
+    "narratives": {
+      "Description": "Break banners: \"I did.\" button and per-type tallies",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/59",
+      "Overview": "## Summary\n\nAdd an **\"I did.\"** action on break notification banners and keep a running tally of completed breaks by type, with controls to clear tallies per category or all at once.\n\nBreak prompts today (`BreakBanner`, from #2 / PR #48) show the prompt message plus **Snooze** and **Dismiss** only. Break kinds are `stretch` / `walk` / `water` / `custom` (`src/lib/breaks.ts`). There is no completion acknowledgment or completion metrics UI yet.\n\n## Acceptance criteria\n\n- [ ] Break notification banners include an **\"I did.\"** button (alongside existing Snooze / Dismiss).\n- [ ] Choosing **\"I did.\"** records a completion for that break’s type and dismisses (or otherwise clears) the active banner appropriately.\n- [ ] A running tally is shown for each break type that applies (`stretch`, `walk`, `water`, `custom` as used in the product).\n- [ ] The user can clear **one** break category’s tally at a time via a control next to that metric.\n- [ ] The user can clear **all** tallies at once via a single control.\n\n## Open question\n\n- Should tallies **persist across sessions** (e.g. local storage) unless specified otherwise? Confirm when implementing if not decided here.\n\n## Context\n\n- Related: #2, PR #48\n- Current banner actions: Snooze + Dismiss only (`src/components/BreakBanner.tsx`)",
+      "Labels": "enhancement",
+      "Requirements": "FR-1: Break notification banners include an \"I did.\" button alongside existing Snooze / Dismiss.\nFR-2: Choosing \"I did.\" records a completion for that break's type and dismisses (clears) the active banner.\nFR-3: A running tally is shown for each break type (stretch, walk, water, custom).\nFR-4: The user can clear one break category's tally via a control next to that metric.\nFR-5: The user can clear all tallies at once via a single control.\nNFR-1: Tallies persist in localStorage across sessions.\nOut of scope: #61 banner stacking (single active banner is OK).",
+      "LockedDecisions": "Refinement 2026-07-14 (#59 triage/implement, operator lock): (1) AC locked as FR-1–5 + NFR-1 from the issue body. (2) Persistence: tallies persist in localStorage across sessions (sensible default; closes the issue open question). (3) Tallies UI lives near BreakPanel settings/metrics area. (4) Out of scope: #61 stacking — single active banner is OK; do not invent unrelated scope."
+    },
+    "items": [
+      {
+        "title": "Break notification banners include an **\"I did.\"** button (alongside existing Snooze / Dismiss).",
+        "status": "completed"
+      },
+      {
+        "title": "Choosing **\"I did.\"** records a completion for that break’s type and dismisses (or otherwise clears) the active banner appropriately.",
+        "status": "completed"
+      },
+      {
+        "title": "A running tally is shown for each break type that applies (`stretch`, `walk`, `water`, `custom` as used in the product).",
+        "status": "completed"
+      },
+      {
+        "title": "The user can clear **one** break category’s tally at a time via a control next to that metric.",
+        "status": "completed"
+      },
+      {
+        "title": "The user can clear **all** tallies at once via a single control.",
+        "status": "completed"
+      }
+    ],
+    "tags": [
+      "enhancement"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/59",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #59: Break banners: \"I did.\" button and per-type tallies"
+      }
+    ],
+    "updated": "2026-07-14T16:10:32Z",
+    "metadata": {
+      "completedAt": "2026-07-14T16:10:32Z"
+    }
+  }
+}
