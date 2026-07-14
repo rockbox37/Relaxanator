@@ -9,7 +9,7 @@ export interface MeditationVoiceDef {
   label: string;
   description: string;
   /** Key into the synth implementations in src/audio/voices.ts. */
-  synth: "bell" | "doomBell" | "chime" | "drone" | "omm" | "fogHorn" | "fogHorn2" | "fogHorn3" | "fogHorn4" | "shipHorn" | "shipHorn2" | "trainHorn";
+  synth: "bell" | "doomBell" | "chime" | "darkChime" | "drone" | "omm" | "fogHorn" | "fogHorn2" | "fogHorn3" | "fogHorn4" | "shipHorn" | "shipHorn2" | "trainHorn";
   defaultIntervalMin: number;
   defaultVolume: number;
 }
@@ -41,6 +41,14 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
     label: "Chime",
     description: "Low, ringing chime with a minor-third shimmer",
     synth: "chime",
+    defaultIntervalMin: 7.5,
+    defaultVolume: 0.4,
+  },
+  {
+    id: "dark-chime",
+    label: "Dark Chime",
+    description: "Lower A3 chime with a darker minor-third shimmer",
+    synth: "darkChime",
     defaultIntervalMin: 7.5,
     defaultVolume: 0.4,
   },

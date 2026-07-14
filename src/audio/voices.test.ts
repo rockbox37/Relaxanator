@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DARK_CHIME_FUNDAMENTAL_HZ,
   DOOM_BELL_FUNDAMENTAL_HZ,
   FOG_HORN_1_INTERVAL_SEMITONES,
   FOG_HORN_1_TONE1_HZ,
@@ -21,6 +22,18 @@ describe("doom bell tuning (#65)", () => {
     expect(DOOM_BELL_FUNDAMENTAL_HZ).toBeCloseTo(174.61, 2);
     // Prior F2 was 87.31; exact 2× is 174.62 due to rounding — F3 is 174.61.
     expect(DOOM_BELL_FUNDAMENTAL_HZ / 87.31).toBeCloseTo(2, 1);
+  });
+});
+
+describe("dark chime tuning (#66)", () => {
+  it("uses A3 (220 Hz) — 3 semitones below Chime C4", () => {
+    const chimeC4Hz = 261.63;
+    expect(DARK_CHIME_FUNDAMENTAL_HZ).toBeCloseTo(220.0, 2);
+    // 3 semitones below C4: 261.63 * 2^(-3/12) ≈ 219.99
+    expect(DARK_CHIME_FUNDAMENTAL_HZ).toBeCloseTo(chimeC4Hz * 2 ** (-3 / 12), 1);
+    // Still a chime register — well above Bell C3 (130.81) and doom bell F3.
+    expect(DARK_CHIME_FUNDAMENTAL_HZ).toBeGreaterThan(174.61);
+    expect(DARK_CHIME_FUNDAMENTAL_HZ).toBeLessThan(chimeC4Hz);
   });
 });
 
