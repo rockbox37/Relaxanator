@@ -62,7 +62,13 @@ import {
   sleepRemainingSec,
 } from "@/lib/sleep-timer";
 
-import BreakBanner, { type ActiveBreak } from "./BreakBanner";
+import {
+  type ActiveBreak,
+  pushActiveBreak,
+  removeActiveBreak,
+} from "@/lib/break-banner-stack";
+
+import { BreakBannerStack } from "./BreakBanner";
 import BreakPanel from "./BreakPanel";
 import MeditationPanel from "./MeditationPanel";
 import TimeAnnouncePanel from "./TimeAnnouncePanel";
@@ -83,7 +89,7 @@ export default function NoisePlayer() {
     createDefaultAnnounceSettings,
   );
   const [breaks, setBreaks] = useState<BreakSettings>(createDefaultBreakSettings);
-  const [activeBreak, setActiveBreak] = useState<ActiveBreak | null>(null);
+  const [activeBreaks, setActiveBreaks] = useState<ActiveBreak[]>([]);
   const [notificationHint, setNotificationHint] = useState<string | undefined>();
   const breakTallies = useSyncExternalStore(
     subscribeBreakTallies,
@@ -208,7 +214,7 @@ export default function NoisePlayer() {
           breakSettingsRef.current,
         );
         breakEngine.setOnFire(({ kind, message }) => {
-          setActiveBreak({ kind, message });
+          setActiveBreaks((prev) => pushActiveBreak(prev, { kind, message }));
         });
         breakEngine.start();
         breakRef.current = breakEngine;
@@ -443,20 +449,18 @@ export default function NoisePlayer() {
     breakRef.current?.preview();
   }
 
-  function dismissBreakBanner() {
-    setActiveBreak(null);
+  function dismissBreakBanner(kind: BreakKind) {
+    setActiveBreaks((prev) => removeActiveBreak(prev, kind));
   }
 
-  function snoozeBreakBanner() {
-    if (!activeBreak) return;
-    breakRef.current?.snooze(activeBreak.kind);
-    setActiveBreak(null);
+  function snoozeBreakBanner(kind: BreakKind) {
+    breakRef.current?.snooze(kind);
+    setActiveBreaks((prev) => removeActiveBreak(prev, kind));
   }
 
-  function didBreakBanner() {
-    if (!activeBreak) return;
-    updateBreakTallies((prev) => incrementBreakTally(prev, activeBreak.kind));
-    setActiveBreak(null);
+  function didBreakBanner(kind: BreakKind) {
+    updateBreakTallies((prev) => incrementBreakTally(prev, kind));
+    setActiveBreaks((prev) => removeActiveBreak(prev, kind));
   }
 
   function clearOneBreakTally(kind: BreakKind) {
@@ -469,8 +473,8 @@ export default function NoisePlayer() {
 
   return (
     <section className="player">
-      <BreakBanner
-        breakPrompt={activeBreak}
+      <BreakBannerStack
+        breaks={activeBreaks}
         onDidIt={didBreakBanner}
         onDismiss={dismissBreakBanner}
         onSnooze={snoozeBreakBanner}
