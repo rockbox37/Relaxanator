@@ -1,0 +1,44 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #75"
+  },
+  "plan": {
+    "title": "Update page title line: add \"... Your work companion!\" after Relaxanator",
+    "status": "completed",
+    "narratives": {
+      "Description": "Update page title line: add \"... Your work companion!\" after Relaxanator",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/75",
+      "Overview": "## Summary\n\nUpdate the on-page brand/title line so that after **Relaxanator** it includes the tagline **... Your work companion!**\n\n## Request (Baba)\n\n> change the title line of the page. after Relaxanator, add ... Your work companion!\n\n## Current behavior\n\n- Visible H1 in `src/app/page.tsx` is currently just `Relaxanator`:\n\n```tsx\n<h1>Relaxanator</h1>\n```\n\n- Document / metadata title in `src/app/layout.tsx` uses `APP_NAME = \"Relaxanator\"` (browser tab, OG, PWA apple title, etc.).\n\n## Desired behavior\n\n- After the word \"Relaxanator\" on the page title/brand line, add `... Your work companion!` (exact punctuation/spacing as written, or closest natural placement that matches the request).\n- Clarify during implementation whether this change is **H1-only** (page header) or also updates document/metadata titles — default assumption: **visible page H1 / brand line**; leave tab/manifest titles as product name unless product wants the tagline there too.\n\n## Acceptance criteria\n\n- [ ] Page header title line reads something like: `Relaxanator ... Your work companion!`\n- [ ] Layout/styling still looks intentional on mobile and desktop\n- [ ] No unrelated copy/metadata changes unless explicitly included\n\n## Notes for implementer\n\nPrimary touchpoint: `src/app/page.tsx` (`<h1>` inside `.app-header`).",
+      "Labels": "enhancement"
+    },
+    "items": [
+      {
+        "title": "Page header title line reads something like: `Relaxanator ... Your work companion!`",
+        "status": "proposed"
+      },
+      {
+        "title": "Layout/styling still looks intentional on mobile and desktop",
+        "status": "proposed"
+      },
+      {
+        "title": "No unrelated copy/metadata changes unless explicitly included",
+        "status": "proposed"
+      }
+    ],
+    "tags": [
+      "enhancement"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/75",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #75: Update page title line: add \"... Your work companion!\" after Relaxanator"
+      }
+    ],
+    "updated": "2026-07-14T19:24:03Z",
+    "metadata": {
+      "completedAt": "2026-07-14T19:24:03Z"
+    }
+  }
+}

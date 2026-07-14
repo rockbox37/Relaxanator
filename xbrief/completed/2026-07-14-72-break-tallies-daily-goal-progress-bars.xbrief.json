@@ -1,0 +1,60 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #72"
+  },
+  "plan": {
+    "title": "Break tallies: daily goal progress bars",
+    "status": "completed",
+    "narratives": {
+      "Description": "Break tallies: daily goal progress bars",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/72",
+      "Overview": "## Summary\n\nIn the Breaks panel **Completed** section (added in #59), each break category (stretch / walk / water / custom) currently shows a numeric count plus Clear / Clear all. Enhance that section with visual progress toward a user-set Daily Goal.\n\n## Context\n\nToday (`BreakPanel` Completed UI):\n- Header: “Completed” + Clear all\n- Per-category rows: label, count, Clear\n- Tallies persist in `localStorage` (`relaxanator.breakTallies`) via `src/lib/break-tallies.ts`\n\n## Proposed UX\n\n1. **Per-category progress bars** — For each break kind, a color-graduated bar that fills left → right as completed count increases toward the Daily Goal.\n2. **Daily Goal slider** — One control that sets the shared daily target used by all category bars (or document if per-category goals are preferred; default assumption: one Daily Goal applies to each category independently).\n3. **Goal met** — When a category’s count ≥ Daily Goal:\n   - Bar color switches to green\n   - A festive / celebratory icon appears at the end of the bar\n\n## Acceptance criteria\n\n- [ ] Each Completed category row includes a L→R graduated progress bar reflecting `count / dailyGoal` (clamped at 100% fill when over goal).\n- [ ] A Daily Goal slider is available in/near the Completed section; changing it updates bar fill immediately.\n- [ ] When `count >= dailyGoal` (and goal > 0), that row’s bar is green and shows a celebratory icon at the bar’s end.\n- [ ] When below goal, bar uses the graduated (non-green) treatment; no celebratory icon.\n- [ ] Daily Goal value persists across sessions (MAY use `localStorage`, same pattern as tallies / NFR-1).\n- [ ] Existing Clear / Clear all and tally increment-on-“I did.” behavior remain unchanged.\n- [ ] Accessible: progress communicates current vs goal (e.g. `role=\"progressbar\"` or equivalent aria); slider is keyboard-operable and labeled.\n\n## Notes / open points\n\n- Confirm whether Daily Goal is one global value for all categories (recommended default) or per-category.\n- Sensible slider range (e.g. 1–20) and default (e.g. 3–5) can be chosen at implement time.\n- Visual style should fit existing Breaks panel / app chrome — polished, not generic dashboard chrome.\n\n## Refs\n\n- Builds on #59 (Completed tallies + localStorage)",
+      "Labels": "enhancement"
+    },
+    "items": [
+      {
+        "title": "Each Completed category row includes a L→R graduated progress bar reflecting `count / dailyGoal` (clamped at 100% fill when over goal).",
+        "status": "proposed"
+      },
+      {
+        "title": "A Daily Goal slider is available in/near the Completed section; changing it updates bar fill immediately.",
+        "status": "proposed"
+      },
+      {
+        "title": "When `count >= dailyGoal` (and goal > 0), that row’s bar is green and shows a celebratory icon at the bar’s end.",
+        "status": "proposed"
+      },
+      {
+        "title": "When below goal, bar uses the graduated (non-green) treatment; no celebratory icon.",
+        "status": "proposed"
+      },
+      {
+        "title": "Daily Goal value persists across sessions (MAY use `localStorage`, same pattern as tallies / NFR-1).",
+        "status": "proposed"
+      },
+      {
+        "title": "Existing Clear / Clear all and tally increment-on-“I did.” behavior remain unchanged.",
+        "status": "proposed"
+      },
+      {
+        "title": "Accessible: progress communicates current vs goal (e.g. `role=\"progressbar\"` or equivalent aria); slider is keyboard-operable and labeled.",
+        "status": "proposed"
+      }
+    ],
+    "tags": [
+      "enhancement"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/72",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #72: Break tallies: daily goal progress bars"
+      }
+    ],
+    "updated": "2026-07-14T18:25:21Z",
+    "metadata": {
+      "completedAt": "2026-07-14T18:25:21Z"
+    }
+  }
+}

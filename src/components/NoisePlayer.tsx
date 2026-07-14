@@ -27,6 +27,12 @@ import {
   requestNotificationPermission,
 } from "@/lib/break-notifications";
 import {
+  getBreakDailyGoalServerSnapshot,
+  getBreakDailyGoalSnapshot,
+  setBreakDailyGoal,
+  subscribeBreakDailyGoal,
+} from "@/lib/break-daily-goal";
+import {
   clearAllBreakTallies,
   clearBreakTally,
   getBreakTalliesServerSnapshot,
@@ -111,6 +117,11 @@ export default function NoisePlayer() {
     subscribeBreakTallies,
     getBreakTalliesSnapshot,
     getBreakTalliesServerSnapshot,
+  );
+  const breakDailyGoal = useSyncExternalStore(
+    subscribeBreakDailyGoal,
+    getBreakDailyGoalSnapshot,
+    getBreakDailyGoalServerSnapshot,
   );
   const todos = useSyncExternalStore(
     subscribeTodos,
@@ -653,8 +664,10 @@ export default function NoisePlayer() {
       <BreakPanel
         settings={breaks}
         tallies={breakTallies}
+        dailyGoal={breakDailyGoal}
         onChangeType={changeBreakType}
         onChangeSettings={changeBreakSettings}
+        onChangeDailyGoal={setBreakDailyGoal}
         onClearTally={clearOneBreakTally}
         onClearAllTallies={clearEveryBreakTally}
         onPreview={previewBreakCue}
