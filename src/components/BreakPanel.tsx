@@ -37,6 +37,7 @@ interface BreakPanelProps {
   notificationHint?: string;
 }
 
+/** Festive goal-met mark — papel picado / fiesta energy, legible at ~14px. */
 function GoalCelebrateIcon() {
   return (
     <svg
@@ -48,12 +49,29 @@ function GoalCelebrateIcon() {
       focusable="false"
     >
       <path
-        fill="currentColor"
-        d="M12 2.2l1.35 6.05 5.65 2.55-5.65 2.55L12 19.4l-1.35-6.05L5 10.8l5.65-2.55L12 2.2z"
+        d="M2 4.8h20"
+        fill="none"
+        stroke="rgba(255,255,255,0.4)"
+        strokeWidth="0.85"
+        strokeLinecap="round"
       />
-      <circle cx="4.2" cy="5.2" r="1.1" fill="currentColor" opacity="0.85" />
-      <circle cx="19.5" cy="4.8" r="0.9" fill="currentColor" opacity="0.75" />
-      <circle cx="20.2" cy="14.5" r="1" fill="currentColor" opacity="0.8" />
+      {/* Papel picado pennants */}
+      <path fill="#F45B69" d="M2.2 5h4.6L4.5 10.2 2.2 5z" />
+      <path fill="#F4A261" d="M7 5h4.6L9.3 10.2 7 5z" />
+      <path fill="#E9C46A" d="M11.8 5h4.6L14.1 10.2 11.8 5z" />
+      <path fill="#2A9D8F" d="M16.6 5H21.2L18.9 10.2 16.6 5z" />
+      {/* Tiny cutouts */}
+      <circle cx="4.5" cy="6.6" r="0.5" fill="rgba(18,20,26,0.5)" />
+      <circle cx="9.3" cy="6.6" r="0.5" fill="rgba(18,20,26,0.5)" />
+      <circle cx="14.1" cy="6.6" r="0.5" fill="rgba(18,20,26,0.5)" />
+      <circle cx="18.9" cy="6.6" r="0.5" fill="rgba(18,20,26,0.5)" />
+      {/* Confetti sparkles */}
+      <circle cx="5.5" cy="14.8" r="1.1" fill="#E76F51" />
+      <circle cx="18.5" cy="14.2" r="0.95" fill="#457B9D" />
+      <path
+        fill="#E9C46A"
+        d="M12 12l0.6 2.05 2.1.6-2.1.6L12 17.3l-.6-2.05-2.1-.6 2.1-.6L12 12z"
+      />
     </svg>
   );
 }

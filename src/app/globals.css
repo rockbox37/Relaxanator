@@ -485,11 +485,12 @@ main > p {
   height: 100%;
   width: calc(var(--progress) * 100%);
   border-radius: inherit;
-  /* Cool slate → warm teal as fill grows toward the goal */
-  background: hsl(
-    calc(205 - (var(--progress) * 55)),
-    calc(38% + (var(--progress) * 18%)),
-    calc(46% + (var(--progress) * 10%))
+  /* Transparent grey (start) → transparent orange (in progress) */
+  background: hsla(
+    28,
+    calc(6% + (var(--progress) * 86%)),
+    calc(52% + (var(--progress) * 6%)),
+    calc(0.28 + (var(--progress) * 0.34))
   );
   transition:
     width 0.22s ease,
@@ -497,14 +498,14 @@ main > p {
 }
 
 .break-tally-bar.is-met .break-tally-bar-fill {
-  background: var(--accent);
+  /* Soft green when goal met — translucent to match staged fills */
+  background: rgba(127, 200, 169, 0.78);
   box-shadow: 0 0 8px rgba(127, 200, 169, 0.45);
 }
 
 .break-tally-celebrate {
   display: inline-flex;
   align-items: center;
-  color: var(--accent);
   flex-shrink: 0;
   animation: break-tally-celebrate-in 0.35s ease-out;
 }
