@@ -14,7 +14,7 @@ export default function Home() {
           height={64}
           priority
         />
-        <h1>Relaxanator</h1>
+        <h1>Relaxanator ... Your work companion!</h1>
       </header>
       <p>
         Colored background noise with a 10-band equalizer, meditation sounds,
