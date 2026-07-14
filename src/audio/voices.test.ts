@@ -20,8 +20,8 @@ describe("fog horn 1 tuning", () => {
     const expectedTone2Hz = FOG_HORN_1_TONE1_HZ * 2 ** (-FOG_HORN_1_INTERVAL_SEMITONES / 12);
     expect(FOG_HORN_1_INTERVAL_SEMITONES).toBe(7);
     expect(FOG_HORN_1_TONE2_HZ).toBeCloseTo(expectedTone2Hz, 2);
-    expect(FOG_HORN_1_TONE1_HZ).toBeCloseTo(61.74, 2);
-    expect(FOG_HORN_1_TONE2_HZ).toBeCloseTo(41.21, 2);
+    expect(FOG_HORN_1_TONE1_HZ).toBeCloseTo(123.47, 2);
+    expect(FOG_HORN_1_TONE2_HZ).toBeCloseTo(82.41, 2);
   });
 });
 
@@ -40,8 +40,8 @@ describe("fog horn 3 tuning", () => {
     const expectedTone2Hz = FOG_HORN_3_TONE1_HZ * 2 ** (-FOG_HORN_3_INTERVAL_SEMITONES / 12);
     expect(FOG_HORN_3_INTERVAL_SEMITONES).toBe(7);
     expect(FOG_HORN_3_TONE2_HZ).toBeCloseTo(expectedTone2Hz, 2);
-    expect(FOG_HORN_3_TONE1_HZ).toBeCloseTo(65.41, 2);
-    expect(FOG_HORN_3_TONE2_HZ).toBeCloseTo(43.66, 2);
+    expect(FOG_HORN_3_TONE1_HZ).toBeCloseTo(130.81, 2);
+    expect(FOG_HORN_3_TONE2_HZ).toBeCloseTo(87.31, 2);
   });
 });
 

@@ -283,16 +283,15 @@ const omm: VoicePlayer = (ctx, dest, when, volume) => {
   fundamental.onended = () => env.disconnect();
 };
 
-/** B1 — fog horn 1 first blast (1 s). */
-export const FOG_HORN_1_TONE1_HZ = 61.74;
-/** E1 — fog horn 1 second blast (2 s); perfect fifth (7 semitones) below tone 1. */
-export const FOG_HORN_1_TONE2_HZ = 41.21;
+/** B2 — fog horn 1 first blast (1 s). */
+export const FOG_HORN_1_TONE1_HZ = 123.47;
+/** E2 — fog horn 1 second blast (2 s); perfect fifth (7 semitones) below tone 1. */
+export const FOG_HORN_1_TONE2_HZ = 82.41;
 export const FOG_HORN_1_INTERVAL_SEMITONES = 7;
 
 const fogHorn: VoicePlayer = (ctx, dest, when, volume) => {
-  // Two-tone fog signal (#54): B1 (1 s) then E1 (2 s), hard-gated sequential
-  // blasts — perfect fifth down (7 semitones), aligned with fog horns 2–4.
-  // Keeps B1 as the high of the pair from the prior single-blast distant horn.
+  // Two-tone fog signal (#54 / #58): B2 (1 s) then E2 (2 s), hard-gated sequential
+  // blasts — perfect fifth down (7 semitones), one octave above prior B1→E1.
   gatedTwoBlastHorn(
     ctx,
     dest,
@@ -504,16 +503,16 @@ const fogHorn2: VoicePlayer = (ctx, dest, when, volume) => {
   );
 };
 
-/** C2 — fog horn 3 first blast (1 s). */
-export const FOG_HORN_3_TONE1_HZ = 65.41;
-/** F1 — fog horn 3 second blast (2 s); perfect fifth (7 semitones) below tone 1. */
-export const FOG_HORN_3_TONE2_HZ = 43.66;
+/** C3 — fog horn 3 first blast (1 s). */
+export const FOG_HORN_3_TONE1_HZ = 130.81;
+/** F2 — fog horn 3 second blast (2 s); perfect fifth (7 semitones) below tone 1. */
+export const FOG_HORN_3_TONE2_HZ = 87.31;
 export const FOG_HORN_3_INTERVAL_SEMITONES = 7;
 
 const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
-  // Two-tone fog signal (#50): C2 (1 s) then F1 (2 s), hard-gated sequential
+  // Two-tone fog signal (#50 / #58): C3 (1 s) then F2 (2 s), hard-gated sequential
   // blasts through heavy feedback-delay reverb — perfect fifth down (7
-  // semitones); canonical interval for all fog horns (#54).
+  // semitones), one octave above prior C2→F1; interval still canonical (#54).
   gatedTwoBlastHorn(
     ctx,
     dest,

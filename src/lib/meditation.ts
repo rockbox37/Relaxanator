@@ -63,7 +63,7 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
   {
     id: "fog-horn",
     label: "fog horn",
-    description: "Two-tone fog signal — B then lower E (1 s + 2 s blasts, perfect fifth) with heavy reverb",
+    description: "Two-tone fog signal — B2 then lower E2 (1 s + 2 s blasts, perfect fifth) with heavy reverb",
     synth: "fogHorn",
     defaultIntervalMin: 25,
     defaultVolume: 0.45,
@@ -79,7 +79,7 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
   {
     id: "fog-horn-3",
     label: "fog horn 3",
-    description: "Two-tone fog signal — C then lower F (1 s + 2 s blasts, perfect fifth) with heavy reverb",
+    description: "Two-tone fog signal — C3 then lower F2 (1 s + 2 s blasts, perfect fifth) with heavy reverb",
     synth: "fogHorn3",
     defaultIntervalMin: 28,
     defaultVolume: 0.45,
