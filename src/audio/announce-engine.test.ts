@@ -464,4 +464,112 @@ describe("AnnounceEngine pump scheduling", () => {
     timeTokensSpy.mockRestore();
     engine.stop();
   });
+
+  it("resync cancels prior BufferSources before re-scheduling the same future boundary (#73)", async () => {
+    vi.useFakeTimers();
+    // Inside full-interval lookahead of the hour.
+    vi.setSystemTime(new Date(2026, 0, 15, 14, 50, 0));
+
+    const ctx = mockAudioContext();
+    const phraseSources: { stop: ReturnType<typeof vi.fn> }[] = [];
+    const origCreate = ctx.createBufferSource.bind(ctx);
+    ctx.createBufferSource = () => {
+      const source = origCreate();
+      const stop = vi.fn(source.stop.bind(source));
+      source.stop = stop;
+      const origStart = source.start.bind(source);
+      source.start = (when: number, offset?: number, duration?: number) => {
+        // Prime blip passes a duration; phrase words do not.
+        if (duration === undefined) {
+          phraseSources.push({ stop });
+        }
+        origStart(when, offset, duration);
+      };
+      return source;
+    };
+
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const firstPhrase = phraseSources.length;
+    expect(firstPhrase).toBeGreaterThan(0);
+    // No stops yet — the first schedule is still live on the audio clock.
+    expect(phraseSources.every((s) => s.stop.mock.calls.length === 0)).toBe(
+      true,
+    );
+
+    // Mimic enable-path / visibility resync: remaps wall→audio without
+    // canceling would leave two overlapping utterances (#73).
+    engine.resync();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(phraseSources.length).toBe(firstPhrase * 2);
+    const firstGen = phraseSources.slice(0, firstPhrase);
+    const secondGen = phraseSources.slice(firstPhrase);
+    expect(firstGen.every((s) => s.stop.mock.calls.length >= 1)).toBe(true);
+    expect(secondGen.every((s) => s.stop.mock.calls.length === 0)).toBe(true);
+
+    engine.stop();
+  });
+
+  it("enable then resync leaves only one live schedule for the next boundary (#73)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 15, 14, 50, 0));
+
+    const ctx = mockAudioContext();
+    const phraseStarts: number[] = [];
+    const phraseStops: ReturnType<typeof vi.fn>[] = [];
+    const origCreate = ctx.createBufferSource.bind(ctx);
+    ctx.createBufferSource = () => {
+      const source = origCreate();
+      const stop = vi.fn(source.stop.bind(source));
+      source.stop = stop;
+      const origStart = source.start.bind(source);
+      source.start = (when: number, offset?: number, duration?: number) => {
+        if (duration === undefined) {
+          phraseStarts.push(when);
+          phraseStops.push(stop);
+        }
+        origStart(when, offset, duration);
+      };
+      return source;
+    };
+
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: false,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    // NoisePlayer enable path: updateSettings(enabled) pumps, then resync.
+    engine.updateSettings({
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    const afterEnable = phraseStarts.length;
+    expect(afterEnable).toBeGreaterThan(0);
+
+    engine.resync();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(phraseStarts.length).toBe(afterEnable * 2);
+    const live = phraseStops.filter((s) => s.mock.calls.length === 0);
+    expect(live).toHaveLength(afterEnable);
+
+    engine.stop();
+  });
 });

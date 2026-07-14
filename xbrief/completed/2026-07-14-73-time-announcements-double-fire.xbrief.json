@@ -1,0 +1,31 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF for GitHub issue #73",
+    "created": "2026-07-14T18:20:00Z",
+    "updated": "2026-07-14T18:25:00Z"
+  },
+  "plan": {
+    "title": "Time announcements double-fire at each interval",
+    "status": "completed",
+    "narratives": {
+      "Description": "At each scheduled interval boundary, the voice time announcement fires twice \u2014 same voice, milliseconds apart.",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/73",
+      "Overview": "Distinct from #62 continual loop. Cadence is correct but each boundary speaks twice. Likely resync/enable re-enqueues the same future boundary onto the audio clock without canceling prior BufferSources, or dual AnnounceEngine instances.",
+      "Requirements": "FR-1: Each interval boundary produces exactly one audible announcement.\nFR-2: No regression of the #62 continual-loop fix (committedBoundaryMs).\nFR-3: resync still remaps wall\u2192audio after suspend without leaving orphan schedules.\nNFR-1: Regression coverage for the double-fire scenario.",
+      "LockedDecisions": "Root cause: resync()/enable remapped a future committed boundary onto the audio clock without canceling prior BufferSources, so the same utterance fired twice ms apart. Fix: track pending BufferSources and stop them on resync/stop before re-scheduling; also guard ensureEngines with startingRef to prevent dual AnnounceEngine instances from concurrent callers."
+    },
+    "items": [],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/73",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #73: Time announcements double-fire at each interval"
+      }
+    ],
+    "updated": "2026-07-14T18:25:00Z",
+    "metadata": {
+      "completedAt": "2026-07-14T18:25:00Z"
+    }
+  }
+}

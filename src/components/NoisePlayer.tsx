@@ -110,6 +110,8 @@ export default function NoisePlayer() {
   }, [breaks]);
   const [playing, setPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
+  /** Sync guard — React state `starting` is stale across concurrent ensureEngines calls. */
+  const startingRef = useRef(false);
   /** Bumped when AudioContext engines are first created — wires recovery listeners. */
   const [audioEpoch, setAudioEpoch] = useState(0);
   const [sleepMinutes, setSleepMinutes] = useState(SLEEP_TIMER_OFF);
@@ -181,7 +183,11 @@ export default function NoisePlayer() {
 
   async function ensureEngines(): Promise<NoiseEngine | null> {
     if (engineRef.current) return engineRef.current;
-    if (starting) return null;
+    // Prefer the ref over React state — two callers in the same tick both see
+    // starting===false before setStarting flushes, and would otherwise each
+    // construct an AnnounceEngine (dual pumps → double-fire, #73).
+    if (startingRef.current) return null;
+    startingRef.current = true;
     setStarting(true);
     try {
       const engine = new NoiseEngine();
@@ -222,6 +228,7 @@ export default function NoisePlayer() {
       setAudioEpoch((n) => n + 1);
       return engine;
     } finally {
+      startingRef.current = false;
       setStarting(false);
     }
   }

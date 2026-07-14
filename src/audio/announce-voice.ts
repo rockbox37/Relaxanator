@@ -27,7 +27,7 @@ export const FIRST_WORD_BUFFER_SKIP_SEC = 0.003;
 
 export type AnnounceWordHandle = {
   stopAt: number;
-  lastNode: AudioNode;
+  lastNode: AudioBufferSourceNode;
 };
 
 function wordDurationSec(buffer: AudioBuffer, playbackRate: number): number {
