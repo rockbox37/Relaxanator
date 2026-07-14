@@ -6,7 +6,7 @@
   },
   "plan": {
     "title": "Break notifications should stack instead of clobbering",
-    "status": "running",
+    "status": "completed",
     "narratives": {
       "Description": "Break notifications should stack instead of clobbering",
       "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/61",
@@ -43,6 +43,9 @@
         "title": "Issue #61: Break notifications should stack instead of clobbering"
       }
     ],
-    "updated": "2026-07-14T17:05:00Z"
+    "updated": "2026-07-14T18:32:37Z",
+    "metadata": {
+      "completedAt": "2026-07-14T18:32:37Z"
+    }
   }
 }

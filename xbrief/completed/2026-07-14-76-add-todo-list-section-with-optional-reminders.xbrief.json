@@ -1,0 +1,68 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #76"
+  },
+  "plan": {
+    "title": "Add ToDo list section with optional reminders",
+    "status": "completed",
+    "narratives": {
+      "Description": "Add ToDo list section with optional reminders",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/76",
+      "Overview": "## Summary\n\nAdd a dedicated **ToDo list** section to the Relaxanator UI so users can capture free-text tasks with an optional reminder time, snooze overdue reminders, and see a progressively more prominent reminder banner after the reminder time has passed. Users must be able to edit or delete any item at any time.\n\n## Motivation\n\nRelaxanator already surfaces timed break prompts via a banner stack with snooze/dismiss (`BreakBanner` / break panel). A lightweight personal ToDo list with optional reminders would reuse that mental model for ad-hoc tasks (e.g. “Call to schedule doctor appointment — remind me at 10:00 AM”) without leaving the app.\n\n## Proposed behavior\n\n### ToDo section\n- New UI section devoted to the ToDo list (alongside existing panels such as breaks / meditation / noise).\n- Users can add items as free text.\n- Each item may optionally include a reminder time (local clock time; example: remind at 10:00 AM).\n- Users can modify (edit text and/or reminder time) or delete any item at any time.\n\n### Reminders & snooze\n- When an item has a reminder time and that time arrives (or is already past), surface a reminder UI.\n- Provide a **snooze** action (pattern to consider: existing break-banner snooze UX).\n- If the reminder time has passed and the item is still outstanding, increase reminder **prominence progressively** over time (e.g. stronger visual weight / urgency styling as overdue duration grows — exact steps TBD in implementation).\n\n## Acceptance criteria\n\n- [ ] Dedicated ToDo list section is visible in the main app UI.\n- [ ] User can add a free-text ToDo item.\n- [ ] User can optionally set a reminder time on an item (e.g. doctor appointment @ 10:00 AM).\n- [ ] User can edit item text and/or reminder time after creation.\n- [ ] User can delete an item at any time.\n- [ ] When reminder time is reached (or past), a reminder affordance appears for that item.\n- [ ] User can snooze a reminder; after snooze, the reminder reappears at the snoozed time.\n- [ ] After reminder time has passed without completion/dismissal, the reminder becomes progressively more prominent.\n- [ ] Basic a11y: reminder affordances use appropriate live-region / role patterns consistent with existing banners where applicable.\n\n## Open questions (non-blocking; do not invent heavy scope)\n\n- **Persistence**: Is `localStorage` (or existing client storage patterns) enough for v1 offline PWA use?\n- **Audio cue**: Should overdue ToDo reminders optionally play a cue, or stay visual-only like a quieter sibling of break prompts?\n- **Timezone / clock**: Confirm local device time only for v1 (no calendar TZ complexity).\n- **Snooze duration**: Fixed interval (e.g. match break snooze minutes) vs user-configurable?\n- **Completion vs dismiss**: Distinct “done” vs “dismiss reminder but keep item” actions?\n\n## Out of scope (unless later scoped)\n\n- Sync across devices / accounts\n- Recurring ToDos / full calendar integration\n- Push notifications beyond what the app already does for breaks (unless explicitly added later)\n\n## Related existing UX\n\n- `src/components/BreakBanner.tsx` — banner + snooze / dismiss / acknowledge actions\n- Break panel + notification helpers — timed prompt surface patterns to align with visually and behaviorally",
+      "Labels": "enhancement"
+    },
+    "items": [
+      {
+        "title": "Dedicated ToDo list section is visible in the main app UI.",
+        "status": "completed"
+      },
+      {
+        "title": "User can add a free-text ToDo item.",
+        "status": "completed"
+      },
+      {
+        "title": "User can optionally set a reminder time on an item (e.g. doctor appointment @ 10:00 AM).",
+        "status": "completed"
+      },
+      {
+        "title": "User can edit item text and/or reminder time after creation.",
+        "status": "completed"
+      },
+      {
+        "title": "User can delete an item at any time.",
+        "status": "completed"
+      },
+      {
+        "title": "When reminder time is reached (or past), a reminder affordance appears for that item.",
+        "status": "completed"
+      },
+      {
+        "title": "User can snooze a reminder; after snooze, the reminder reappears at the snoozed time.",
+        "status": "completed"
+      },
+      {
+        "title": "After reminder time has passed without completion/dismissal, the reminder becomes progressively more prominent.",
+        "status": "completed"
+      },
+      {
+        "title": "Basic a11y: reminder affordances use appropriate live-region / role patterns consistent with existing banners where applicable.",
+        "status": "completed"
+      }
+    ],
+    "tags": [
+      "enhancement"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/76",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #76: Add ToDo list section with optional reminders"
+      }
+    ],
+    "updated": "2026-07-14T18:35:00Z",
+    "metadata": {
+      "completedAt": "2026-07-14T18:35:00Z"
+    }
+  }
+}
