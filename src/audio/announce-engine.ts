@@ -68,6 +68,12 @@ export class AnnounceEngine {
   private speakGeneration = 0;
   /** True while pump() is awaiting speak — prevents overlapping schedules. */
   private scheduling = false;
+  /**
+   * BufferSources enqueued onto the audio clock for pending phrases.
+   * Cleared on {@link resync} / {@link stop} so a remapped schedule cannot
+   * leave an orphan copy of the same boundary sounding (#73).
+   */
+  private pendingSources: AudioBufferSourceNode[] = [];
 
   constructor(
     private readonly ctx: BaseAudioContext,
@@ -122,8 +128,10 @@ export class AnnounceEngine {
    * while wall time advances, so a far-ahead schedule would otherwise fire at
    * the wrong civil time. Does not clear {@link committedBoundaryMs} — already
    * spoken / enqueued marks must not re-enter miss-grace catch-up (#62).
+   * Cancels orphan BufferSources from the prior mapping first (#73).
    */
   resync(): void {
+    this.cancelPendingSources();
     this.scheduledBoundaryMs = 0;
     void this.pump();
   }
@@ -137,9 +145,22 @@ export class AnnounceEngine {
     this.vocoderPrimed = false;
     this.scheduling = false;
     this.speakGeneration += 1;
+    this.cancelPendingSources();
     const t = this.ctx.currentTime;
     this.outputBus.gain.cancelScheduledValues(t);
     this.outputBus.gain.setValueAtTime(0, t);
+  }
+
+  /** Stop any audio-clock schedules that have not yet finished playing. */
+  private cancelPendingSources(): void {
+    for (const source of this.pendingSources) {
+      try {
+        source.stop();
+      } catch {
+        // Already stopped / never started — ignore.
+      }
+    }
+    this.pendingSources = [];
   }
 
   private async preload(voiceId: string): Promise<void> {
@@ -290,7 +311,7 @@ export class AnnounceEngine {
       const buffer = words.get(token);
       if (!buffer) continue;
       scheduled = true;
-      const { stopAt } = scheduleAnnounceWord(
+      const { stopAt, lastNode } = scheduleAnnounceWord(
         this.ctx,
         buffer,
         this.outputBus,
@@ -299,6 +320,7 @@ export class AnnounceEngine {
         1,
         firstOutput && firstWord,
       );
+      this.pendingSources.push(lastNode);
       firstWord = false;
       cursor = stopAt + wordGapAfterToken(token);
     }
