@@ -38,6 +38,7 @@ describe("MEDITATION_VOICES", () => {
       "bell",
       "doom-bell",
       "chime",
+      "dark-chime",
       "drone",
       "omm",
       "fog-horn",
@@ -64,6 +65,16 @@ describe("MEDITATION_VOICES", () => {
     expect(doomBell?.description).toMatch(/F3/i);
     expect(doomBell?.description).toMatch(/minor-third/i);
     expect(doomBell?.description).not.toMatch(/very low/i);
+  });
+
+  it("documents dark chime as lower A3 minor sibling of Chime (#66)", () => {
+    const darkChime = MEDITATION_VOICES.find((v) => v.id === "dark-chime");
+    expect(darkChime?.label).toBe("Dark Chime");
+    expect(darkChime?.synth).toBe("darkChime");
+    expect(darkChime?.description).toMatch(/A3/i);
+    expect(darkChime?.description).toMatch(/minor-third/i);
+    expect(darkChime?.defaultIntervalMin).toBe(7.5);
+    expect(darkChime?.defaultVolume).toBe(0.4);
   });
 
   it("documents fog horn 1 as B2/E2 perfect fifth two-tone", () => {

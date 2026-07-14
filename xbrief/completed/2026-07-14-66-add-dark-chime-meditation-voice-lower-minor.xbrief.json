@@ -1,0 +1,53 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #66"
+  },
+  "plan": {
+    "title": "Add Dark Chime meditation voice (lower, minor)",
+    "status": "completed",
+    "narratives": {
+      "Description": "Add Dark Chime meditation voice (lower, minor)",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/66",
+      "LockedDecisions": "Implement #66 (2026-07-14): (1) Catalog id `dark-chime`, label \"Dark Chime\", synth key `darkChime`. (2) Fundamental A3 (220.00 Hz) — 3 semitones below Chime C4 (261.63); still a chime, not Bell/doomBell depth. (3) Darker minor stack: soft hum 0.5×, stronger minor-third tierce 1.2×, reduced high shimmer; ~9 s ring. (4) Defaults match Chime (7.5 min / 0.4). (5) Existing Chime untouched.",
+      "Overview": "## Summary\n\nAdd a new meditation voice **Dark Chime**: a slightly lower, darker sibling of the existing **Chime**, with a clear minor sonority.\n\n## Context — existing Chime\n\nCatalog (`src/lib/meditation.ts`):\n\n- **id / label**: `chime` / \"Chime\"\n- **description**: \"Low, ringing chime with a minor-third shimmer\"\n- Defaults: interval 7.5 min, volume 0.4\n\nSynth (`src/audio/voices.ts` — `chime` player):\n\n- Struck additive tone, fundamental **C4 (261.63 Hz)**\n- Partials include a **~minor-third** tierce (`1.2×`) plus higher partials; ~8 s ring\n- Comment notes it sits above Bell (C3) and doom bell (F2), sharing bittersweet minor-third character\n\n## Requirements\n\n1. **Name**: \"Dark Chime\" (catalog label; stable `id` e.g. `darkChime` — follow existing voice id conventions).\n2. **Pitch**: slightly **lower** than current Chime (C4 / 261.63 Hz) — a modest drop (e.g. ~1–3 semitones), still recognizably a chime, not as deep as Bell/doomBell.\n3. **Harmony / character**: **minor** sonority (minor-third or darker minor-flavored partial stack), more shadowed than the existing Chime while keeping the struck/ringing chime envelope family.\n4. Wire into the meditation voice catalog, synth registry, and any UI/preview paths that enumerate voices.\n5. Do **not** replace or retune the existing Chime unless needed for shared helpers; Dark Chime is an additive option.\n\n## Acceptance criteria\n\n- [ ] New catalog entry with label **Dark Chime**, sensible description, and default interval/volume consistent with other struck voices.\n- [ ] Synth implementation plays a lower, minor-character struck chime (audible vs Chime in preview).\n- [ ] Voice appears in meditation settings / voice picker and preview works.\n- [ ] Tests updated (e.g. `meditation.test.ts` voice-id list / related coverage) so the new voice is included where the suite asserts catalog completeness.\n- [ ] No regression to existing Chime (still C4-ish minor-third chime).\n\n## Out of scope\n\n- Retuning Bell, doomBell, or break-cue chimes.\n- New UI chrome beyond listing/previewing the new voice like the others.",
+      "Labels": "enhancement"
+    },
+    "items": [
+      {
+        "title": "New catalog entry with label **Dark Chime**, sensible description, and default interval/volume consistent with other struck voices.",
+        "status": "proposed"
+      },
+      {
+        "title": "Synth implementation plays a lower, minor-character struck chime (audible vs Chime in preview).",
+        "status": "proposed"
+      },
+      {
+        "title": "Voice appears in meditation settings / voice picker and preview works.",
+        "status": "proposed"
+      },
+      {
+        "title": "Tests updated (e.g. `meditation.test.ts` voice-id list / related coverage) so the new voice is included where the suite asserts catalog completeness.",
+        "status": "proposed"
+      },
+      {
+        "title": "No regression to existing Chime (still C4-ish minor-third chime).",
+        "status": "proposed"
+      }
+    ],
+    "tags": [
+      "enhancement"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/66",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #66: Add Dark Chime meditation voice (lower, minor)"
+      }
+    ],
+    "updated": "2026-07-14T16:38:35Z",
+    "metadata": {
+      "completedAt": "2026-07-14T16:38:35Z"
+    }
+  }
+}

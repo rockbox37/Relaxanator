@@ -229,6 +229,22 @@ const chime: VoicePlayer = (ctx, dest, when, volume) => {
   ], 8);
 };
 
+/** A3 — Dark Chime fundamental (#66); 3 semitones below Chime C4. */
+export const DARK_CHIME_FUNDAMENTAL_HZ = 220.0;
+
+const darkChime: VoicePlayer = (ctx, dest, when, volume) => {
+  // Darker sibling of Chime (#66 LockedDecision): A3 fundamental (3 st below
+  // C4), soft hum + stronger minor-third tierce, quieter high shimmer, ~9 s.
+  struck(ctx, dest, when, volume * 0.65, DARK_CHIME_FUNDAMENTAL_HZ, [
+    [0.5, 0.28],
+    [1, 1],
+    [1.2, 0.62],
+    [2.0, 0.22],
+    [2.76, 0.12],
+    [5.4, 0.04],
+  ], 9);
+};
+
 const drone: VoicePlayer = (ctx, dest, when, volume) => {
   const attack = 2.5;
   const hold = 8;
@@ -754,6 +770,7 @@ const PLAYERS: Record<MeditationVoiceDef["synth"], VoicePlayer> = {
   bell,
   doomBell,
   chime,
+  darkChime,
   drone,
   omm,
   fogHorn,
