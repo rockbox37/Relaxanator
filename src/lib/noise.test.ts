@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EQ_BAND_COUNT, createFlatEqCurve } from "./eq";
+import { EQ_BAND_COUNT, EQ_GAIN_MIN_DB, createFlatEqCurve } from "./eq";
 import {
   DEFAULT_MASTER_VOLUME,
   DEFAULT_NOISE_COLOR,
@@ -9,12 +9,22 @@ import {
   clampVolume,
   colorToIndex,
   createDefaultNoiseState,
+  darkBrownEqCurve,
   eqCurveForColor,
 } from "./noise";
 
 describe("NOISE_COLORS", () => {
-  it("offers white, pink, and brown in worklet param order", () => {
-    expect(NOISE_COLORS.map((c) => c.id)).toEqual(["white", "pink", "brown"]);
+  it("offers white, pink, brown, and dark-brown in worklet param order", () => {
+    expect(NOISE_COLORS.map((c) => c.id)).toEqual([
+      "white",
+      "pink",
+      "brown",
+      "dark-brown",
+    ]);
+  });
+
+  it("labels Dark Brown for the UI", () => {
+    expect(NOISE_COLORS.find((c) => c.id === "dark-brown")?.label).toBe("Dark Brown");
   });
 });
 
@@ -40,6 +50,7 @@ describe("colorToIndex", () => {
     expect(colorToIndex("white")).toBe(0);
     expect(colorToIndex("pink")).toBe(1);
     expect(colorToIndex("brown")).toBe(2);
+    expect(colorToIndex("dark-brown")).toBe(3);
   });
 
   it("falls back to white for unknown persisted values", () => {
@@ -59,9 +70,8 @@ describe("eqCurveForColor", () => {
   });
 
   it("rolls off darker colors more steeply (white < pink < brown)", () => {
-    const bass = (color: (typeof NOISE_COLORS)[number]["id"]) =>
-      eqCurveForColor(color)[0].gainDb;
-    const treble = (color: (typeof NOISE_COLORS)[number]["id"]) =>
+    const bass = (color: "white" | "pink" | "brown") => eqCurveForColor(color)[0].gainDb;
+    const treble = (color: "white" | "pink" | "brown") =>
       eqCurveForColor(color)[EQ_BAND_COUNT - 1].gainDb;
     expect(bass("white")).toBeLessThan(bass("pink"));
     expect(bass("pink")).toBeLessThanOrEqual(bass("brown"));
@@ -69,8 +79,51 @@ describe("eqCurveForColor", () => {
     expect(treble("pink")).toBeGreaterThanOrEqual(treble("brown"));
   });
 
-  it("uses the classic 0 / 3 / 6 dB-per-octave slopes", () => {
+  it("uses the classic 0 / 3 / 6 dB-per-octave slopes for white/pink/brown", () => {
     expect(EQ_ROLLOFF_DB_PER_OCTAVE_BY_COLOR).toEqual({ white: 0, pink: 3, brown: 6 });
+  });
+
+  it("keeps Brown’s curve unchanged", () => {
+    expect(eqCurveForColor("brown").map((b) => [b.frequency, b.gainDb])).toEqual([
+      [31, 12],
+      [63, 12],
+      [125, 12],
+      [250, 9],
+      [500, 3],
+      [1000, -3],
+      [2000, -9],
+      [4000, -12],
+      [8000, -12],
+      [16000, -12],
+    ]);
+  });
+});
+
+describe("darkBrownEqCurve / Dark Brown (#68)", () => {
+  it("matches the Dark Brown per-band table", () => {
+    expect(eqCurveForColor("dark-brown")).toEqual(darkBrownEqCurve());
+    expect(eqCurveForColor("dark-brown").map((b) => [b.frequency, b.gainDb])).toEqual([
+      [31, 12],
+      [63, 12],
+      [125, 12],
+      [250, 2],
+      [500, EQ_GAIN_MIN_DB],
+      [1000, EQ_GAIN_MIN_DB],
+      [2000, EQ_GAIN_MIN_DB],
+      [4000, EQ_GAIN_MIN_DB],
+      [8000, EQ_GAIN_MIN_DB],
+      [16000, EQ_GAIN_MIN_DB],
+    ]);
+  });
+
+  it("matches Brown through 125 Hz and shelves mids/highs", () => {
+    const brown = eqCurveForColor("brown");
+    const dark = eqCurveForColor("dark-brown");
+    for (let i = 0; i < 3; i += 1) {
+      expect(dark[i]).toEqual(brown[i]);
+    }
+    expect(dark[3].gainDb).toBe(2);
+    expect(dark.slice(4).every((b) => b.gainDb === EQ_GAIN_MIN_DB)).toBe(true);
   });
 });
 

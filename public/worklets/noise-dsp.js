@@ -5,7 +5,7 @@
  */
 
 /** Color ids, index-aligned with the worklet's `color` AudioParam. */
-export const NOISE_COLOR_ORDER = ["white", "pink", "brown"];
+export const NOISE_COLOR_ORDER = ["white", "pink", "brown", "dark-brown"];
 
 /** Uniform white noise in [-1, 1). */
 export function createWhiteGenerator(rng = Math.random) {
@@ -55,6 +55,8 @@ const FACTORIES = {
   white: createWhiteGenerator,
   pink: createPinkGenerator,
   brown: createBrownGenerator,
+  // Dark Brown (#68): same generator as Brown; darker shape comes from EQ.
+  "dark-brown": createBrownGenerator,
 };
 
 /**

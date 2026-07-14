@@ -1,0 +1,53 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #68"
+  },
+  "plan": {
+    "title": "Add Dark Brown main color EQ preset",
+    "status": "completed",
+    "narratives": {
+      "Description": "Add Dark Brown main color EQ preset",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/68",
+      "LockedDecisions": "Implement #68 (2026-07-14): (1) Catalog id `dark-brown`, label \"Dark Brown\". (2) DSP reuses Brown generator; darkness is EQ-only. (3) EQ: Brown through ≤125 Hz; 250 Hz = +2 dB; ≥500 Hz = −12 dB. (4) First-class entry in NOISE_COLORS / NOISE_COLOR_ORDER index 3. (5) Existing White/Pink/Brown unchanged.",
+      "Overview": "## Summary\n\nAdd a new main noise-color preset **Dark Brown**: same starting EQ shape as **Brown**, with a darker mid/high shelf.\n\nRequested by Baba.\n\n## Brown baseline (current)\n\nBrown uses `eqCurveForColor(\"brown\")` → `slopedEqCurve(6)` (6 dB/oct rolloff, pivot at band index 4.5), clamped to ±12 dB.\n\nBands (`EQ_BAND_FREQUENCIES` in `src/lib/eq.ts`):\n\n| Hz | Brown gain (dB) |\n|----|-----------------|\n| 31 | +12 |\n| 63 | +12 |\n| 125 | +12 |\n| 250 | +9 |\n| 500 | +3 |\n| 1000 | −3 |\n| 2000 | −9 |\n| 4000 | −12 |\n| 8000 | −12 |\n| 16000 | −12 |\n\nRegistry today: `NOISE_COLORS` / `EQ_ROLLOFF_DB_PER_OCTAVE_BY_COLOR` in `src/lib/noise.ts` (white / pink / brown only).\n\n## Dark Brown (desired)\n\nCopy Brown’s curve, then apply these overrides:\n\n| Hz | Change |\n|----|--------|\n| 250 | **+2 dB** (was +9) |\n| ≥500 (500, 1k, 2k, 4k, 8k, 16k) | **−12 dB** all |\n\nResulting Dark Brown curve:\n\n| Hz | Dark Brown gain (dB) |\n|----|----------------------|\n| 31 | +12 |\n| 63 | +12 |\n| 125 | +12 |\n| 250 | **+2** |\n| 500 | **−12** |\n| 1000 | **−12** |\n| 2000 | **−12** |\n| 4000 | −12 |\n| 8000 | −12 |\n| 16000 | −12 |\n\nBands below 250 Hz stay identical to Brown.\n\n## Acceptance criteria\n\n- [ ] New main color preset **Dark Brown** appears alongside White / Pink / Brown in the color UI.\n- [ ] Selecting Dark Brown snaps the 10-band EQ to the curve above (and applies it to the audio graph via the existing preset→snap path).\n- [ ] Brown (and other existing colors) are unchanged.\n- [ ] Worklet / color registry / tests updated so Dark Brown is a first-class color (or an explicit documented EQ-only preset if product chooses that shape — prefer matching how Brown is registered today).\n- [ ] Unit coverage asserts Dark Brown’s per-band gains match the table (especially 250 Hz = +2 and all ≥500 Hz = −12).\n\n## Notes\n\n- Gain floor is already `EQ_GAIN_MIN_DB = -12`; the ≥500 Hz shelf is at the legal minimum.\n- Implementation likely touches `src/lib/noise.ts`, worklet color order (`public/worklets/noise-dsp.js` / `NOISE_COLOR_ORDER`), UI in `NoisePlayer`, and related tests — exact DSP generator for “dark brown” can reuse Brown’s generator with the custom EQ curve if a distinct algorithm is not needed.",
+      "Labels": "enhancement"
+    },
+    "items": [
+      {
+        "title": "New main color preset **Dark Brown** appears alongside White / Pink / Brown in the color UI.",
+        "status": "proposed"
+      },
+      {
+        "title": "Selecting Dark Brown snaps the 10-band EQ to the curve above (and applies it to the audio graph via the existing preset→snap path).",
+        "status": "proposed"
+      },
+      {
+        "title": "Brown (and other existing colors) are unchanged.",
+        "status": "proposed"
+      },
+      {
+        "title": "Worklet / color registry / tests updated so Dark Brown is a first-class color (or an explicit documented EQ-only preset if product chooses that shape — prefer matching how Brown is registered today).",
+        "status": "proposed"
+      },
+      {
+        "title": "Unit coverage asserts Dark Brown’s per-band gains match the table (especially 250 Hz = +2 and all ≥500 Hz = −12).",
+        "status": "proposed"
+      }
+    ],
+    "tags": [
+      "enhancement"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/68",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #68: Add Dark Brown main color EQ preset"
+      }
+    ],
+    "updated": "2026-07-14T16:53:15Z",
+    "metadata": {
+      "completedAt": "2026-07-14T16:53:15Z"
+    }
+  }
+}
