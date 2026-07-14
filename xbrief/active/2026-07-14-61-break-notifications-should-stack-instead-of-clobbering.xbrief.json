@@ -1,0 +1,48 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #61",
+    "updated": "2026-07-14T17:05:00Z"
+  },
+  "plan": {
+    "title": "Break notifications should stack instead of clobbering",
+    "status": "running",
+    "narratives": {
+      "Description": "Break notifications should stack instead of clobbering",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/61",
+      "Overview": "## Summary\n\nBreak banners currently show **one at a time**. When overlapping break types fire, a new break replaces the active banner instead of stacking, so the earlier prompt can be lost before the user acts on it.\n\nRelated: #59 (I did. / tallies), #2 (break prompts).\n\n## Current behavior\n\nIn `NoisePlayer`, UI state is a single slot:\n\n- `activeBreak: ActiveBreak | null`\n- `BreakEngine.setOnFire` → `setActiveBreak({ kind, message })` (replaces any prior banner)\n- Dismiss / snooze clear that one slot\n\n`BreakBanner` renders at most one prompt. The engine can fire different kinds on overlapping schedules; same-kind same-instant UI fires are deduped in `BreakEngine`, but **different kinds (or a later fire while a banner is still up) clobber** the visible banner.\n\nOS notifications use `tag: relaxanator-break-${kind}` (per-kind replace), which is separate from the in-app banner clobber.\n\n## Expected behavior\n\nWhen multiple break types are due while a banner is still active, notifications should **stack** (queue or multi-banner) so earlier prompts are not silently replaced. User can dismiss/snooze each independently (or clear the stack in a deliberate way).\n\n## Acceptance criteria\n\n- [ ] Firing break type B while banner A is still visible does not discard A without user action\n- [ ] Stacked/queued breaks remain actionable (dismiss / snooze per item, or equivalent clear UX)\n- [ ] Behavior is predictable when several kinds fire close together\n- [ ] (Optional) Align OS notification tagging with stacking intent if in-app and system surfaces should match\n\n## Notes\n\nStacking was not implemented in the original single-banner design — treat as enhancement unless product intent was multi-banner all along.",
+      "Labels": "enhancement",
+      "Requirements": "FR-1: Firing break type B while banner A is visible must not discard A without user action.\nFR-2: Each stacked banner remains independently actionable (I did. / Snooze / Dismiss apply only to that banner's kind).\nFR-3: Stack behavior is deterministic for concurrent kinds (one entry per kind; same-kind re-fire refreshes message in place).\nNFR-1: OS Notification tags remain per-kind (`relaxanator-break-${kind}`) — already aligned; no change required.",
+      "LockedDecisions": "Refinement 2026-07-14 (#61 triage/implement, operator lock): (1) Replace single activeBreak with an ActiveBreak[] stack. (2) Clean list: at most one banner per break kind; append new kinds, refresh same-kind in place. (3) I did. / Snooze / Dismiss are kind-scoped and remove only that banner. (4) Works with #59 tallies (I did. increments that kind only). (5) Optional OS notification AC already satisfied by per-kind tags — out of scope for code change."
+    },
+    "items": [
+      {
+        "title": "Firing break type B while banner A is still visible does not discard A without user action",
+        "status": "in-progress"
+      },
+      {
+        "title": "Stacked/queued breaks remain actionable (dismiss / snooze per item, or equivalent clear UX)",
+        "status": "in-progress"
+      },
+      {
+        "title": "Behavior is predictable when several kinds fire close together",
+        "status": "in-progress"
+      },
+      {
+        "title": "(Optional) Align OS notification tagging with stacking intent if in-app and system surfaces should match",
+        "status": "completed"
+      }
+    ],
+    "tags": [
+      "enhancement"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/61",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #61: Break notifications should stack instead of clobbering"
+      }
+    ],
+    "updated": "2026-07-14T17:05:00Z"
+  }
+}

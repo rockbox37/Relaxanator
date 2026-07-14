@@ -316,13 +316,20 @@ main > p {
   margin-top: 0.75rem;
 }
 
+.break-banner-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
 .break-banner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
   padding: 0.75rem 1rem;
   background: rgba(127, 200, 169, 0.12);
   border: 1px solid rgba(127, 200, 169, 0.35);
