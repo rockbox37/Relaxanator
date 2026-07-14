@@ -1,0 +1,52 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #65"
+  },
+  "plan": {
+    "title": "Raise Doom Bell one octave",
+    "status": "completed",
+    "narratives": {
+      "Description": "Raise Doom Bell one octave",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/65",
+      "Overview": "## Request\n\nDoom Bell feels too low — raise it one octave (+12 semitones). Keep the existing church-bell partial ratios and long ring.\n\n## Current notes (`src/audio/voices.ts`)\n\n| Voice | Fundamental | Hz | Partials (relative) |\n|-------|-------------|-----|---------------------|\n| Doom Bell | F2 | 87.31 | hum 0.5, prime 1, tierce 1.2, quint 1.5, nominal 2.0, +2.67 |\n\nComment in code: church-bell voicing an octave-and-a-half below Bell, ~16s ring.\n\n## Target notes (+12 semitones)\n\n| Voice | Fundamental | Hz |\n|-------|-------------|-----|\n| Doom Bell | F3 | 174.61 |\n\nKeep the same relative partials (`[0.5, 0.5]`, `[1, 1]`, `[1.2, 0.55]`, `[1.5, 0.28]`, `[2.0, 0.22]`, `[2.67, 0.08]`) and duration (~16s). Update the `struck(...)` fundamental and the comment that currently says F2.\n\nAlso update the Chime comment that references “doom bell (F2)” if it still cites the old pitch.\n\n## Acceptance criteria\n\n- [ ] Doom Bell fundamental is F3 (174.61 Hz) — one octave above current F2\n- [ ] Relative partial structure and ring length are unchanged\n- [ ] Bell / Chime voices are untouched unless a follow-up asks otherwise\n- [ ] Comments in `voices.ts` match the new pitch\n- [ ] Quick listen in-app confirms the higher strike without breaking the long decay\n\n## Refs\n\nSame class of change as Foghorn octave raise (#58).",
+      "Labels": "enhancement"
+    },
+    "items": [
+      {
+        "title": "Doom Bell fundamental is F3 (174.61 Hz) — one octave above current F2",
+        "status": "proposed"
+      },
+      {
+        "title": "Relative partial structure and ring length are unchanged",
+        "status": "proposed"
+      },
+      {
+        "title": "Bell / Chime voices are untouched unless a follow-up asks otherwise",
+        "status": "proposed"
+      },
+      {
+        "title": "Comments in `voices.ts` match the new pitch",
+        "status": "proposed"
+      },
+      {
+        "title": "Quick listen in-app confirms the higher strike without breaking the long decay",
+        "status": "proposed"
+      }
+    ],
+    "tags": [
+      "enhancement"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/65",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #65: Raise Doom Bell one octave"
+      }
+    ],
+    "updated": "2026-07-14T16:25:53Z",
+    "metadata": {
+      "completedAt": "2026-07-14T16:25:53Z"
+    }
+  }
+}

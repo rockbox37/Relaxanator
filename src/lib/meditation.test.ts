@@ -59,6 +59,13 @@ describe("MEDITATION_VOICES", () => {
     }
   });
 
+  it("documents doom bell as F3 church-bell strike (#65)", () => {
+    const doomBell = MEDITATION_VOICES.find((v) => v.id === "doom-bell");
+    expect(doomBell?.description).toMatch(/F3/i);
+    expect(doomBell?.description).toMatch(/minor-third/i);
+    expect(doomBell?.description).not.toMatch(/very low/i);
+  });
+
   it("documents fog horn 1 as B2/E2 perfect fifth two-tone", () => {
     const fogHorn = MEDITATION_VOICES.find((v) => v.id === "fog-horn");
     expect(fogHorn?.description).toContain("perfect fifth");

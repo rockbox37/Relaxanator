@@ -31,7 +31,7 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
   {
     id: "doom-bell",
     label: "doom bell",
-    description: "Very low bell with a minor-third shimmer and long decay",
+    description: "Church-bell strike at F3 with a minor-third shimmer and long decay",
     synth: "doomBell",
     defaultIntervalMin: 20,
     defaultVolume: 0.5,

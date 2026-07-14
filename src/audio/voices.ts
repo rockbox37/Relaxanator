@@ -199,11 +199,14 @@ const bell: VoicePlayer = (ctx, dest, when, volume) => {
   ], 9.5);
 };
 
+/** F3 — doom bell fundamental (#65); one octave above prior F2. */
+export const DOOM_BELL_FUNDAMENTAL_HZ = 174.61;
+
 const doomBell: VoicePlayer = (ctx, dest, when, volume) => {
-  // Church-bell voicing an octave-and-a-half below the bell: F2 fundamental
+  // Church-bell voicing raised one octave (#65): F3 fundamental
   // with hum (0.5), prime (1), tierce (1.2 — the minor third that gives big
   // bells their character), quint (1.5), and nominal (2.0), ringing ~16s.
-  struck(ctx, dest, when, volume * 0.9, 87.31, [
+  struck(ctx, dest, when, volume * 0.9, DOOM_BELL_FUNDAMENTAL_HZ, [
     [0.5, 0.5],
     [1, 1],
     [1.2, 0.55],
@@ -216,7 +219,7 @@ const doomBell: VoicePlayer = (ctx, dest, when, volume) => {
 const chime: VoicePlayer = (ctx, dest, when, volume) => {
   // Re-voiced much lower with a minor-third tierce and longer ring (#18):
   // C4 fundamental keeps it a lighter strike than Bell (C3) and doom bell
-  // (F2) while sharing the same bittersweet minor-third character.
+  // (F3) while sharing the same bittersweet minor-third character.
   struck(ctx, dest, when, volume * 0.65, 261.63, [
     [1, 1],
     [1.2, 0.5],
