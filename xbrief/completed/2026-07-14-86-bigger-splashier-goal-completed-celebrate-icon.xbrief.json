@@ -1,0 +1,58 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #86",
+    "author": "agent:implement-86",
+    "created": "2026-07-14T20:50:00Z"
+  },
+  "plan": {
+    "title": "Bigger, splashier goal-completed celebrate icon with grow/pulse animation",
+    "status": "completed",
+    "narratives": {
+      "Description": "Bigger, splashier goal-completed celebrate icon with grow/pulse animation",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/86",
+      "Overview": "## Summary\n\nMake the **goal completed** celebration icon bigger and splashier, and add animation: grow large then return to original size when the goal is met, then occasionally replay that pulse while the goal remains met until the user resets or clears the goal / tally.\n\n## Context\n\n- Related: #81 (fiesta / papel picado celebrate icon — shipped in v31/v32)\n- Related: #72 (daily goals)\n\n## Desired behavior\n\n1. Bigger + splashier celebrate icon (still readable; layout-safe).\n2. On meet — grow-then-shrink pulse.\n3. Occasional replay while still met until reset/clear.\n4. Stop when no longer met.\n5. Respect prefers-reduced-motion (static splashier icon only).\n\n## Out of scope\n\n- Changing goal logic, tally math, or reset/clear semantics beyond animation stop conditions.\n- #80 / #84.",
+      "Labels": "enhancement"
+    },
+    "items": [
+      {
+        "title": "Goal-met celebrate icon is noticeably larger and more festive than the current compact mark, without breaking goals layout on mobile/desktop.",
+        "status": "proposed"
+      },
+      {
+        "title": "On transition to goal met, icon animates grow → shrink back to resting size.",
+        "status": "proposed"
+      },
+      {
+        "title": "While goal remains met, animation occasionally replays until user resets/clears goal or tally.",
+        "status": "proposed"
+      },
+      {
+        "title": "Clearing/resetting goal or tally (so goal is no longer met) stops further celebration animation.",
+        "status": "proposed"
+      },
+      {
+        "title": "When prefers-reduced-motion: reduce is set, no grow/pulse or occasional replay; static splashier icon only.",
+        "status": "proposed"
+      },
+      {
+        "title": "No regression to daily goals tally / meet / reset / clear behavior (#72).",
+        "status": "proposed"
+      }
+    ],
+    "tags": [
+      "enhancement"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/86",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #86: Bigger, splashier goal-completed celebrate icon with grow/pulse animation"
+      }
+    ],
+    "updated": "2026-07-14T20:53:04Z",
+    "metadata": {
+      "completedAt": "2026-07-14T20:53:04Z"
+    }
+  }
+}
