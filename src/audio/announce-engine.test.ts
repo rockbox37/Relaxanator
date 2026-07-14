@@ -396,4 +396,72 @@ describe("AnnounceEngine pump scheduling", () => {
     timeTokensSpy.mockRestore();
     engine.stop();
   });
+
+  it("does not re-fire a catch-up boundary once the next interval is reserved (#62)", async () => {
+    vi.useFakeTimers();
+    // Inside miss grace after the hour. Full-interval lookahead will also
+    // enqueue 16:00; the missed 15:00 must not oscillate back in on later pumps.
+    vi.setSystemTime(new Date(2026, 0, 15, 15, 0, 2));
+
+    const ctx = mockAudioContext();
+    const timeTokensSpy = vi.spyOn(announce, "timeTokens");
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    // Catch-up 15:00, then reserve 16:00, then many pumps inside grace.
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    const fifteenOclock = timeTokensSpy.mock.calls.filter(
+      (c) => c[0] === 15 && c[1] === 0,
+    );
+    const sixteenOclock = timeTokensSpy.mock.calls.filter(
+      (c) => c[0] === 16 && c[1] === 0,
+    );
+    expect(fifteenOclock).toHaveLength(1);
+    expect(sixteenOclock).toHaveLength(1);
+
+    timeTokensSpy.mockRestore();
+    engine.stop();
+  });
+
+  it("resync during miss grace does not re-speak an already catch-up boundary (#62)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 15, 15, 0, 2));
+
+    const ctx = mockAudioContext();
+    const timeTokensSpy = vi.spyOn(announce, "timeTokens");
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await vi.advanceTimersByTimeAsync(1000);
+    const before = timeTokensSpy.mock.calls.filter(
+      (c) => c[0] === 15 && c[1] === 0,
+    ).length;
+    expect(before).toBe(1);
+
+    engine.resync();
+    await vi.advanceTimersByTimeAsync(1000);
+    engine.resync();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    const after = timeTokensSpy.mock.calls.filter(
+      (c) => c[0] === 15 && c[1] === 0,
+    ).length;
+    expect(after).toBe(1);
+
+    timeTokensSpy.mockRestore();
+    engine.stop();
+  });
 });

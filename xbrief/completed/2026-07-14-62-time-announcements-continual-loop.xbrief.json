@@ -1,0 +1,31 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF for GitHub issue #62",
+    "created": "2026-07-14T15:20:00Z",
+    "updated": "2026-07-14T15:21:27Z"
+  },
+  "plan": {
+    "title": "Time announcements trigger in a continual loop",
+    "status": "completed",
+    "narratives": {
+      "Description": "Time announcements fire repeatedly in a tight/continual loop instead of once per interval boundary.",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/62",
+      "Overview": "After #47 full-interval lookahead, miss-grace catch-up oscillates with the next reserved boundary: once scheduledBoundaryMs advances to the following mark, pumps re-prefer the still-in-grace missed mark and speak it immediately again.",
+      "Requirements": "FR-1: Each wall-clock interval boundary triggers at most once (catch-up or scheduled).\nFR-2: Full-interval lookahead and miss-grace catch-up still work for background throttling.\nFR-3: resync remaps future audio-clock schedules without re-speaking already-committed past boundaries.\nNFR-1: Failing regression tests for the catch-up/lookahead oscillation (#62).",
+      "LockedDecisions": "Fix in AnnounceEngine pump dedupe: commit watermark for spoken/scheduled boundaries that survives resync; do not regress to an earlier in-grace missed mark after reserving a later boundary."
+    },
+    "items": [],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/62",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #62: Time announcements trigger in a continual loop"
+      }
+    ],
+    "updated": "2026-07-14T15:21:27Z",
+    "metadata": {
+      "completedAt": "2026-07-14T15:21:27Z"
+    }
+  }
+}

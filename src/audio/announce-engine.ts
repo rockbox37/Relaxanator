@@ -45,7 +45,17 @@ export const FIRST_OUTPUT_SETTLE_SEC = 0.05;
 export class AnnounceEngine {
   private settings: AnnounceSettings;
   private timer: ReturnType<typeof setInterval> | null = null;
+  /**
+   * Wall-clock boundary currently reserved for an in-flight / pending audio
+   * schedule. Cleared by {@link resync} so a resume can re-map wall→audio.
+   */
   private scheduledBoundaryMs = 0;
+  /**
+   * Highest boundary successfully spoken or enqueued. Survives {@link resync}
+   * so miss-grace catch-up cannot re-fire a mark after lookahead has already
+   * advanced to a later reservation (#62).
+   */
+  private committedBoundaryMs = 0;
   private buffers = new Map<string, Map<string, AudioBuffer>>();
   /** In-flight sprite loads — speak/preview must await these, not an empty map. */
   private preloadJobs = new Map<string, Promise<void>>();
@@ -88,7 +98,10 @@ export class AnnounceEngine {
       void this.preload(settings.voiceId);
     }
     // Interval change invalidates a boundary reserved for the old cadence.
-    if (intervalChanged) this.scheduledBoundaryMs = 0;
+    if (intervalChanged) {
+      this.scheduledBoundaryMs = 0;
+      this.committedBoundaryMs = 0;
+    }
     if (enabledNow || intervalChanged) void this.pump();
   }
 
@@ -104,10 +117,11 @@ export class AnnounceEngine {
   }
 
   /**
-   * Drop any reserved wall-clock boundary so the next pump re-maps from
-   * wall clock → audio clock. Call after AudioContext resume: a long suspend
-   * freezes the audio clock while wall time advances, so a far-ahead schedule
-   * would otherwise fire at the wrong civil time.
+   * Drop the pending wall→audio reservation so the next pump can re-map.
+   * Call after AudioContext resume: a long suspend freezes the audio clock
+   * while wall time advances, so a far-ahead schedule would otherwise fire at
+   * the wrong civil time. Does not clear {@link committedBoundaryMs} — already
+   * spoken / enqueued marks must not re-enter miss-grace catch-up (#62).
    */
   resync(): void {
     this.scheduledBoundaryMs = 0;
@@ -118,6 +132,7 @@ export class AnnounceEngine {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     this.scheduledBoundaryMs = 0;
+    this.committedBoundaryMs = 0;
     this.hasScheduledOutput = false;
     this.vocoderPrimed = false;
     this.scheduling = false;
@@ -196,12 +211,26 @@ export class AnnounceEngine {
     const lookaheadMs = scheduleLookaheadMs(intervalMin);
     const missGraceMs = scheduleMissGraceMs(intervalMin);
     const missed = missedBoundaryMs(nowMs, intervalMin, missGraceMs);
+    // Catch up only when the missed mark is strictly after anything we have
+    // already committed. Comparing only to scheduledBoundaryMs (#46) lets
+    // full-interval lookahead advance the reservation to the *next* mark,
+    // after which miss-grace re-selects the earlier mark every other pump (#62).
     const boundaryMs =
-      missed !== null && missed !== this.scheduledBoundaryMs
+      missed !== null && missed > this.committedBoundaryMs
         ? missed
         : nextBoundaryMs(nowMs, intervalMin);
 
     if (boundaryMs === this.scheduledBoundaryMs) return;
+    // Past marks already committed: never re-speak. Future marks equal to
+    // committed are only re-armed when resync cleared the pending reservation
+    // (scheduledBoundaryMs === 0) so wall→audio can be remapped.
+    if (boundaryMs < this.committedBoundaryMs) return;
+    if (
+      boundaryMs === this.committedBoundaryMs &&
+      (boundaryMs <= nowMs || this.scheduledBoundaryMs !== 0)
+    ) {
+      return;
+    }
     if (boundaryMs > nowMs && boundaryMs - nowMs > lookaheadMs) return;
 
     // Reserve before awaiting preload so concurrent pumps don't double-speak.
@@ -219,7 +248,14 @@ export class AnnounceEngine {
         }),
         when,
       );
-      if (!scheduled) this.scheduledBoundaryMs = 0;
+      if (!scheduled) {
+        this.scheduledBoundaryMs = 0;
+      } else {
+        this.committedBoundaryMs = Math.max(
+          this.committedBoundaryMs,
+          boundaryMs,
+        );
+      }
     } finally {
       this.scheduling = false;
     }
