@@ -59,10 +59,10 @@ describe("MEDITATION_VOICES", () => {
     }
   });
 
-  it("documents fog horn 1 as B/E perfect fifth two-tone", () => {
+  it("documents fog horn 1 as B2/E2 perfect fifth two-tone", () => {
     const fogHorn = MEDITATION_VOICES.find((v) => v.id === "fog-horn");
     expect(fogHorn?.description).toContain("perfect fifth");
-    expect(fogHorn?.description).toMatch(/B then lower E/i);
+    expect(fogHorn?.description).toMatch(/B2 then lower E2/i);
   });
 
   it("documents fog horn 2 as D/G perfect fifth interval", () => {
@@ -72,10 +72,10 @@ describe("MEDITATION_VOICES", () => {
     expect(fogHorn2?.description).not.toContain("minor sixth");
   });
 
-  it("documents fog horn 3 as C/F perfect fifth (not F/D♭)", () => {
+  it("documents fog horn 3 as C3/F2 perfect fifth (not F/D♭)", () => {
     const fogHorn3 = MEDITATION_VOICES.find((v) => v.id === "fog-horn-3");
     expect(fogHorn3?.description).toContain("perfect fifth");
-    expect(fogHorn3?.description).toMatch(/C then lower F/i);
+    expect(fogHorn3?.description).toMatch(/C3 then lower F2/i);
     expect(fogHorn3?.description).not.toMatch(/D[♭b]/i);
   });
 
