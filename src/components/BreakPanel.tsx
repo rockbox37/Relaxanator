@@ -1,6 +1,10 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import {
   BREAK_TYPES,
@@ -21,6 +25,7 @@ import {
   isBreakDailyGoalMet,
 } from "@/lib/break-daily-goal";
 import type { BreakTallies } from "@/lib/break-tallies";
+import { createCelebratePulseScheduler } from "@/lib/celebrate-pulse";
 
 interface BreakPanelProps {
   settings: BreakSettings;
@@ -37,42 +42,123 @@ interface BreakPanelProps {
   notificationHint?: string;
 }
 
-/** Festive goal-met mark — papel picado / fiesta energy, legible at ~14px. */
+/** Festive goal-met mark — papel picado / fiesta energy (#81), splashier at ~22px (#86). */
 function GoalCelebrateIcon() {
   return (
     <svg
       className="break-tally-celebrate-icon"
       viewBox="0 0 24 24"
-      width="14"
-      height="14"
+      width="22"
+      height="22"
       aria-hidden="true"
       focusable="false"
     >
       <path
-        d="M2 4.8h20"
+        d="M1.5 4.5h21"
         fill="none"
-        stroke="rgba(255,255,255,0.4)"
-        strokeWidth="0.85"
+        stroke="rgba(255,255,255,0.55)"
+        strokeWidth="1.1"
         strokeLinecap="round"
       />
       {/* Papel picado pennants */}
-      <path fill="#F45B69" d="M2.2 5h4.6L4.5 10.2 2.2 5z" />
-      <path fill="#F4A261" d="M7 5h4.6L9.3 10.2 7 5z" />
-      <path fill="#E9C46A" d="M11.8 5h4.6L14.1 10.2 11.8 5z" />
-      <path fill="#2A9D8F" d="M16.6 5H21.2L18.9 10.2 16.6 5z" />
+      <path fill="#F45B69" d="M2 4.7h4.8L4.4 11.1 2 4.7z" />
+      <path fill="#F4A261" d="M6.8 4.7h4.8L9.2 11.1 6.8 4.7z" />
+      <path fill="#E9C46A" d="M11.6 4.7h4.8L14 11.1 11.6 4.7z" />
+      <path fill="#2A9D8F" d="M16.4 4.7H21.2L18.8 11.1 16.4 4.7z" />
       {/* Tiny cutouts */}
-      <circle cx="4.5" cy="6.6" r="0.5" fill="rgba(18,20,26,0.5)" />
-      <circle cx="9.3" cy="6.6" r="0.5" fill="rgba(18,20,26,0.5)" />
-      <circle cx="14.1" cy="6.6" r="0.5" fill="rgba(18,20,26,0.5)" />
-      <circle cx="18.9" cy="6.6" r="0.5" fill="rgba(18,20,26,0.5)" />
+      <circle cx="4.4" cy="6.6" r="0.55" fill="rgba(18,20,26,0.55)" />
+      <circle cx="9.2" cy="6.6" r="0.55" fill="rgba(18,20,26,0.55)" />
+      <circle cx="14" cy="6.6" r="0.55" fill="rgba(18,20,26,0.55)" />
+      <circle cx="18.8" cy="6.6" r="0.55" fill="rgba(18,20,26,0.55)" />
       {/* Confetti sparkles */}
-      <circle cx="5.5" cy="14.8" r="1.1" fill="#E76F51" />
-      <circle cx="18.5" cy="14.2" r="0.95" fill="#457B9D" />
+      <circle cx="4.2" cy="14.2" r="1.15" fill="#E76F51" />
+      <circle cx="19.6" cy="13.6" r="1" fill="#457B9D" />
+      <circle cx="7.8" cy="17.8" r="0.7" fill="#F45B69" />
+      <circle cx="16.4" cy="18.2" r="0.65" fill="#2A9D8F" />
       <path
         fill="#E9C46A"
-        d="M12 12l0.6 2.05 2.1.6-2.1.6L12 17.3l-.6-2.05-2.1-.6 2.1-.6L12 12z"
+        d="M12 11.2l0.75 2.35 2.4.7-2.4.7L12 17.3l-.75-2.35-2.4-.7 2.4-.7L12 11.2z"
+      />
+      <path
+        fill="#F4A261"
+        d="M20.2 17.4l0.35 1.1 1.1.32-1.1.32-.35 1.1-.35-1.1-1.1-.32 1.1-.32.35-1.1z"
       />
     </svg>
+  );
+}
+
+/**
+ * Goal-met celebrate mark: splashier icon, grow→shrink on meet, occasional
+ * replay while still met. Stops on unmount (clear/reset drops below goal).
+ * Honors prefers-reduced-motion (static icon only).
+ */
+function GoalCelebrateMark() {
+  const [pulseClass, setPulseClass] = useState("");
+
+  useEffect(() => {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let cancelled = false;
+    let replay = false;
+    let scheduler = createCelebratePulseScheduler({
+      onPulse: () => {},
+      prefersReducedMotion: true,
+    });
+
+    const triggerPulse = () => {
+      if (cancelled) return;
+      // Retrigger CSS animation by clearing then re-adding the class.
+      setPulseClass("");
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        setPulseClass(replay ? "is-replay-pulse" : "is-meet-pulse");
+        replay = true;
+      });
+    };
+
+    const restart = (reduced: boolean) => {
+      scheduler.stop();
+      if (reduced) {
+        setPulseClass("");
+        return;
+      }
+      replay = false;
+      scheduler = createCelebratePulseScheduler({
+        onPulse: triggerPulse,
+        prefersReducedMotion: false,
+        pulseOnStart: true,
+      });
+      scheduler.start();
+    };
+
+    const onMotionChange = () => restart(motionQuery.matches);
+
+    restart(motionQuery.matches);
+
+    if (typeof motionQuery.addEventListener === "function") {
+      motionQuery.addEventListener("change", onMotionChange);
+    } else {
+      motionQuery.addListener(onMotionChange);
+    }
+
+    return () => {
+      cancelled = true;
+      scheduler.stop();
+      if (typeof motionQuery.removeEventListener === "function") {
+        motionQuery.removeEventListener("change", onMotionChange);
+      } else {
+        motionQuery.removeListener(onMotionChange);
+      }
+    };
+  }, []);
+
+  const className = pulseClass
+    ? `break-tally-celebrate ${pulseClass}`
+    : "break-tally-celebrate";
+
+  return (
+    <span className={className} title="Daily goal met">
+      <GoalCelebrateIcon />
+    </span>
   );
 }
 
@@ -284,11 +370,7 @@ export default function BreakPanel({
                   <div className="break-tally-bar-track">
                     <div className="break-tally-bar-fill" />
                   </div>
-                  {goalMet && (
-                    <span className="break-tally-celebrate" title="Daily goal met">
-                      <GoalCelebrateIcon />
-                    </span>
-                  )}
+                  {goalMet && <GoalCelebrateMark />}
                 </div>
               </li>
             );
