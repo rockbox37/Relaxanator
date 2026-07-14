@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { AnnounceEngine } from "@/audio/announce-engine";
 import { BreakEngine } from "@/audio/break-engine";
@@ -26,6 +26,15 @@ import {
 import {
   requestNotificationPermission,
 } from "@/lib/break-notifications";
+import {
+  clearAllBreakTallies,
+  clearBreakTally,
+  getBreakTalliesServerSnapshot,
+  getBreakTalliesSnapshot,
+  incrementBreakTally,
+  subscribeBreakTallies,
+  updateBreakTallies,
+} from "@/lib/break-tallies";
 import {
   type MeditationSettings,
   type VoiceSettings,
@@ -76,6 +85,11 @@ export default function NoisePlayer() {
   const [breaks, setBreaks] = useState<BreakSettings>(createDefaultBreakSettings);
   const [activeBreak, setActiveBreak] = useState<ActiveBreak | null>(null);
   const [notificationHint, setNotificationHint] = useState<string | undefined>();
+  const breakTallies = useSyncExternalStore(
+    subscribeBreakTallies,
+    getBreakTalliesSnapshot,
+    getBreakTalliesServerSnapshot,
+  );
   const announceSettingsRef = useRef(announce);
   const meditationSettingsRef = useRef(meditation);
   const breakSettingsRef = useRef(breaks);
@@ -439,10 +453,25 @@ export default function NoisePlayer() {
     setActiveBreak(null);
   }
 
+  function didBreakBanner() {
+    if (!activeBreak) return;
+    updateBreakTallies((prev) => incrementBreakTally(prev, activeBreak.kind));
+    setActiveBreak(null);
+  }
+
+  function clearOneBreakTally(kind: BreakKind) {
+    updateBreakTallies((prev) => clearBreakTally(prev, kind));
+  }
+
+  function clearEveryBreakTally() {
+    updateBreakTallies(() => clearAllBreakTallies());
+  }
+
   return (
     <section className="player">
       <BreakBanner
         breakPrompt={activeBreak}
+        onDidIt={didBreakBanner}
         onDismiss={dismissBreakBanner}
         onSnooze={snoozeBreakBanner}
         snoozeMin={breaks.snoozeMin}
@@ -563,8 +592,11 @@ export default function NoisePlayer() {
 
       <BreakPanel
         settings={breaks}
+        tallies={breakTallies}
         onChangeType={changeBreakType}
         onChangeSettings={changeBreakSettings}
+        onClearTally={clearOneBreakTally}
+        onClearAllTallies={clearEveryBreakTally}
         onPreview={previewBreakCue}
         onToggleNotifications={toggleBreakNotifications}
         previewDisabled={starting}
