@@ -1,0 +1,50 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "description": "Scope xBRIEF ingested from GitHub issue #54"
+  },
+  "plan": {
+    "title": "Align all fog horns to Foghorn 3's tone interval",
+    "status": "completed",
+    "narratives": {
+      "Description": "Align all fog horns to Foghorn 3's tone interval",
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/54",
+      "Overview": "## Request\n\nAll fog horns should follow the same tone interval that fog horn 3 now uses.\n\n## Canonical interval (Foghorn 3)\n\nFoghorn 3 was retuned in #50 / PR #51 to **C2 → F1** — a **perfect fifth** (7 semitones down). That interval is the target for the other fog horns.\n\nDefined in `src/audio/voices.ts` as `FOG_HORN_3_INTERVAL_SEMITONES = 7` (C2 `65.41` Hz → F1 `43.66` Hz), and documented in `src/lib/meditation.ts`.\n\n## Current intervals (as of filing)\n\n| Voice | Current tones | Interval |\n|-------|---------------|----------|\n| Fog horn 1 | Single B1 (~61.74 Hz) via `distantHorn` | No two-tone interval (sustained single blast) |\n| Fog horn 2 | D3 → F♯2/G♭2 | Minor sixth (8 semitones) |\n| Fog horn 3 | C2 → F1 | Perfect fifth (7 semitones) — **canonical** |\n| Fog horn 4 | C3 → G2 | Perfect fourth (5 semitones) |\n\n## Acceptance criteria\n\n- [ ] Fog horns 2 and 4 use a **perfect fifth** (7 semitones) between tone 1 and tone 2, matching Foghorn 3’s interval (absolute pitch may stay voice-specific if desired; the *interval* must match).\n- [ ] Fog horn 1 either gains a matching two-tone perfect-fifth pattern, or is explicitly scoped out with rationale if it remains a single-tone distant horn.\n- [ ] Constants / comments in `src/audio/voices.ts` and descriptions in `src/lib/meditation.ts` reflect the aligned intervals.\n- [ ] Existing voice tuning tests (`src/audio/voices.test.ts`, `src/lib/meditation.test.ts`) are updated accordingly and pass.\n\n## Notes\n\n- Scope is **tone interval** alignment (semitone distance between blasts), not necessarily identical absolute pitches or reverb/timbre.\n- Do not change ship/train horns unless they are later found to share the same two-tone fog-horn pattern.",
+      "Requirements": "FR-1: Fog horns 2 and 4 use a perfect fifth (7 semitones) between tone 1 and tone 2; absolute pitch may stay voice-specific.\nFR-2: Fog horn 1 converts to a two-tone perfect-fifth pattern (B1 high → E1 low) via gatedTwoBlastHorn, matching the fog-horn family interval semantics.\nFR-3: Named Hz / interval constants and comments in src/audio/voices.ts plus catalog descriptions in src/lib/meditation.ts document the aligned perfect-fifth intervals.\nFR-4: voices.test.ts and meditation.test.ts cover the new tunings and pass.\nNFR-1: Pitch/interval/docs/tests only — no ship/train horn changes; no reverb/timing redesign beyond what converting fog horn 1 to two-tone requires.",
+      "LockedDecisions": "Refinement 2026-07-13 (#54 Evaluate lock, operator accept+implement): (1) AC locked as FR-1–4 + NFR-1 from the issue body. (2) Fog horn 1 is IN SCOPE: convert from single-tone distantHorn to two-tone gatedTwoBlastHorn with B1 (61.74 Hz) as tone 1 and E1 (~41.21 Hz) as tone 2 — perfect fifth down; keep B1 as the high of the pair. (3) Fog horn 2 keeps D3 tone 1; tone 2 retunes to G2 (~98.00 Hz). (4) Fog horn 4 keeps C3 tone 1; tone 2 retunes to F2 (~87.31 Hz). (5) Fog horn 3 unchanged (canonical). (6) Out of scope: ship/train horns, announce files, UI beyond catalog descriptions.",
+      "Labels": "enhancement"
+    },
+    "items": [
+      {
+        "title": "Fog horns 2 and 4 use a **perfect fifth** (7 semitones) between tone 1 and tone 2, matching Foghorn 3’s interval (absolute pitch may stay voice-specific if desired; the *interval* must match).",
+        "status": "completed"
+      },
+      {
+        "title": "Fog horn 1 either gains a matching two-tone perfect-fifth pattern, or is explicitly scoped out with rationale if it remains a single-tone distant horn.",
+        "status": "completed"
+      },
+      {
+        "title": "Constants / comments in `src/audio/voices.ts` and descriptions in `src/lib/meditation.ts` reflect the aligned intervals.",
+        "status": "completed"
+      },
+      {
+        "title": "Existing voice tuning tests (`src/audio/voices.test.ts`, `src/lib/meditation.test.ts`) are updated accordingly and pass.",
+        "status": "completed"
+      }
+    ],
+    "tags": [
+      "enhancement"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/54",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #54: Align all fog horns to Foghorn 3's tone interval"
+      }
+    ],
+    "updated": "2026-07-13T21:25:24Z",
+    "metadata": {
+      "completedAt": "2026-07-13T21:25:24Z"
+    }
+  }
+}
