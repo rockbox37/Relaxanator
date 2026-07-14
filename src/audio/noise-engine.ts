@@ -8,6 +8,8 @@
 import { EQ_BAND_FREQUENCIES, type EqBand } from "@/lib/eq";
 import { type NoiseState, clampVolume, colorToIndex } from "@/lib/noise";
 
+import { createAudioContext, unlockAudioContext } from "./audio-unlock";
+
 /** Seconds for setTargetAtTime smoothing — click-free slider drags. */
 const SMOOTHING = 0.05;
 /** Q for octave-spaced graphic-EQ peaking filters. */
@@ -47,10 +49,17 @@ export class NoiseEngine {
     return this.announceOut;
   }
 
-  /** Create the graph. Must be called from a user gesture. */
+  /**
+   * Create the graph. Must be called from a user gesture.
+   *
+   * iOS Safari (#83): create + unlock (resume + silent buffer) run
+   * *before* any await so the gesture chain is not broken by worklet load.
+   */
   async init(state: NoiseState): Promise<void> {
     if (this.ctx) return;
-    const ctx = new AudioContext();
+    const ctx = createAudioContext();
+    // Sync unlock inside the gesture — do not await before this call.
+    void unlockAudioContext(ctx);
     await ctx.audioWorklet.addModule("/worklets/noise-processor.js");
 
     const source = new AudioWorkletNode(ctx, "noise-processor", {
@@ -103,10 +112,14 @@ export class NoiseEngine {
     this.master = master;
     this.mix = mix;
     this.announceOut = announceOut;
+
+    // Settle resume after async worklet load (desktop + post-gesture await).
+    await unlockAudioContext(ctx);
   }
 
   async resume(): Promise<void> {
-    await this.ctx?.resume();
+    if (!this.ctx) return;
+    await unlockAudioContext(this.ctx);
   }
 
   /**

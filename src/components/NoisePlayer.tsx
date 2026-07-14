@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { AnnounceEngine } from "@/audio/announce-engine";
+import { unlockAudioContext } from "@/audio/audio-unlock";
 import { BreakEngine } from "@/audio/break-engine";
 import { MeditationEngine } from "@/audio/meditation-engine";
 import { NoiseEngine } from "@/audio/noise-engine";
@@ -221,8 +222,21 @@ export default function NoisePlayer() {
     };
   }, [playing, audioEpoch]);
 
+  /**
+   * iOS Safari (#83): if a context already exists, kick unlock *synchronously*
+   * at the top of the gesture before any await. Fresh init() does the same
+   * inside NoiseEngine before addModule.
+   */
+  function unlockExistingContextSync(): void {
+    const ctx = engineRef.current?.context;
+    if (ctx) void unlockAudioContext(ctx);
+  }
+
   async function ensureEngines(): Promise<NoiseEngine | null> {
-    if (engineRef.current) return engineRef.current;
+    if (engineRef.current) {
+      unlockExistingContextSync();
+      return engineRef.current;
+    }
     // Prefer the ref over React state — two callers in the same tick both see
     // starting===false before setStarting flushes, and would otherwise each
     // construct an AnnounceEngine (dual pumps → double-fire, #73).
@@ -234,7 +248,7 @@ export default function NoisePlayer() {
       await engine.init(state);
       engineRef.current = engine;
       if (engine.context && engine.mixBus && engine.announceBus) {
-        // Resume during the user gesture before priming output paths.
+        // Resume settled after init's sync unlock; prime cold graph edges.
         await engine.resume();
         engine.primeAudioOutput();
 
@@ -275,6 +289,7 @@ export default function NoisePlayer() {
 
   /** Resume AudioContext for preview without audible noise when not playing. */
   async function ensurePreviewAudio(): Promise<boolean> {
+    unlockExistingContextSync();
     const engine = await ensureEngines();
     if (!engine) return false;
     await engine.resume();
@@ -327,6 +342,8 @@ export default function NoisePlayer() {
 
   async function togglePlay() {
     if (starting) return;
+    // Sync unlock before any await — preserves iOS gesture chain (#83).
+    unlockExistingContextSync();
     const engine = await ensureEngines();
     if (!engine) return;
     if (playing) {
