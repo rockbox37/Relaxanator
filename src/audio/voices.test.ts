@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DOOM_BELL_FUNDAMENTAL_HZ,
   FOG_HORN_1_INTERVAL_SEMITONES,
   FOG_HORN_1_TONE1_HZ,
   FOG_HORN_1_TONE2_HZ,
@@ -14,6 +15,14 @@ import {
   FOG_HORN_4_TONE1_HZ,
   FOG_HORN_4_TONE2_HZ,
 } from "./voices";
+
+describe("doom bell tuning (#65)", () => {
+  it("uses F3 (174.61 Hz) — one octave above prior F2", () => {
+    expect(DOOM_BELL_FUNDAMENTAL_HZ).toBeCloseTo(174.61, 2);
+    // Prior F2 was 87.31; exact 2× is 174.62 due to rounding — F3 is 174.61.
+    expect(DOOM_BELL_FUNDAMENTAL_HZ / 87.31).toBeCloseTo(2, 1);
+  });
+});
 
 describe("fog horn 1 tuning", () => {
   it("places tone 2 a perfect fifth (7 semitones) below tone 1", () => {
