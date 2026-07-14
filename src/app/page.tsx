@@ -18,7 +18,8 @@ export default function Home() {
       </header>
       <p>
         Colored background noise with a 10-band equalizer, meditation sounds,
-        break prompts, and optional time announcements.
+        break prompts, a ToDo list with optional reminders, and optional time
+        announcements.
       </p>
       <NoisePlayer />
     </main>

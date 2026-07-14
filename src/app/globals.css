@@ -452,6 +452,256 @@ main > p {
   cursor: default;
 }
 
+.todo-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.todo-add,
+.todo-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.todo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.todo-field-text {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+.todo-field-time {
+  flex: 0 0 auto;
+}
+
+.todo-field input[type="text"],
+.todo-field input[type="time"] {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.95rem;
+}
+
+.todo-field input[type="text"] {
+  width: 100%;
+}
+
+.todo-add-btn,
+.todo-save-btn,
+.todo-cancel-btn,
+.todo-edit-btn,
+.todo-delete-btn {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.todo-add-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.todo-cancel-btn,
+.todo-delete-btn {
+  color: var(--muted);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.todo-add-btn:hover:not(:disabled),
+.todo-save-btn:hover,
+.todo-edit-btn:hover {
+  background: rgba(127, 200, 169, 0.12);
+}
+
+.todo-cancel-btn:hover,
+.todo-delete-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.todo-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.todo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.todo-item {
+  justify-content: space-between;
+}
+
+.todo-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
+.todo-item-text {
+  font-weight: 600;
+}
+
+.todo-item-reminder {
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.todo-item-reminder--none {
+  color: var(--muted);
+}
+
+.todo-item-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.todo-banner-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.todo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 168, 85, 0.4);
+  background: rgba(212, 168, 85, 0.1);
+  transition:
+    background 0.35s ease,
+    border-color 0.35s ease,
+    border-width 0.35s ease;
+}
+
+.todo-banner--due {
+  border-color: rgba(212, 168, 85, 0.4);
+  background: rgba(212, 168, 85, 0.1);
+}
+
+.todo-banner--overdue {
+  border-color: rgba(230, 150, 70, 0.55);
+  background: rgba(230, 150, 70, 0.18);
+  border-width: 2px;
+}
+
+.todo-banner--urgent {
+  border-color: rgba(232, 110, 80, 0.7);
+  background: rgba(232, 110, 80, 0.24);
+  border-width: 2px;
+  padding: 0.9rem 1.1rem;
+}
+
+.todo-banner--critical {
+  border-color: rgba(240, 80, 80, 0.9);
+  background: rgba(240, 80, 80, 0.32);
+  border-width: 3px;
+  padding: 1rem 1.15rem;
+}
+
+.todo-banner-message {
+  margin: 0;
+  font-weight: 600;
+  flex: 1 1 12rem;
+}
+
+.todo-banner-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.15rem;
+}
+
+.todo-banner-when {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.todo-banner-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.todo-banner-done,
+.todo-banner-snooze,
+.todo-banner-dismiss {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.todo-banner-done {
+  background: rgba(212, 168, 85, 0.22);
+  color: #e8c87a;
+  border-color: #e8c87a;
+  font-weight: 600;
+}
+
+.todo-banner-snooze {
+  color: #e8c87a;
+  border-color: #e8c87a;
+}
+
+.todo-banner-done:hover,
+.todo-banner-dismiss:hover,
+.todo-banner-snooze:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.todo-banner-done:hover {
+  background: rgba(212, 168, 85, 0.32);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 @media (max-width: 560px) {
   .eq {
     grid-template-columns: repeat(5, 1fr);

@@ -67,14 +67,30 @@ import {
   pushActiveBreak,
   removeActiveBreak,
 } from "@/lib/break-banner-stack";
+import {
+  TODO_SNOOZE_MIN,
+  addTodo,
+  dismissTodo,
+  getTodosServerSnapshot,
+  getTodosSnapshot,
+  listActiveTodoReminders,
+  patchTodo,
+  removeTodo,
+  snoozeTodo,
+  subscribeTodos,
+} from "@/lib/todos";
 
 import { BreakBannerStack } from "./BreakBanner";
 import BreakPanel from "./BreakPanel";
 import MeditationPanel from "./MeditationPanel";
 import TimeAnnouncePanel from "./TimeAnnouncePanel";
+import TodoPanel from "./TodoPanel";
+import { TodoReminderStack } from "./TodoReminderBanner";
 
 /** Sleep-timer pump cadence — reads the audio clock to drive fade + stop. */
 const SLEEP_PUMP_MS = 250;
+/** Poll clock so ToDo reminders appear when local time crosses due. */
+const TODO_REMINDER_POLL_MS = 15_000;
 
 export default function NoisePlayer() {
   const engineRef = useRef<NoiseEngine | null>(null);
@@ -96,6 +112,19 @@ export default function NoisePlayer() {
     getBreakTalliesSnapshot,
     getBreakTalliesServerSnapshot,
   );
+  const todos = useSyncExternalStore(
+    subscribeTodos,
+    getTodosSnapshot,
+    getTodosServerSnapshot,
+  );
+  const [todoClockMs, setTodoClockMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setTodoClockMs(Date.now());
+    }, TODO_REMINDER_POLL_MS);
+    return () => window.clearInterval(id);
+  }, []);
+  const activeTodoReminders = listActiveTodoReminders(todos, todoClockMs);
   const announceSettingsRef = useRef(announce);
   const meditationSettingsRef = useRef(meditation);
   const breakSettingsRef = useRef(breaks);
@@ -478,6 +507,19 @@ export default function NoisePlayer() {
     updateBreakTallies(() => clearAllBreakTallies());
   }
 
+  function handleTodoDone(id: string) {
+    removeTodo(id);
+  }
+
+  function handleTodoDismiss(id: string) {
+    dismissTodo(id);
+  }
+
+  function handleTodoSnooze(id: string) {
+    snoozeTodo(id, TODO_SNOOZE_MIN);
+    setTodoClockMs(Date.now());
+  }
+
   return (
     <section className="player">
       <BreakBannerStack
@@ -486,6 +528,13 @@ export default function NoisePlayer() {
         onDismiss={dismissBreakBanner}
         onSnooze={snoozeBreakBanner}
         snoozeMin={breaks.snoozeMin}
+      />
+      <TodoReminderStack
+        reminders={activeTodoReminders}
+        onDone={handleTodoDone}
+        onDismiss={handleTodoDismiss}
+        onSnooze={handleTodoSnooze}
+        snoozeMin={TODO_SNOOZE_MIN}
       />
       <div className="transport">
         <div className="transport-controls">
@@ -612,6 +661,21 @@ export default function NoisePlayer() {
         onToggleNotifications={toggleBreakNotifications}
         previewDisabled={starting}
         notificationHint={notificationHint}
+      />
+
+      <TodoPanel
+        items={todos}
+        onAdd={(text, reminderTime) => {
+          addTodo(text, reminderTime);
+          setTodoClockMs(Date.now());
+        }}
+        onUpdate={(id, update) => {
+          patchTodo(id, update);
+          setTodoClockMs(Date.now());
+        }}
+        onDelete={(id) => {
+          removeTodo(id);
+        }}
       />
 
       <TimeAnnouncePanel
