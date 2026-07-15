@@ -89,7 +89,7 @@ export function createDefaultBreakSettings(): BreakSettings {
     types[def.id] = {
       enabled: def.defaultEnabled,
       intervalMin: def.defaultIntervalMin,
-      customLabel: def.id === "custom" ? "Break" : "",
+      customLabel: def.id === "custom" ? "do a little dance" : "",
     };
   }
   return {
@@ -107,7 +107,7 @@ export function breakDisplayLabel(
 ): string {
   if (kind === "custom") {
     const trimmed = settings.customLabel.trim();
-    return trimmed.length > 0 ? trimmed : "Break";
+    return trimmed.length > 0 ? trimmed : "do a little dance";
   }
   return BREAK_TYPES.find((t) => t.id === kind)?.label ?? kind;
 }
