@@ -5,6 +5,13 @@
  *
  * All voices are synthesized for now — recorded samples (and the planned
  * Manding-inspired deep tones) plug in as new registry entries later.
+ *
+ * Per-voice output scalars (#90) are rebalanced to a common estimated
+ * loudness target (peak partial-sum × scalar), clamped to at most a 40% cut
+ * or 60% boost from the prior value per voice — train horn and ship's horn
+ * were the loudest outliers (stacking several near-unity partials), omm the
+ * quietest. The estimate is a static proxy, not a perceptual measurement;
+ * treat these as a starting point pending listening feedback.
  */
 import type { MeditationVoiceDef } from "@/lib/meditation";
 
@@ -190,7 +197,7 @@ function swellEnvelope(
 const bell: VoicePlayer = (ctx, dest, when, volume) => {
   // Deep temple-bell voicing (#14): low C3-ish fundamental, strong low
   // partials, soft shimmer on top, and a longer decay to match the pitch.
-  struck(ctx, dest, when, volume * 0.85, 130.81, [
+  struck(ctx, dest, when, volume * 0.76, 130.81, [
     [1, 1],
     [2.0, 0.55],
     [2.76, 0.32],
@@ -206,7 +213,7 @@ const doomBell: VoicePlayer = (ctx, dest, when, volume) => {
   // Church-bell voicing raised one octave (#65): F3 fundamental
   // with hum (0.5), prime (1), tierce (1.2 — the minor third that gives big
   // bells their character), quint (1.5), and nominal (2.0), ringing ~16s.
-  struck(ctx, dest, when, volume * 0.9, DOOM_BELL_FUNDAMENTAL_HZ, [
+  struck(ctx, dest, when, volume * 0.61, DOOM_BELL_FUNDAMENTAL_HZ, [
     [0.5, 0.5],
     [1, 1],
     [1.2, 0.55],
@@ -220,7 +227,7 @@ const chime: VoicePlayer = (ctx, dest, when, volume) => {
   // Re-voiced much lower with a minor-third tierce and longer ring (#18):
   // C4 fundamental keeps it a lighter strike than Bell (C3) and doom bell
   // (F3) while sharing the same bittersweet minor-third character.
-  struck(ctx, dest, when, volume * 0.65, 261.63, [
+  struck(ctx, dest, when, volume * 0.8, 261.63, [
     [1, 1],
     [1.2, 0.5],
     [2.0, 0.28],
@@ -235,7 +242,7 @@ export const DARK_CHIME_FUNDAMENTAL_HZ = 220.0;
 const darkChime: VoicePlayer = (ctx, dest, when, volume) => {
   // Darker sibling of Chime (#66 LockedDecision): A3 fundamental (3 st below
   // C4), soft hum + stronger minor-third tierce, quieter high shimmer, ~9 s.
-  struck(ctx, dest, when, volume * 0.65, DARK_CHIME_FUNDAMENTAL_HZ, [
+  struck(ctx, dest, when, volume * 0.7, DARK_CHIME_FUNDAMENTAL_HZ, [
     [0.5, 0.28],
     [1, 1],
     [1.2, 0.62],
@@ -249,7 +256,7 @@ const drone: VoicePlayer = (ctx, dest, when, volume) => {
   const attack = 2.5;
   const hold = 8;
   const release = 3.5;
-  const env = swellEnvelope(ctx, when, volume * 0.5, attack, hold, release);
+  const env = swellEnvelope(ctx, when, volume * 0.53, attack, hold, release);
   env.connect(dest);
 
   const stopAt = when + attack + hold + release + 0.1;
@@ -275,7 +282,7 @@ const omm: VoicePlayer = (ctx, dest, when, volume) => {
   const attack = 1.5;
   const hold = 4.5;
   const release = 2;
-  const env = swellEnvelope(ctx, when, volume * 0.55, attack, hold, release);
+  const env = swellEnvelope(ctx, when, volume * 0.88, attack, hold, release);
   env.connect(dest);
 
   const stopAt = when + attack + hold + release + 0.1;
@@ -409,7 +416,7 @@ function gatedTwoBlastHorn(
   const feedbackBoost = options.feedbackBoost ?? 0;
   const reverbTailSec = options.reverbTailSec ?? 18;
   const reverbSendFadeSec = options.reverbSendFadeSec ?? 3;
-  const outputScale = options.outputScale ?? 0.62;
+  const outputScale = options.outputScale ?? 0.78;
   const oscType = options.oscType ?? "sine";
   const tone1Partials = options.tone1Partials ?? [
     [1, 1],
@@ -567,7 +574,7 @@ const fogHorn4: VoicePlayer = (ctx, dest, when, volume) => {
     reverbDampScale: 0.48,
     reverbWetFromDamp: true,
     wetHighCutHz: 720,
-    outputScale: 0.6,
+    outputScale: 0.87,
     oscType: "triangle",
     tone1Partials: [
       [1, 1],
@@ -595,7 +602,7 @@ const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
     [2, 0.4],
     [2.5, 0.12],
     [3, 0.14],
-  ], 15, 980, 0.035, 2.4, 1.08);
+  ], 15, 980, 0.035, 2.4, 0.65);
 };
 
 const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
@@ -611,7 +618,7 @@ const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
   const f0 = 146.84; // D3
 
   const out = ctx.createGain();
-  out.gain.value = volume * 0.64;
+  out.gain.value = volume * 0.58;
   out.connect(dest);
 
   const dry = ctx.createGain();
@@ -690,7 +697,7 @@ const trainHorn: VoicePlayer = (ctx, dest, when, volume) => {
   const stopAt = endSec + 0.1;
 
   const out = ctx.createGain();
-  out.gain.value = volume * 0.58;
+  out.gain.value = volume * 0.35;
   out.connect(dest);
 
   const dry = ctx.createGain();
