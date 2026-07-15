@@ -59,20 +59,6 @@ export const DEFAULT_TODO_CUE_SOUND_ID: CueSoundId = "marimba";
 
 export const DEFAULT_CUE_VOLUME = 0.55;
 
-export function isCueSoundId(id: string): id is CueSoundId {
-  return CUE_SOUNDS.some((s) => s.id === id);
-}
-
-/** Resolve a cue sound by id, falling back to the break default. */
-export function getCueSound(id: string): CueSoundDef {
-  return (
-    CUE_SOUNDS.find((s) => s.id === id) ??
-    (CUE_SOUNDS.find(
-      (s) => s.id === DEFAULT_BREAK_CUE_SOUND_ID,
-    ) as CueSoundDef)
-  );
-}
-
 export function clampCueVolume(volume: number): number {
   if (Number.isNaN(volume)) return DEFAULT_CUE_VOLUME;
   return Math.min(1, Math.max(0, volume));

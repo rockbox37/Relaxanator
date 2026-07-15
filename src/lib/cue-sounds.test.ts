@@ -6,8 +6,6 @@ import {
   DEFAULT_TODO_CUE_SOUND_ID,
   clampCueVolume,
   createDefaultTodoCueSettings,
-  getCueSound,
-  isCueSoundId,
 } from "./cue-sounds";
 
 describe("CUE_SOUNDS registry", () => {
@@ -28,25 +26,6 @@ describe("CUE_SOUNDS registry", () => {
   function ids() {
     return CUE_SOUNDS.map((s) => s.id);
   }
-});
-
-describe("isCueSoundId", () => {
-  it("accepts registered ids and rejects others", () => {
-    expect(isCueSoundId("chime")).toBe(true);
-    expect(isCueSoundId("marimba")).toBe(true);
-    expect(isCueSoundId("nope")).toBe(false);
-    expect(isCueSoundId("")).toBe(false);
-  });
-});
-
-describe("getCueSound", () => {
-  it("resolves a known id", () => {
-    expect(getCueSound("bell-ding").id).toBe("bell-ding");
-  });
-
-  it("falls back to the break default for an unknown id", () => {
-    expect(getCueSound("does-not-exist").id).toBe(DEFAULT_BREAK_CUE_SOUND_ID);
-  });
 });
 
 describe("clampCueVolume", () => {
