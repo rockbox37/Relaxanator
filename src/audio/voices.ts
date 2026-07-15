@@ -5,6 +5,13 @@
  *
  * All voices are synthesized for now — recorded samples (and the planned
  * Manding-inspired deep tones) plug in as new registry entries later.
+ *
+ * Per-voice output scalars (#90) are rebalanced to a common estimated
+ * loudness target (peak partial-sum × scalar), clamped to at most a 40% cut
+ * or 60% boost from the prior value per voice — train horn and ship's horn
+ * were the loudest outliers (stacking several near-unity partials), omm the
+ * quietest. The estimate is a static proxy, not a perceptual measurement;
+ * treat these as a starting point pending listening feedback.
  */
 import type { MeditationVoiceDef } from "@/lib/meditation";
 
@@ -43,55 +50,6 @@ type VoicePlayer = (
   when: number,
   volume: number,
 ) => void;
-
-/** Distant low horn: struck partials through a lowpass with soft attack. */
-function distantHorn(
-  ctx: BaseAudioContext,
-  dest: AudioNode,
-  when: number,
-  volume: number,
-  f0: number,
-  partials: Array<[ratio: number, gain: number]>,
-  decaySec: number,
-  lowpassHz: number,
-  attackSec = 0.12,
-  holdSec = 0,
-  outputScale = 0.6,
-): void {
-  const out = ctx.createGain();
-  out.gain.value = volume * outputScale;
-  out.connect(dest);
-
-  const lp = ctx.createBiquadFilter();
-  lp.type = "lowpass";
-  lp.frequency.value = lowpassHz;
-  lp.Q.value = 0.7;
-  lp.connect(out);
-
-  let remaining = partials.length;
-  for (const [ratio, gain] of partials) {
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.value = f0 * ratio;
-    const env = ctx.createGain();
-    env.gain.setValueAtTime(0, when);
-    env.gain.linearRampToValueAtTime(gain, when + attackSec);
-    if (holdSec > 0) {
-      env.gain.setValueAtTime(gain, when + attackSec + holdSec);
-    }
-    env.gain.exponentialRampToValueAtTime(0.0001, when + decaySec);
-    osc.connect(env).connect(lp);
-    osc.start(when);
-    osc.stop(when + decaySec + 0.1);
-    osc.onended = () => {
-      remaining -= 1;
-      if (remaining === 0) {
-        lp.disconnect();
-        out.disconnect();
-      }
-    };
-  }
-}
 
 interface FeedbackReverbOptions {
   /** Multiplier applied to each tap's dampHz (default 1). */
@@ -190,7 +148,7 @@ function swellEnvelope(
 const bell: VoicePlayer = (ctx, dest, when, volume) => {
   // Deep temple-bell voicing (#14): low C3-ish fundamental, strong low
   // partials, soft shimmer on top, and a longer decay to match the pitch.
-  struck(ctx, dest, when, volume * 0.85, 130.81, [
+  struck(ctx, dest, when, volume * 0.76, 130.81, [
     [1, 1],
     [2.0, 0.55],
     [2.76, 0.32],
@@ -206,7 +164,7 @@ const doomBell: VoicePlayer = (ctx, dest, when, volume) => {
   // Church-bell voicing raised one octave (#65): F3 fundamental
   // with hum (0.5), prime (1), tierce (1.2 — the minor third that gives big
   // bells their character), quint (1.5), and nominal (2.0), ringing ~16s.
-  struck(ctx, dest, when, volume * 0.9, DOOM_BELL_FUNDAMENTAL_HZ, [
+  struck(ctx, dest, when, volume * 0.61, DOOM_BELL_FUNDAMENTAL_HZ, [
     [0.5, 0.5],
     [1, 1],
     [1.2, 0.55],
@@ -220,7 +178,7 @@ const chime: VoicePlayer = (ctx, dest, when, volume) => {
   // Re-voiced much lower with a minor-third tierce and longer ring (#18):
   // C4 fundamental keeps it a lighter strike than Bell (C3) and doom bell
   // (F3) while sharing the same bittersweet minor-third character.
-  struck(ctx, dest, when, volume * 0.65, 261.63, [
+  struck(ctx, dest, when, volume * 0.8, 261.63, [
     [1, 1],
     [1.2, 0.5],
     [2.0, 0.28],
@@ -235,7 +193,7 @@ export const DARK_CHIME_FUNDAMENTAL_HZ = 220.0;
 const darkChime: VoicePlayer = (ctx, dest, when, volume) => {
   // Darker sibling of Chime (#66 LockedDecision): A3 fundamental (3 st below
   // C4), soft hum + stronger minor-third tierce, quieter high shimmer, ~9 s.
-  struck(ctx, dest, when, volume * 0.65, DARK_CHIME_FUNDAMENTAL_HZ, [
+  struck(ctx, dest, when, volume * 0.7, DARK_CHIME_FUNDAMENTAL_HZ, [
     [0.5, 0.28],
     [1, 1],
     [1.2, 0.62],
@@ -249,7 +207,7 @@ const drone: VoicePlayer = (ctx, dest, when, volume) => {
   const attack = 2.5;
   const hold = 8;
   const release = 3.5;
-  const env = swellEnvelope(ctx, when, volume * 0.5, attack, hold, release);
+  const env = swellEnvelope(ctx, when, volume * 0.53, attack, hold, release);
   env.connect(dest);
 
   const stopAt = when + attack + hold + release + 0.1;
@@ -275,7 +233,7 @@ const omm: VoicePlayer = (ctx, dest, when, volume) => {
   const attack = 1.5;
   const hold = 4.5;
   const release = 2;
-  const env = swellEnvelope(ctx, when, volume * 0.55, attack, hold, release);
+  const env = swellEnvelope(ctx, when, volume * 0.88, attack, hold, release);
   env.connect(dest);
 
   const stopAt = when + attack + hold + release + 0.1;
@@ -409,7 +367,7 @@ function gatedTwoBlastHorn(
   const feedbackBoost = options.feedbackBoost ?? 0;
   const reverbTailSec = options.reverbTailSec ?? 18;
   const reverbSendFadeSec = options.reverbSendFadeSec ?? 3;
-  const outputScale = options.outputScale ?? 0.62;
+  const outputScale = options.outputScale ?? 0.78;
   const oscType = options.oscType ?? "sine";
   const tone1Partials = options.tone1Partials ?? [
     [1, 1],
@@ -567,7 +525,7 @@ const fogHorn4: VoicePlayer = (ctx, dest, when, volume) => {
     reverbDampScale: 0.48,
     reverbWetFromDamp: true,
     wetHighCutHz: 720,
-    outputScale: 0.6,
+    outputScale: 0.87,
     oscType: "triangle",
     tone1Partials: [
       [1, 1],
@@ -585,17 +543,78 @@ const fogHorn4: VoicePlayer = (ctx, dest, when, volume) => {
 };
 
 const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
-  // Ship's horn (#23): F2 fundamental (~19% above prior D2) with quint-heavy
-  // brass partials, sharper attack, and brighter lowpass for a clearer
-  // maritime blast — still dry vs ship horn 2's massive reverb.
-  distantHorn(ctx, dest, when, volume, 87.31, [
+  // Ship's horn (#23, #92): F2 fundamental (~19% above prior D2) with
+  // quint-heavy brass partials and brighter lowpass for a clearer maritime
+  // blast — a gentler attack and a moderate reverb wash, still noticeably
+  // less wet than ship horn 2's massive reverb.
+  const attackSec = 0.06;
+  const holdSec = 2.4;
+  const decaySec = 15;
+  const reverbSendFadeSec = 4;
+  const endSec = when + decaySec;
+  const stopAt = endSec + 0.1;
+  const f0 = 87.31; // F2
+
+  const out = ctx.createGain();
+  out.gain.value = volume * 0.65;
+  out.connect(dest);
+
+  const dry = ctx.createGain();
+  dry.gain.value = 0.5;
+  const wet = ctx.createGain();
+  wet.gain.value = 0.5;
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 980;
+  lp.Q.value = 0.7;
+  lp.connect(dry);
+  dry.connect(out);
+
+  const reverbSend = ctx.createGain();
+  reverbSend.gain.setValueAtTime(1, when);
+  reverbSend.gain.setValueAtTime(1, when + attackSec + holdSec);
+  reverbSend.gain.exponentialRampToValueAtTime(
+    0.0001,
+    when + attackSec + holdSec + reverbSendFadeSec,
+  );
+  lp.connect(reverbSend);
+  const reverbNodes = feedbackReverb(ctx, reverbSend, wet);
+  wet.connect(out);
+
+  const cleanupNodes: AudioNode[] = [out, dry, wet, lp, reverbSend, ...reverbNodes];
+
+  const partials: Array<[ratio: number, gain: number]> = [
     [1, 1],
     [1.25, 0.24],
     [1.5, 0.58],
     [2, 0.4],
     [2.5, 0.12],
     [3, 0.14],
-  ], 15, 980, 0.035, 2.4, 1.08);
+  ];
+
+  let remaining = partials.length;
+  for (const [ratio, gain] of partials) {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = f0 * ratio;
+
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(gain, when + attackSec);
+    env.gain.setValueAtTime(gain, when + attackSec + holdSec);
+    env.gain.exponentialRampToValueAtTime(0.0001, endSec);
+
+    osc.connect(env).connect(lp);
+    osc.start(when);
+    osc.stop(stopAt);
+    osc.onended = () => {
+      remaining -= 1;
+      if (remaining === 0) {
+        scheduleAudioTimelineCleanup(ctx, stopAt, cleanupNodes, 5);
+      }
+    };
+  }
 };
 
 const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
@@ -611,7 +630,7 @@ const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
   const f0 = 146.84; // D3
 
   const out = ctx.createGain();
-  out.gain.value = volume * 0.64;
+  out.gain.value = volume * 0.58;
   out.connect(dest);
 
   const dry = ctx.createGain();
@@ -690,7 +709,7 @@ const trainHorn: VoicePlayer = (ctx, dest, when, volume) => {
   const stopAt = endSec + 0.1;
 
   const out = ctx.createGain();
-  out.gain.value = volume * 0.58;
+  out.gain.value = volume * 0.35;
   out.connect(dest);
 
   const dry = ctx.createGain();
