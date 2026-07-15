@@ -3,6 +3,10 @@
 import { useState, type FormEvent } from "react";
 
 import {
+  CUE_SOUNDS,
+  type TodoCueSettings,
+} from "@/lib/cue-sounds";
+import {
   type TodoItem,
   formatReminderLabel,
   normalizeReminderTime,
@@ -16,6 +20,10 @@ interface TodoPanelProps {
     update: { text?: string; reminderTime?: string | null },
   ) => void;
   onDelete: (id: string) => void;
+  cue: TodoCueSettings;
+  onChangeCue: (update: Partial<TodoCueSettings>) => void;
+  onPreviewCue: () => void;
+  previewDisabled?: boolean;
 }
 
 export default function TodoPanel({
@@ -23,6 +31,10 @@ export default function TodoPanel({
   onAdd,
   onUpdate,
   onDelete,
+  cue,
+  onChangeCue,
+  onPreviewCue,
+  previewDisabled = false,
 }: TodoPanelProps) {
   const [draftText, setDraftText] = useState("");
   const [draftReminder, setDraftReminder] = useState("");
@@ -70,6 +82,59 @@ export default function TodoPanel({
         Capture tasks with an optional reminder time. Overdue reminders escalate
         in the banner above.
       </p>
+
+      <div className="voice todo-cue">
+        <label className="voice-enable" title="Play a sound when a reminder is due (while audio is playing)">
+          <input
+            type="checkbox"
+            checked={cue.enabled}
+            onChange={(e) => onChangeCue({ enabled: e.target.checked })}
+          />
+          Reminder sound
+        </label>
+
+        <label className="voice-interval">
+          Cue
+          <select
+            value={cue.soundId}
+            onChange={(e) =>
+              onChangeCue({ soundId: e.target.value as TodoCueSettings["soundId"] })
+            }
+            aria-label="ToDo reminder cue sound"
+            disabled={!cue.enabled}
+          >
+            {CUE_SOUNDS.map((sound) => (
+              <option key={sound.id} value={sound.id} title={sound.description}>
+                {sound.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="voice-volume">
+          Volume
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={cue.volume}
+            onChange={(e) => onChangeCue({ volume: Number(e.target.value) })}
+            aria-label="ToDo reminder cue volume"
+            disabled={!cue.enabled}
+          />
+        </label>
+
+        <button
+          type="button"
+          className="voice-preview"
+          onClick={onPreviewCue}
+          disabled={previewDisabled || !cue.enabled}
+          title="Play reminder cue now"
+        >
+          ♪
+        </button>
+      </div>
 
       <form className="todo-add" onSubmit={submitAdd}>
         <label className="todo-field todo-field-text">

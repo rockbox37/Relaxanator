@@ -17,7 +17,7 @@ import {
 } from "@/lib/breaks";
 import { showBreakNotification } from "@/lib/break-notifications";
 
-import { playBreakCue } from "./break-cue";
+import { playCueSound } from "./cue-sounds";
 
 const PUMP_MS = 200;
 const LOOKAHEAD_SEC = 0.6;
@@ -60,7 +60,8 @@ export class BreakEngine {
 
   /** Fire the cue immediately (UI preview button). */
   preview(): void {
-    playBreakCue(
+    playCueSound(
+      this.settings.cueSoundId,
       this.ctx,
       this.dest,
       this.ctx.currentTime,
@@ -104,7 +105,13 @@ export class BreakEngine {
     const type = this.settings.types[event.kind];
     if (!type) return;
 
-    playBreakCue(this.ctx, this.dest, event.whenSec, this.settings.cueVolume);
+    playCueSound(
+      this.settings.cueSoundId,
+      this.ctx,
+      this.dest,
+      event.whenSec,
+      this.settings.cueVolume,
+    );
 
     // Avoid double-firing UI for the same scheduled instant if the pump
     // overlaps (e.g. catch-up + normal). Key on rounded audio-clock time.

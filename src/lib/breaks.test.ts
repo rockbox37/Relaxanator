@@ -56,6 +56,11 @@ describe("createDefaultBreakSettings", () => {
     expect(settings.snoozeMin).toBe(DEFAULT_SNOOZE_MIN);
   });
 
+  it("defaults the cue sound to the break default", () => {
+    const settings = createDefaultBreakSettings();
+    expect(settings.cueSoundId).toBe("chime");
+  });
+
   it("defaults the custom break label to 'do a little dance'", () => {
     const settings = createDefaultBreakSettings();
     expect(settings.types.custom.customLabel).toBe("do a little dance");
