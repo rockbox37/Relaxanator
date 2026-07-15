@@ -51,55 +51,6 @@ type VoicePlayer = (
   volume: number,
 ) => void;
 
-/** Distant low horn: struck partials through a lowpass with soft attack. */
-function distantHorn(
-  ctx: BaseAudioContext,
-  dest: AudioNode,
-  when: number,
-  volume: number,
-  f0: number,
-  partials: Array<[ratio: number, gain: number]>,
-  decaySec: number,
-  lowpassHz: number,
-  attackSec = 0.12,
-  holdSec = 0,
-  outputScale = 0.6,
-): void {
-  const out = ctx.createGain();
-  out.gain.value = volume * outputScale;
-  out.connect(dest);
-
-  const lp = ctx.createBiquadFilter();
-  lp.type = "lowpass";
-  lp.frequency.value = lowpassHz;
-  lp.Q.value = 0.7;
-  lp.connect(out);
-
-  let remaining = partials.length;
-  for (const [ratio, gain] of partials) {
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.value = f0 * ratio;
-    const env = ctx.createGain();
-    env.gain.setValueAtTime(0, when);
-    env.gain.linearRampToValueAtTime(gain, when + attackSec);
-    if (holdSec > 0) {
-      env.gain.setValueAtTime(gain, when + attackSec + holdSec);
-    }
-    env.gain.exponentialRampToValueAtTime(0.0001, when + decaySec);
-    osc.connect(env).connect(lp);
-    osc.start(when);
-    osc.stop(when + decaySec + 0.1);
-    osc.onended = () => {
-      remaining -= 1;
-      if (remaining === 0) {
-        lp.disconnect();
-        out.disconnect();
-      }
-    };
-  }
-}
-
 interface FeedbackReverbOptions {
   /** Multiplier applied to each tap's dampHz (default 1). */
   dampScale?: number;
@@ -592,17 +543,78 @@ const fogHorn4: VoicePlayer = (ctx, dest, when, volume) => {
 };
 
 const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
-  // Ship's horn (#23): F2 fundamental (~19% above prior D2) with quint-heavy
-  // brass partials, sharper attack, and brighter lowpass for a clearer
-  // maritime blast — still dry vs ship horn 2's massive reverb.
-  distantHorn(ctx, dest, when, volume, 87.31, [
+  // Ship's horn (#23, #92): F2 fundamental (~19% above prior D2) with
+  // quint-heavy brass partials and brighter lowpass for a clearer maritime
+  // blast — a gentler attack and a moderate reverb wash, still noticeably
+  // less wet than ship horn 2's massive reverb.
+  const attackSec = 0.06;
+  const holdSec = 2.4;
+  const decaySec = 15;
+  const reverbSendFadeSec = 4;
+  const endSec = when + decaySec;
+  const stopAt = endSec + 0.1;
+  const f0 = 87.31; // F2
+
+  const out = ctx.createGain();
+  out.gain.value = volume * 0.65;
+  out.connect(dest);
+
+  const dry = ctx.createGain();
+  dry.gain.value = 0.5;
+  const wet = ctx.createGain();
+  wet.gain.value = 0.5;
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 980;
+  lp.Q.value = 0.7;
+  lp.connect(dry);
+  dry.connect(out);
+
+  const reverbSend = ctx.createGain();
+  reverbSend.gain.setValueAtTime(1, when);
+  reverbSend.gain.setValueAtTime(1, when + attackSec + holdSec);
+  reverbSend.gain.exponentialRampToValueAtTime(
+    0.0001,
+    when + attackSec + holdSec + reverbSendFadeSec,
+  );
+  lp.connect(reverbSend);
+  const reverbNodes = feedbackReverb(ctx, reverbSend, wet);
+  wet.connect(out);
+
+  const cleanupNodes: AudioNode[] = [out, dry, wet, lp, reverbSend, ...reverbNodes];
+
+  const partials: Array<[ratio: number, gain: number]> = [
     [1, 1],
     [1.25, 0.24],
     [1.5, 0.58],
     [2, 0.4],
     [2.5, 0.12],
     [3, 0.14],
-  ], 15, 980, 0.035, 2.4, 0.65);
+  ];
+
+  let remaining = partials.length;
+  for (const [ratio, gain] of partials) {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = f0 * ratio;
+
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(gain, when + attackSec);
+    env.gain.setValueAtTime(gain, when + attackSec + holdSec);
+    env.gain.exponentialRampToValueAtTime(0.0001, endSec);
+
+    osc.connect(env).connect(lp);
+    osc.start(when);
+    osc.stop(stopAt);
+    osc.onended = () => {
+      remaining -= 1;
+      if (remaining === 0) {
+        scheduleAudioTimelineCleanup(ctx, stopAt, cleanupNodes, 5);
+      }
+    };
+  }
 };
 
 const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
