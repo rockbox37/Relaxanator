@@ -6,9 +6,35 @@
  * stack. Any `await` before those calls breaks the gesture chain and iOS
  * silently refuses playback — which is the #83 failure mode (noise +
  * meditation both mute; desktop Chrome OK).
+ *
+ * Separately, WebKit defaults to the "ambient" audio session, which the
+ * iPhone's ring/silent switch mutes — the #88 failure mode (context reaches
+ * "running", UI shows Playing, but nothing is audible with the switch set to
+ * silent). Opting into the "playback" session type is what iOS media apps
+ * use to keep audio audible regardless of the switch.
  */
 
 type AudioContextConstructor = typeof AudioContext;
+
+/**
+ * Set the WebKit audio session to "playback" so iOS routes Web Audio through
+ * the media-playback session instead of the default ambient one — the
+ * ambient session is silenced by the iPhone's ring/silent switch, which is
+ * the #88 failure mode (iOS Chrome silent with the switch flipped to silent;
+ * iOS Safari is more lenient about ambient audio). Safari/WKWebView only
+ * (iOS 16.4+); no-op elsewhere.
+ */
+export function setPlaybackAudioSession(): void {
+  const nav = globalThis.navigator as Navigator & {
+    audioSession?: { type: string };
+  };
+  if (!nav.audioSession) return;
+  try {
+    nav.audioSession.type = "playback";
+  } catch {
+    // Best-effort — a rejected/unsupported type must not block playback.
+  }
+}
 
 /** Resolve AudioContext, including legacy webkitAudioContext on older iOS. */
 export function getAudioContextConstructor(): AudioContextConstructor {
@@ -55,6 +81,8 @@ export function playSilentBuffer(ctx: BaseAudioContext): void {
  * returned promise settles when the context actually reaches "running".
  */
 export function unlockAudioContext(ctx: AudioContext): Promise<void> {
+  setPlaybackAudioSession();
+
   try {
     playSilentBuffer(ctx);
   } catch {

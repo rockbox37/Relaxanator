@@ -4,6 +4,7 @@ import {
   createAudioContext,
   getAudioContextConstructor,
   playSilentBuffer,
+  setPlaybackAudioSession,
   unlockAudioContext,
 } from "./audio-unlock";
 
@@ -97,5 +98,37 @@ describe("audio-unlock", () => {
     });
     await unlockAudioContext(ctx);
     expect(resume).toHaveBeenCalledOnce();
+  });
+
+  describe("setPlaybackAudioSession", () => {
+    it("sets audioSession.type to playback when the API exists", () => {
+      const audioSession = { type: "auto" };
+      vi.stubGlobal("navigator", { audioSession });
+      setPlaybackAudioSession();
+      expect(audioSession.type).toBe("playback");
+    });
+
+    it("no-ops when navigator.audioSession is unavailable", () => {
+      vi.stubGlobal("navigator", {});
+      expect(() => setPlaybackAudioSession()).not.toThrow();
+    });
+
+    it("swallows errors from an unsupported/rejected session type", () => {
+      const audioSession = {
+        set type(_value: string) {
+          throw new Error("not supported");
+        },
+      };
+      vi.stubGlobal("navigator", { audioSession });
+      expect(() => setPlaybackAudioSession()).not.toThrow();
+    });
+  });
+
+  it("unlockAudioContext sets the playback audio session", async () => {
+    const audioSession = { type: "auto" };
+    vi.stubGlobal("navigator", { audioSession });
+    const { ctx } = mockCtx("suspended");
+    await unlockAudioContext(ctx);
+    expect(audioSession.type).toBe("playback");
   });
 });
