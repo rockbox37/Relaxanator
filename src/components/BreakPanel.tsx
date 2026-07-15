@@ -229,7 +229,7 @@ export default function BreakPanel({
                       onChangeType(def.id, { customLabel: e.target.value })
                     }
                     aria-label="Custom break label"
-                    placeholder="Break"
+                    placeholder="do a little dance"
                   />
                 </label>
               )}

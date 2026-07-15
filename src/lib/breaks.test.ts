@@ -55,6 +55,12 @@ describe("createDefaultBreakSettings", () => {
     expect(settings.notificationsEnabled).toBe(false);
     expect(settings.snoozeMin).toBe(DEFAULT_SNOOZE_MIN);
   });
+
+  it("defaults the custom break label to 'do a little dance'", () => {
+    const settings = createDefaultBreakSettings();
+    expect(settings.types.custom.customLabel).toBe("do a little dance");
+    expect(settings.types.stretch.customLabel).toBe("");
+  });
 });
 
 describe("clampBreakIntervalMin / clampSnoozeMin", () => {
@@ -77,9 +83,11 @@ describe("breakDisplayLabel / breakPromptMessage", () => {
     expect(breakPromptMessage("water", type())).toBe("Time to drink water");
   });
 
-  it("uses custom label when set, falling back to Break", () => {
+  it("uses custom label when set, falling back to 'do a little dance'", () => {
     expect(breakDisplayLabel("custom", type({ customLabel: "Tea" }))).toBe("Tea");
-    expect(breakDisplayLabel("custom", type({ customLabel: "  " }))).toBe("Break");
+    expect(breakDisplayLabel("custom", type({ customLabel: "  " }))).toBe(
+      "do a little dance",
+    );
     expect(breakPromptMessage("custom", type({ customLabel: "Tea" }))).toBe("Tea");
   });
 });
