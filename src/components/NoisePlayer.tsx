@@ -86,6 +86,12 @@ import {
   snoozeTodo,
   subscribeTodos,
 } from "@/lib/todos";
+import {
+  type TodoCueSettings,
+  clampCueVolume,
+  createDefaultTodoCueSettings,
+} from "@/lib/cue-sounds";
+import { playCueSound } from "@/audio/cue-sounds";
 
 import { BreakBannerStack } from "./BreakBanner";
 import BreakPanel from "./BreakPanel";
@@ -137,6 +143,37 @@ export default function NoisePlayer() {
     return () => window.clearInterval(id);
   }, []);
   const activeTodoReminders = listActiveTodoReminders(todos, todoClockMs);
+  const [todoCue, setTodoCue] = useState<TodoCueSettings>(
+    createDefaultTodoCueSettings,
+  );
+  /** Reminder keys (id:dueAt) already sounded, so each due fires the cue once. */
+  const cuedTodoKeysRef = useRef<Set<string>>(new Set());
+  const activeTodoCueKey = activeTodoReminders
+    .map((r) => `${r.item.id}:${r.dueAt}`)
+    .join("|");
+  useEffect(() => {
+    const keys = activeTodoCueKey ? activeTodoCueKey.split("|") : [];
+    const activeSet = new Set(keys);
+    // Drop keys no longer active so a re-due reminder (e.g. after snooze) re-fires.
+    for (const key of [...cuedTodoKeysRef.current]) {
+      if (!activeSet.has(key)) cuedTodoKeysRef.current.delete(key);
+    }
+    if (!todoCue.enabled) return;
+    const ctx = engineRef.current?.context;
+    const bus = engineRef.current?.mixBus;
+    // Cue only while audio is actually running — matches break-cue behavior.
+    if (!ctx || !bus || ctx.state !== "running") return;
+    let hasNew = false;
+    for (const key of keys) {
+      if (cuedTodoKeysRef.current.has(key)) continue;
+      cuedTodoKeysRef.current.add(key);
+      hasNew = true;
+    }
+    // One cue per batch of newly-due reminders — avoids stacked cacophony.
+    if (hasNew) {
+      playCueSound(todoCue.soundId, ctx, bus, ctx.currentTime, todoCue.volume);
+    }
+  }, [activeTodoCueKey, todoCue.enabled, todoCue.soundId, todoCue.volume]);
   const announceSettingsRef = useRef(announce);
   const meditationSettingsRef = useRef(meditation);
   const breakSettingsRef = useRef(breaks);
@@ -513,6 +550,22 @@ export default function NoisePlayer() {
     breakRef.current?.preview();
   }
 
+  function changeTodoCue(update: Partial<TodoCueSettings>) {
+    setTodoCue((c) => ({
+      ...c,
+      ...update,
+      volume: update.volume !== undefined ? clampCueVolume(update.volume) : c.volume,
+    }));
+  }
+
+  async function previewTodoCue() {
+    if (!(await ensurePreviewAudio())) return;
+    const ctx = engineRef.current?.context;
+    const bus = engineRef.current?.mixBus;
+    if (!ctx || !bus) return;
+    playCueSound(todoCue.soundId, ctx, bus, ctx.currentTime, todoCue.volume);
+  }
+
   function dismissBreakBanner(kind: BreakKind) {
     setActiveBreaks((prev) => removeActiveBreak(prev, kind));
   }
@@ -706,6 +759,10 @@ export default function NoisePlayer() {
         onDelete={(id) => {
           removeTodo(id);
         }}
+        cue={todoCue}
+        onChangeCue={changeTodoCue}
+        onPreviewCue={previewTodoCue}
+        previewDisabled={starting}
       />
 
       <TimeAnnouncePanel

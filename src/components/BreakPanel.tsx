@@ -25,6 +25,7 @@ import {
   isBreakDailyGoalMet,
 } from "@/lib/break-daily-goal";
 import type { BreakTallies } from "@/lib/break-tallies";
+import { CUE_SOUNDS } from "@/lib/cue-sounds";
 import { createCelebratePulseScheduler } from "@/lib/celebrate-pulse";
 
 interface BreakPanelProps {
@@ -239,8 +240,25 @@ export default function BreakPanel({
       </ul>
 
       <div className="voice break-globals">
-        <label className="voice-volume">
+        <label className="voice-interval">
           Cue
+          <select
+            value={settings.cueSoundId}
+            onChange={(e) =>
+              onChangeSettings({ cueSoundId: e.target.value as BreakSettings["cueSoundId"] })
+            }
+            aria-label="Break cue sound"
+          >
+            {CUE_SOUNDS.map((sound) => (
+              <option key={sound.id} value={sound.id} title={sound.description}>
+                {sound.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="voice-volume">
+          Volume
           <input
             type="range"
             min={0}

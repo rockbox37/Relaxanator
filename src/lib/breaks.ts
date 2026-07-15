@@ -5,6 +5,11 @@
  * deterministic and unit-tested. Timing is audio-clock-driven (NFR-1).
  */
 
+import {
+  type CueSoundId,
+  DEFAULT_BREAK_CUE_SOUND_ID,
+} from "./cue-sounds";
+
 export type BreakKind = "stretch" | "walk" | "water" | "custom";
 
 export interface BreakTypeDef {
@@ -55,6 +60,8 @@ export interface BreakTypeSettings {
 
 export interface BreakSettings {
   types: Record<BreakKind, BreakTypeSettings>;
+  /** Notification sound played on a due break (#95). */
+  cueSoundId: CueSoundId;
   /** Soft cue volume into the master mix bus (FR-2). */
   cueVolume: number;
   /** Minutes to delay the next fire when the user snoozes (FR-4). */
@@ -94,6 +101,7 @@ export function createDefaultBreakSettings(): BreakSettings {
   }
   return {
     types,
+    cueSoundId: DEFAULT_BREAK_CUE_SOUND_ID,
     cueVolume: DEFAULT_CUE_VOLUME,
     snoozeMin: DEFAULT_SNOOZE_MIN,
     notificationsEnabled: false,
