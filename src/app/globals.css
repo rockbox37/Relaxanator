@@ -116,6 +116,26 @@ main > p {
   cursor: wait;
 }
 
+.mute-all,
+.mute-except-todo {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.6rem 0.85rem;
+  cursor: pointer;
+}
+
+/* Latched (active) mute — filled so the muted state is obvious. */
+.mute-all[aria-pressed="true"],
+.mute-except-todo[aria-pressed="true"] {
+  background: rgba(232, 110, 80, 0.9);
+  border-color: rgba(232, 110, 80, 0.9);
+  color: #0d1117;
+}
+
 .sleep-timer {
   display: inline-flex;
   align-items: center;

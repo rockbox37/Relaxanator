@@ -22,6 +22,12 @@ export class NoiseEngine {
   private master: GainNode | null = null;
   private mix: GainNode | null = null;
   private announceOut: GainNode | null = null;
+  /** ToDo-cue bus — routes to output past the mute-group gate (#97). */
+  private todoCue: GainNode | null = null;
+  /** Mute-group gate: everything except ToDo cues (0 = muted). */
+  private mainGroup: GainNode | null = null;
+  /** Final output gate: 0 = whole graph silenced. */
+  private output: GainNode | null = null;
 
   get running(): boolean {
     return this.ctx?.state === "running";
@@ -47,6 +53,15 @@ export class NoiseEngine {
    */
   get announceBus(): AudioNode | null {
     return this.announceOut;
+  }
+
+  /**
+   * ToDo-reminder cue bus (#97). Feeds the final output *after* the mute-group
+   * gate, so "Mute All But ToDo Reminders" leaves these cues audible while
+   * silencing everything else. Still gated by the master output (Mute All).
+   */
+  get todoCueBus(): AudioNode | null {
+    return this.todoCue;
   }
 
   /**
@@ -95,6 +110,16 @@ export class NoiseEngine {
     const announceOut = ctx.createGain();
     announceOut.gain.value = 1;
 
+    // Mute stages (#97): the muted group (noise + meditation + breaks +
+    // announcements) feeds mainGroup; ToDo cues bypass it. Both meet at the
+    // output gate, which silences everything for Mute All.
+    const mainGroup = ctx.createGain();
+    mainGroup.gain.value = 1;
+    const todoCue = ctx.createGain();
+    todoCue.gain.value = 1;
+    const output = ctx.createGain();
+    output.gain.value = 1;
+
     let tail: AudioNode = source;
     for (const band of bands) {
       tail.connect(band);
@@ -103,8 +128,12 @@ export class NoiseEngine {
     tail.connect(master);
     master.connect(mix);
     mix.connect(limiter);
-    limiter.connect(ctx.destination);
-    announceOut.connect(ctx.destination);
+    limiter.connect(mainGroup);
+    // Announce keeps bypassing the limiter, but joins the muted group.
+    announceOut.connect(mainGroup);
+    mainGroup.connect(output);
+    todoCue.connect(output);
+    output.connect(ctx.destination);
 
     this.ctx = ctx;
     this.source = source;
@@ -112,6 +141,9 @@ export class NoiseEngine {
     this.master = master;
     this.mix = mix;
     this.announceOut = announceOut;
+    this.mainGroup = mainGroup;
+    this.todoCue = todoCue;
+    this.output = output;
 
     // Settle resume after async worklet load (desktop + post-gesture await).
     await unlockAudioContext(ctx);
@@ -238,6 +270,21 @@ export class NoiseEngine {
     );
   }
 
+  /**
+   * Apply mute gains (#97): `output` gates the whole graph, `mainGroup` gates
+   * everything except ToDo cues. Smoothed to avoid clicks on toggle.
+   */
+  setMuteGains(output: number, mainGroup: number): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.output?.gain.setTargetAtTime(Math.max(0, Math.min(1, output)), t, SMOOTHING);
+    this.mainGroup?.gain.setTargetAtTime(
+      Math.max(0, Math.min(1, mainGroup)),
+      t,
+      SMOOTHING,
+    );
+  }
+
   async dispose(): Promise<void> {
     await this.ctx?.close();
     this.ctx = null;
@@ -246,5 +293,8 @@ export class NoiseEngine {
     this.master = null;
     this.mix = null;
     this.announceOut = null;
+    this.todoCue = null;
+    this.mainGroup = null;
+    this.output = null;
   }
 }
