@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "deft hook:dispatch --host cursor --event session.start",
+        "timeout": 5
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "deft hook:dispatch --host cursor --event tool.before",
+        "matcher": "Edit|Write|WriteFile|CreateFile|MultiEdit|NotebookEdit|StrReplace|SearchReplace|Delete|DeleteFile|ApplyPatch|apply_patch",
+        "failClosed": true,
+        "timeout": 5
+      }
+    ]
+  }
+}

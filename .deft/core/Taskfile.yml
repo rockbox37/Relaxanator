@@ -4,9 +4,9 @@ vars:
   PROJECT_NAME: deft
   # VERSION is resolved dynamically (#723) so `task build` produces
   # `dist/deft-{version}.{zip,tar.gz}` matching the in-flight release.
-  # Resolution priority (mirrors scripts/resolve_version.py):
-  #   1. $DEFT_RELEASE_VERSION env var (set by scripts/release.py:run_build
-  #      so `task release -- 0.21.0` builds dist/deft-0.21.0.zip).
+  # Resolution priority:
+  #   1. $DEFT_RELEASE_VERSION env var (set by `task release -- 0.21.0`
+  #      so the release task builds dist/deft-0.21.0.zip).
   #   2. `git describe --tags --abbrev=0` stripped of leading `v`.
   #   3. `0.0.0-dev` fallback for fresh checkouts with no tags.
   # The previous hard-coded literal (`VERSION: 0.20.0`) was the root cause
@@ -14,8 +14,7 @@ vars:
   # because nothing in the release pipeline updated the Taskfile literal.
   # Inline POSIX sh (run by go-task's embedded mvdan/sh interpreter so the
   # block is cross-platform on Windows / macOS / Linux without requiring
-  # uv/python at parse time -- the Python equivalent lives in
-  # scripts/resolve_version.py for Python callers + regression tests).
+  # uv/python at parse time).
   VERSION:
     sh: |
       if [ -n "$DEFT_RELEASE_VERSION" ]; then
@@ -126,6 +125,9 @@ includes:
   vbrief:
     taskfile: ./tasks/vbrief.yml
     optional: true
+  xbrief:
+    taskfile: ./tasks/xbrief.yml
+    optional: true
   prd:
     taskfile: ./tasks/prd.yml
     optional: true
@@ -149,6 +151,9 @@ includes:
     optional: true
   session:
     taskfile: ./tasks/session.yml
+    optional: true
+  plan-sequence:
+    taskfile: ./tasks/plan-sequence.yml
     optional: true
   # #883 Story 1 stub include. The fragment exposes its inner tasks
   # (`issue:list` / `issue:view` / `issue:close` / `issue:edit`) under the
@@ -248,6 +253,12 @@ includes:
   triage-smoketest:
     taskfile: ./tasks/triage-smoketest.yml
     optional: true
+  # D17 (#1709): `task triage:metrics` trend readout from summary-history.jsonl.
+  # Inner task `metrics` is exposed as the user-facing alias `task triage:metrics`
+  # in the alias block below.
+  triage-metrics:
+    taskfile: ./tasks/triage-metrics.yml
+    optional: true
   # Windows maintainer onboarding fragment (#902). Exposes the inner task
   # `toolchain` as `task setup:toolchain`. Note: the root-level `setup` task
   # below (git-hooks bootstrap) coexists with `setup:toolchain` because
@@ -294,6 +305,21 @@ includes:
   # `optional: true` for rolling-merge tolerance.
   capacity:
     taskfile: ./tasks/capacity.yml
+    optional: true
+  # Tier 0 framework-eval surface (#1703). Exposes `task eval:health` --
+  # aggregates static self-consistency gates into a versioned health score.
+  eval:
+    taskfile: ./tasks/eval.yml
+    optional: true
+  # Gap escalation upstream filing (#1709 child 5). Exposes `task feedback:file` --
+  # confirmation-gated, deduped framework-gap issues for consumer projects.
+  feedback:
+    taskfile: ./tasks/feedback.yml
+    optional: true
+  # Pull-based value-awareness readbacks (#1709). Inner task `show` is exposed as
+  # `task value:show` via the include namespace key.
+  value:
+    taskfile: ./tasks/value.yml
     optional: true
   # Pack-slicing surface (#1283 design, #1294 pilot, ADR-001 Layer B). Exposes
   # `task packs:slice` (named-slice API), `task packs:render` (regenerate the
@@ -363,6 +389,8 @@ tasks:
       - verify:pack-drift
       - verify-wip-cap-framework-self-check
       - verify:agents-md-budget
+      - verify-eval-health-relocation-framework-check
+      - verify-eval-triggers-relocation-framework-check
       - vbrief:validate
       - codebase:validate-structure
       - verify:codebase-map-fresh
@@ -401,6 +429,24 @@ tasks:
       - task: verify:wip-cap
         vars:
           CLI_ARGS: "--allow-over-cap"
+
+  verify-eval-health-relocation-framework-check:
+    internal: true
+    desc: "Framework self-check shim for verify:eval-health-relocation (#2373)."
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - task: verify:eval-health-relocation
+        vars:
+          CLI_ARGS: "--base-ref origin/master"
+
+  verify-eval-triggers-relocation-framework-check:
+    internal: true
+    desc: "Framework self-check shim for verify:eval-triggers-relocation (#1586)."
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - task: verify:eval-triggers-relocation
+        vars:
+          CLI_ARGS: "--base-ref origin/master"
 
   # s2-deterministic-gate (#1166): deterministic validation gate for strategy
   # output shape. Runs on every `task check` (including CI). Implemented in
@@ -484,7 +530,7 @@ tasks:
   # in ``tasks/framework.yml`` now prints a redaction notice pointing
   # the operator at this surface.
   doctor:
-    desc: "Canonical doctor surface (#1272) -- task doctor [-- --session | --fix | --json | --quiet | --network]. Uses vendored bin.js in source checkouts or global deft on npm consumer deposits (#2022 Phase 3). --network is required to run the payload-staleness check (git remote, then npm registry fallback); it is offline (skipped) by default and discloses the tool + registry class before contacting either (#2182)."
+    desc: "Canonical doctor surface (#1272) -- task doctor [-- --session | --fix | --json | --quiet | --network]. Uses vendored bin.js in source checkouts or global deft on npm consumer deposits (#2022 Phase 3). --network is required to run the payload-staleness check (git verifies the pin; npm compares stable release availability); it is offline (skipped) by default and discloses the tool + registry class before contacting either (#2182)."
     dir: '{{.USER_WORKING_DIR}}'
     cmds:
       - task: engine:invoke
@@ -848,9 +894,16 @@ tasks:
           CLI_ARGS: "{{.CLI_ARGS}}"
 
   triage:summary:
-    desc: "Emit the one-line triage state for the session-start ritual (D2 / #1122). Always exits 0; appends a JSONL record to vbrief/.eval/summary-history.jsonl. -- task triage:summary -- [--json] [--no-history]"
+    desc: "Emit the one-line triage state for the session-start ritual (D2 / #1122). Always exits 0; appends a JSONL record to <lifecycle-root>/.triage-cache/summary-history.jsonl. -- task triage:summary -- [--json] [--no-history]"
     cmds:
       - task: triage-summary:summary
+        vars:
+          CLI_ARGS: "{{.CLI_ARGS}}"
+
+  triage:metrics:
+    desc: "Trend lines from summary-history.jsonl (#1709 / D17). -- task triage:metrics -- [--window=7d|30d] [--format=text|json]"
+    cmds:
+      - task: triage-metrics:metrics
         vars:
           CLI_ARGS: "{{.CLI_ARGS}}"
 

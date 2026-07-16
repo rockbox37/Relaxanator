@@ -12,6 +12,42 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 
 ---
 
+## Helped + health metrics relocation (#2545)
+
+- **Applies when:** any project that upgraded to a release shipping #2545 and still has append logs under `<lifecycle-root>/.eval/results/crud-metrics.jsonl` or `health-history.jsonl` inside the git worktree.
+- **Safe to auto-run:** Yes. New runs write to the resolved user-data metrics root; no manual migration of historical rows is required (lost worktree copies are acceptable).
+- **Restart required:** No for the filesystem change. Start a **new agent session** after upgrade if agents still cite the old `xbrief/.eval/results/` paths.
+- **Commands:**
+  - `deft eval:health` (persists to the resolved metrics home on success)
+  - Inspect platform default: `%APPDATA%\deft\metrics\` (Windows) or `~/.config/deft/metrics/` (Unix)
+  - Headless / CI: set `DEFT_METRICS_HOME` (or `DEFT_EVAL_HOME`) to a job artifact directory
+
+### What changed
+
+- **Helped + health ledgers moved out of the project tree.** `crud-metrics.jsonl` (value / "how we helped") and `health-history.jsonl` (`eval:health` history) now resolve under a shared metrics home with `helped/` and `health/` subdirectories.
+- **Resolve ladder:** `DEFT_METRICS_HOME` / `DEFT_EVAL_HOME` override → optional workspace-local `<project>/.deft/metrics/` when `DEFT_METRICS_PROJECT_LOCAL=1` → platform user-data (`%APPDATA%\deft\metrics` / `~/.config/deft/metrics`). No fallback to `xbrief/.eval/results/`.
+- **Soft-disable:** when no writable metrics home exists, persistence is skipped (metrics-disabled) instead of dirtying the worktree.
+- **Golden-run eval artifacts** (`golden-runs.jsonl`, committed `eval-health-baseline.json`) remain under `<lifecycle-root>/.eval/results/`.
+
+### References
+
+- [#2545](https://github.com/deftai/directive/issues/2545) — metrics relocation.
+- [`packages/core/src/metrics/resolve-metrics-home.ts`](../packages/core/src/metrics/resolve-metrics-home.ts) — shared resolver.
+
+---
+
+## Which command do I run? (three-command model)
+
+Directive is driven by three commands, and upgrading is one of them. Route by situation to exactly one:
+
+- **Ordinary upgrade of an existing Directive project** → `directive update` (after `npm i -g @deftai/directive@latest`). This is the one command most upgrades need; the [Canonical upgrade — npm](#canonical-upgrade--npm-v0551) section below is the full walkthrough.
+- **Not sure what state you are in, or something looks broken** → `directive doctor`. It is read-only and prints exactly one recommended next step (including "run `directive update`" when the deposit is stale).
+- **First-time adoption, or a legacy / pre-v0.20 layout** → `directive init`. It classifies the directory and either scaffolds Directive or routes you to the specific migration path.
+
+Everything below preserves the **advanced and big-jump** detail — multi-version jumps, the frozen pre-v0.20 bridge, legacy Go-installer migration, and the per-version transitions. Ordinary upgraders only need `directive update`; reach into the detailed sections when `directive doctor` or the [big-jump triage](#big-jump-triage--multi-version-upgrades-start-here) points you there.
+
+---
+
 ## Canonical upgrade — npm (v0.55.1+)
 
 From v0.55.1 onwards `@deftai/directive` is published on npm. The canonical consumer upgrade path is:
@@ -21,6 +57,14 @@ From v0.55.1 onwards `@deftai/directive` is published on npm. The canonical cons
    ```bash
    npm i -g @deftai/directive@latest
    ```
+
+   **Using pnpm?** pnpm installs the same package from the same npm registry — no extra registry or config:
+
+   ```bash
+   pnpm add -g @deftai/directive@latest
+   ```
+
+   Ensure pnpm's global bin directory is on your `PATH` (`pnpm setup` configures `PNPM_HOME`). A project-local `pnpm add -D @deftai/directive@latest` (run via `pnpm exec directive …`) is equivalent for pnpm-managed repos that avoid global installs. `deft update` / `deft migrate` / `deft doctor` all work identically regardless of which package manager installed the engine.
 
 2. **Refresh the project deposit** from your project root:
 
@@ -47,6 +91,46 @@ From v0.55.1 onwards `@deftai/directive` is published on npm. The canonical cons
    ```
 
 Start a **new agent session** after steps 2–3 so the refreshed AGENTS.md and skills load from a clean context.
+
+## OpenPackage tiered skills (optional, #2462)
+
+The npm engine (`npm i -g @deftai/directive`) remains the canonical runtime handler for gates, lifecycle, and `.deft/core/` refresh. **OpenPackage** is an optional cross-harness distribution path for placing tiered consumer skills into Cursor, Codex CLI, and OpenCode native directories — without a Directive-owned skill router.
+
+1. Install OpenPackage CLI: `npm i -g opkg`
+2. From a maintainer checkout (or release tree), sync skills into the package (default: **daily-core** only):
+
+   ```bash
+   node packaging/openpackage/sync-skills.mjs
+   ```
+
+   For all tiers on disk (maintainer release prep): `node packaging/openpackage/sync-skills.mjs --tier all`
+
+3. From your **project root** (after `directive init`):
+
+   ```bash
+   opkg install /path/to/directive/packaging/openpackage/deft-directive-skills --platforms cursor codex opencode
+   ```
+
+**Default install tier:** **daily-core** (setup, sync, build, pre-pr, review-cycle, triage) — the sync script and `deft-tiers.json` `defaultInstallTier` select this unless you override with `--tier all`, `--tier standard`, or `--tier advanced`. **Standard** covers operational workflows; **advanced** (release, swarm, debug, article-review) stays deferred. Full lists: `packaging/openpackage/deft-tiers.json`. Detail: [`packaging/openpackage/deft-directive-skills/README.md`](../packaging/openpackage/deft-directive-skills/README.md).
+
+Consumer AGENTS.md stays pointer-thin — scan `.deft/core/REFERENCES.md` Skills Index; do not enumerate skills in the managed section.
+
+### Always-on bootstrap budget (DD-3, #2463)
+
+`verify:agents-md-budget` now itemizes the always-on bootstrap surface:
+
+- **Managed AGENTS.md** bytes (fail-closed ratchet via `plan.policy.agentsMdBudget.absoluteMaxBytes`)
+- **Harness skill frontmatter** bytes (Cursor `<agent_skill>` shape; advisory unless `skillFrontmatterMaxBytes` is set)
+- **Bootstrap hooks** bytes (0 until #2438 ships)
+
+The north-star target is **≤8192 B / ~2k tok for the managed section** (Phase-2) and **≤9216 B / ~2.3k tok combined** (managed + DD-3 + hooks; Phase-3 closeout #2531). On Cursor with all skills injected, managed AGENTS.md plus skill frontmatter can still exceed the combined bar — remediation paths:
+
+1. **Tier skills** — install only the daily-core six (`setup`, `sync`, `build`, `pre-pr`, `review-cycle`, `triage`) via OpenPackage; set `plan.policy.agentsMdBudget.skillFrontmatterTier` to `daily-core` or export `DEFT_AGENTS_MD_BUDGET_SKILL_TIER=daily-core`.
+2. **Thin managed AGENTS.md** — continue epic #2369 relocation; push bulk to `commands.md`, `scm/github.md`, and skills.
+3. **Shorten SKILL.md descriptions** — advanced-tier skills (`release`, `swarm`, `debug`, `article-review`, …) are the largest frontmatter offenders.
+4. **Optional ratchet** — seed `plan.policy.agentsMdBudget.skillFrontmatterMaxBytes` at the measured tier size when you want fail-closed DD-3 growth control. The directive framework tree itself seeds this at daily-core **2080 B** (with `skillFrontmatterTier: daily-core`) as Phase-3 insurance (#2532 / #2531); consumers remain advisory until they opt in.
+
+Non-native-skill harnesses (Codex CLI, OpenCode) report 0 B frontmatter; set `harnessProfile: none` in policy when appropriate.
 
 ## xBRIEF layout migration (#2034 / #2110)
 
@@ -117,16 +201,21 @@ These commands are unrelated — do not confuse them:
 
 Current `@deftai/directive` npm releases no longer ship `task migrate:vbrief` or `scripts/migrate_vbrief.py` on the consumer deposit path (#2022 Phase 3). If your project still uses the pre-v0.20 flat document model (authoritative root `SPECIFICATION.md` / `PROJECT.md` without vBRIEF lifecycle folders), migrate **once** on a pinned release that still bundles the Python migrator, then join the normal npm upgrade path.
 
+> **Durability & support horizon (#2297).** This is a **best-effort** path for a document model that predates v0.20. The permanence anchor is the **`v0.59.0` git tag** — GitHub serves a source tarball for any tag on demand (`https://github.com/deftai/directive/archive/refs/tags/v0.59.0.tar.gz`), so recovery does **not** depend on any uploaded release asset staying attached. As long as the tag exists, the migrator is reachable. If you cannot reach the frozen payload at all, use the **[Fresh-start fallback](#fresh-start-fallback-2297)** below.
+
 **Applies when:** `deft doctor` reports `Pre-cutover: migration needed`, or `task migrate:preflight` exits non-zero with a `document-model` FAIL line.
 
-**Pinned release:** `v0.59.0` (last release before the Python-free npm deposit; includes `scripts/migrate_vbrief.py`).
+**Pinned tag:** `v0.59.0` — the last release before the Python-free npm deposit; the tagged tree includes `scripts/migrate_vbrief.py`.
+
+**This is a two-hop chain.** The pre-v0.20 flat model does not migrate straight to the current layout: hop 1 is `task migrate:vbrief` on **v0.59.0** (flat → vBRIEF v0.6); hop 2 is `deft migrate:xbrief` on **current npm** (vBRIEF v0.6 → xBRIEF v0.8). Steps 5–6 below cover hop 2.
 
 **Steps:**
 
 1. Install **Python 3.11+** and **[uv](https://docs.astral.sh/uv/)** on the migration machine.
-2. Deposit framework **v0.59.0** using one of:
-   - **Frozen Go installer** at [GitHub Releases tag v0.59.0](https://github.com/deftai/directive/releases/tag/v0.59.0) (layout migration + full source tarball under `.deft/core/`), or
-   - **Git submodule / clone:** `git checkout v0.59.0` in your framework checkout.
+2. Deposit framework **v0.59.0** using one of (git-tag methods first — they survive even if release assets are removed):
+   - **Source tarball from the tag:** `curl -fsSL https://github.com/deftai/directive/archive/refs/tags/v0.59.0.tar.gz | tar xz` (full source tree including the migrator), or
+   - **Git clone / submodule:** `git checkout v0.59.0` in your framework checkout, or
+   - **Frozen Go installer** at [GitHub Releases tag v0.59.0](https://github.com/deftai/directive/releases/tag/v0.59.0) (legacy bridge; relies on the uploaded asset, so prefer a git-tag method above for durability).
 3. From the project root, preview then apply:
    ```bash
    task migrate:preflight
@@ -139,6 +228,16 @@ Current `@deftai/directive` npm releases no longer ship `task migrate:vbrief` or
 6. Start a **new agent session** so refreshed AGENTS.md and skills load from a clean context.
 
 ⊗ Run `npm i -g @deftai/directive@latest` / `deft update` on a project that still has authoritative pre-v0.20 root docs — the current deposit cannot run the migrator; follow the frozen path first.
+
+#### Fresh-start fallback (#2297)
+
+The automated migrator is a convenience, not the only route. If the `v0.59.0` payload is genuinely unreachable (tag deleted, no network, Python/uv unavailable, or the migrator errors on an unusual legacy shape), you are **not** stranded — port forward manually:
+
+1. On **current npm**, scaffold a clean project beside the old one: `directive init` (or `npx @deftai/directive init`). This produces the current xBRIEF layout directly, skipping both hops.
+2. Hand-port your content: copy the substance of the old `SPECIFICATION.md` / `PROJECT.md` into the new project definition and scope xBRIEFs the setup flow creates. Your prose is the source of truth; only the container format changed.
+3. Keep the old tree read-only for reference until the new project's `deft doctor` is green, then archive it.
+
+This is lossless for content (you re-author the container, not the substance) and depends on nothing but current npm — so it is the guaranteed floor under the best-effort automated path.
 
 See [docs/BROWNFIELD.md](./docs/BROWNFIELD.md) for what migration produces and how content is preserved.
 
@@ -155,6 +254,8 @@ If your current install uses the frozen Go installer (`deft-install`), migrate o
 
 The frozen Go installer remains available at [GitHub Releases](https://github.com/deftai/directive/releases) as a legacy / offline bridge but receives no further updates (#1912); Node ≥ 20 is still required to run Deft afterward. After this one-time step, the four-step npm path above is all you need for every future upgrade.
 
+> **Security (#2305): only run the migration bridge against a repository you trust.** A malicious repo can commit `.deft` / `.deft/core` (or a parent) as a symlink that escapes the tree, causing the deposit to write framework content outside the project directory under your account. The canonical npm CLI now refuses a symlink-escaping deposit boundary, but the **frozen Go installer** (`cmd/deft-install/upgrade.go`) is **not** patched — it is explicitly won't-fix / risk-accepted (no further Go releases, #1912). Run it only on repositories you control or trust.
+
 ---
 
 ## Legacy layout refused by the npm CLI (#1912)
@@ -165,6 +266,8 @@ uses a **legacy on-disk layout**, the npm CLI **refuses** and exits non-zero
 legacy layout; the frozen final Go installer is the one-and-only migration
 bridge. This is the run-from-npm, use-time gate that backs the one-time
 migration above.
+
+> **Security (#2305): trust the repo before running the frozen migration bridge.** The npm CLI refuses a deposit whose `.deft` / `.deft/core` (or a parent) is a symlink escaping the resolved project tree, so a malicious repo cannot redirect the deposit to an arbitrary location under your account. The one residual exposure the npm gate cannot cover is running the **frozen Go bridge** against an untrusted repo during legacy migration (the Go binary acts before npm ever runs); it is explicitly won't-fix / risk-accepted (#1912). Only run the migration bridge against a repository you trust.
 
 **Legacy layouts the npm CLI refuses:**
 
@@ -222,6 +325,7 @@ runs the doctor first gets pointed at this exact two-step before touching `init`
 - **From v0.27.x — mostly auto-handled.** Pick up the install manifest and the `deft/` → `.deft/core/` layout: [From v0.27.x → v0.28](#from-v027x---v028-canonical-install-manifest-at-installversion), [From deft/ → .deft/core/](#from-deft---deftcore), and [From drifted AGENTS.md → current install](#from-drifted-agentsmd---current-install-task-upgrade-repair-path-1061).
 - **From v0.60.x — manual (hook refresh).** After #2049, consumer `.githooks/` dispatch through the `deft` CLI only. Run [From v0.60.0 → v0.61.x (refresh project-root git hooks, #2049)](#from-v0600--v061x-refresh-project-root-git-hooks-2049) after every framework upgrade that touches hook templates.
 - **From v0.28–v0.36 (and the final hop to current) — auto-handled.** If still on the Go-installer layout, follow the [One-time migration from the Go installer](#one-time-migration-from-the-go-installer-legacy--npm) above, then `npm i -g @deftai/directive@latest` for all future upgrades.
+- **From v0.70.x — auto-handled (lazy).** The triage working-set cache moved off `.eval/` to `.triage-cache/`; run any triage/scope/doctor command once after upgrade to trigger the lazy migration: [From v0.70.x → v0.71.0 (triage cache relocation, #1703)](#from-v070x--v0710-triage-cache-relocation-1703).
 
 **Final step for every bucket.** Finish on the canonical npm upgrade path, then let the doctor confirm you are current:
 
@@ -233,6 +337,31 @@ deft doctor
 ```
 
 Run those from your project root after any bucket-specific hops (`deft update` refreshes `.deft/core/` and `.githooks/`; `deft migrate` stamps npm provenance once and is idempotent). If still on a Go-installer layout, follow the [One-time migration from the Go installer](#one-time-migration-from-the-go-installer-legacy--npm) first.
+
+---
+
+## From v0.70.x → v0.71.0 (triage cache relocation, #1703)
+
+- **Applies when:** any project on deft v0.70.x (or earlier releases that stored the triage working-set under `<lifecycle-root>/.eval/`) that upgrades to v0.71.0+. Detection: after upgrade, triage append-only logs (`candidates.jsonl`, `slices.jsonl`, `summary-history.jsonl`, `scope-lifecycle.jsonl`, `subscription-history.jsonl`, `doctor-state.json`, `decompositions/`, `README.md`) still live under `<lifecycle-root>/.eval/` instead of `<lifecycle-root>/.triage-cache/`. The `<lifecycle-root>` is `xbrief/` or legacy `vbrief/` depending on your layout.
+- **Safe to auto-run:** Yes (lazy, idempotent). The engine migrates each known legacy file/dir from `.eval/` → `.triage-cache/` the first time any triage/scope/doctor path is resolved after upgrade — for example `deft triage:summary`, `deft triage:bootstrap`, `deft doctor`, or any scope transition that touches the triage cache. Nothing to do manually beyond running one of those commands once; re-runs are no-ops.
+- **Restart required:** No for the filesystem migration itself. Start a **new agent session** after upgrade if your session still cites the old `.eval/` triage paths in AGENTS.md or skill prose loaded before the deposit refresh.
+- **Commands:**
+  - `deft triage:summary` (or any other triage/scope/doctor verb — triggers lazy migration on first resolve)
+  - `deft doctor` (also resolves triage-cache paths during install-integrity checks)
+  - `ls <lifecycle-root>/.triage-cache/` (confirm relocated files after the first trigger)
+
+### What changed
+
+- **Triage working-set moved.** Append-only triage logs, decomposition scratch, and the deposited triage README now resolve under `<lifecycle-root>/.triage-cache/` instead of `<lifecycle-root>/.eval/`.
+- **`.eval/` reclaimed for framework eval.** The `.eval/` namespace is now the version-eval results store at `<lifecycle-root>/.eval/results/` (health/golden/crud ledgers from #1703). This store had no prior home — it is not a rename of the triage cache.
+- **Lazy migration, not upgrade-triggered.** `deft update`, `deft migrate`, and `deft migrate:xbrief` do **not** relocate the triage working-set. The last copies `vbrief/.eval/` → `xbrief/.eval/` as-is when crossing the xbrief rename; the triage relocation fires only on triage/scope/doctor path resolve. There is no dedicated `migrate:triage-cache` verb.
+- **Conflict policy (canonical wins).** When both a legacy `.eval/` copy and a canonical `.triage-cache/` copy of the same basename exist, the legacy `.eval/` entry is skipped — the canonical `.triage-cache/` file wins. The migration is idempotent.
+
+### References
+
+- [#1703](https://github.com/deftai/directive/issues/1703) — triage working-set relocation + framework-eval results store.
+- [#2349](https://github.com/deftai/directive/issues/2349) — operator-facing upgrade documentation for this relocation.
+- [`packages/core/src/triage/cache-path.ts`](../packages/core/src/triage/cache-path.ts) — `migrateLegacyTriageCacheFromEval()` implementation.
 
 ---
 

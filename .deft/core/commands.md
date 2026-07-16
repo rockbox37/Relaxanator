@@ -99,11 +99,16 @@ Common commands:
 Before implementation work, use:
 
 ```bash
+git status --short --branch
 task verify:story-ready -- --vbrief-path xbrief/active/<file>.xbrief.json
 deft xbrief:preflight -- xbrief/active/<file>.xbrief.json
 ```
 
-The implementation gate succeeds only for active scope xBRIEFs with `plan.status == "running"`.
+Gate 0 `task verify:story-ready` machine-checks working-tree cleanliness (or `--allow-dirty`), the target xBRIEF in `xbrief/active/` with `plan.status == "running"`, and the dispatch envelope's `## Allocation context` consent token (#1378). A `swarm-cohort` section is ready only when `allocation_plan_id` AND `batching_rationale` are non-null. Complete stories with `task scope:complete -- <active-story-path>`.
+
+**Story Start Gate (#1378):** Before starting any new implementation story or switching stories, run `git status --short --branch`. If the working tree is dirty, stop and summarize the current branch, modified/untracked files, and whether the changes appear related to the next story — ask the operator to choose: commit existing work, stash existing work, include existing work in the current story, or stop. ⊗ Do not begin a new story while unrelated dirty work is present without explicit operator approval. When invoked as part of a swarm cohort dispatch, the approved Phase 5 allocation plan satisfies batching consent (#954); between stories checkpoint-commit it and proceed — do not pause to ask the operator mid-cohort. Promote/activate via `task scope:promote -- <path>` / `task scope:activate -- <path>`; preflight with `deft xbrief:preflight -- <active-story-path>`.
+
+The implementation gate succeeds only for active scope xBRIEFs with `plan.status == "running"`. Do not infer implementation intent from lifecycle vocabulary — require explicit action-verb directives (`build`, `implement`, `ship`, `swarm`, `run agents`, `start agent`) per #810.
 
 ```mermaid
 flowchart TD
@@ -168,13 +173,43 @@ Current status: the validation, extractor, provider, registry, generated MAP, an
 - `task check:slow` -- slower/full checks.
 - `task verify:session-ritual` -- validate session-start ritual state.
 - `task verify:branch` -- enforce default-branch protection.
-- `task verify:hooks-installed` -- ensure local hooks are configured.
+- `task verify:hooks-installed` -- ensure local git hooks are configured; use `deft verify:hooks-installed --scope=agent` for agent-host hooks.
 - `task verify:encoding` -- detect mojibake and BOM issues.
 - `task verify:xbrief-conformance` -- validate xBRIEF conformance surfaces.
 - `task verify:cache-fresh` -- validate cache freshness where required.
 - `task verify:capacity`, `task verify:wip-cap`, and `task verify:judgment-gates` -- policy/capacity gates.
 
 Use `task --list` for the exact current verify namespace.
+
+### Agent-host direct-write hooks (#2438)
+
+`directive init` and `deft update` idempotently merge Directive-owned entries into `.claude/settings.json`, `.grok/hooks/deft.json`, and `.cursor/hooks.json` while preserving unrelated settings. `SessionStart` refreshes resume bookkeeping on a non-blocking path. `PreToolUse` covers direct edit/write tools and denies them until both existing gates pass: a fresh gated session ritual and an active/running xBRIEF accepted by canonical preflight.
+
+- Verify registration: `deft verify:hooks-installed --scope=agent` (or `--scope=all` for git + agent hooks).
+- Repair missing/drifted entries: `deft update`.
+- The P0 hook slice does not classify shell-mediated writes, MCP mutations, compact re-arm, or subagent routing; those remain owned by their dedicated follow-up issues.
+
+## Session-start ritual (#1149)
+
+Full always-on contract for the interactive session-start ritual and its gated verifier (#1149 / #1348). Read-only posture (#2176) defers this ceremony until mutation intent — see `.deft/core/commands.md` § Session routing.
+
+### Session routing (#2176)
+
+- ! Default interactive sessions to **read-only posture** until mutation or implementation intent (questions, research, Plan Mode, ticket-shaping). Load AGENTS.md / main.md / USER.md / PROJECT-DEFINITION; confirm alignment with addressing-name; ⊗ do not write `.deft/ritual-state.json`, run install/build side effects, or emit triage welcome, branch-policy, default-branch sync, sync-skill lifecycle checks, or eval/value readback writes unless the operator asks or the task is implementation-ready.
+- ! **USER.md path (#2544):** resolve via `deft session:start` output (`USER.md resolved …`); default platform paths: Windows `%APPDATA%\deft\USER.md`, Unix `~/.config/deft/USER.md`; override `$DEFT_USER_PATH`; workspace `<project>/.deft/USER.md`. ⊗ Invent or search `~/.config/deft` on Windows — AppData Roaming is canonical.
+- ! At mutation boundaries (code-writing, scope lifecycle moves, `start_agent`, commits, pushes, PR-from-local-changes, release work): run the mutable quick tier then gated verifier below before proceeding.
+- ? Explicit read-only alignment only: `deft session:start -- --read-only` (no ritual-state write).
+- ~ Operators MAY still explicitly request full `deft session:start`, `deft triage:welcome`, sync, or doctor in read-only sessions.
+
+### Mutable ritual (mutation posture)
+
+- ! On **mutation** session start, run `deft session:start` (or `task session:start` in framework source) after loading AGENTS.md. Records quick-tier ritual in `.deft/ritual-state.json`: alignment confirmation, branch-policy disclosure, `deft verify:tools` guidance, default-branch sync warnings, and `deft triage:welcome` one-liner. State is worktree- and HEAD-bound; stale after `plan.policy.sessionRitualStalenessHours` hours (default 4).
+- ! Before any code-writing tool call or `start_agent` implementation dispatch, run `deft verify:session-ritual -- --tier=gated`. Gated tier fails closed unless quick-tier state is fresh; lazily records `deft doctor` and `deft verify:cache-fresh` entrypoints. Step 0 of the pre-`start_agent` gate stack.
+- ? Postpone with `deft session:start -- --defer step=reason` (`alignment`, `branch_policy`, `triage_welcome`, `doctor`, `cache_fresh`).
+- Headless workers / CI MAY set `DEFT_SESSION_RITUAL_SKIP=1`; verifier exits 0 but warns when bypass hides failure.
+- ⊗ Self-report ritual complete without fresh `deft session:start` state; ⊗ bypass `deft verify:session-ritual` before implementation dispatch; ⊗ reorder/skip/merge ritual tiers without operator override.
+
+**Pre-`start_agent` gate stack (#1149/#1348):** (0) `deft verify:session-ritual -- --tier=gated` → (1) `deft verify:story-ready` → (2) `deft xbrief:preflight` → (3) `deft verify:cache-fresh` → (4) `deft verify:branch` + hooks → (5) `start_agent`.
 
 ```mermaid
 flowchart TD
@@ -196,6 +231,7 @@ User-facing surface for the Phase 0 triage workflow and the unified content cach
 
 - `task triage:bootstrap -- [--repo OWNER/NAME] [--limit N] [--state {open|closed|all}] [--batch-size N] [--delay-ms N]` -- seed the local triage cache and audit layer.
 - `task triage:queue --limit=10` -- show ranked candidate work from cache-backed state.
+- **Ordered-plan precedence (#2402):** when `.deft/plan-sequence.json` is active, bare "what's next?" / "next PR" / "proceed" bind to the current sequence entry via `task plan-sequence:current` — they do **not** authorize `triage:queue` or adjacent backlog picks. Use `task verify:plan-sequence -- --target-kind <kind> --target <id>` before opening a PR/branch/story/sub-agent. Sequence exhaustion fails closed until the operator names a new target or explicitly asks for queue/backlog selection ("what's the queue?", "build a cohort"). Set a sequence with `task plan-sequence:set -- --file <json>`; advance with `task plan-sequence:advance`; clear with `task plan-sequence:clear`. Do not reuse triage queue `continuationNumbers` / `continuationOrder` for this state.
 - `task triage:accept -- <issue>` -- accept a candidate and ingest it as a proposed scope xBRIEF.
 - `task triage:reject -- <issue> [--reason "why"]` -- reject a candidate, audit the decision, and update upstream issue state.
 - `task triage:defer -- <issue>` -- defer a candidate without terminal rejection.

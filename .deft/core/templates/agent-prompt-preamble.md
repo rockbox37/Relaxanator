@@ -49,6 +49,28 @@ Worked example (a swarm-cohort member):
 
 A `solo` dispatch sets `dispatch_kind: solo`, MAY leave `allocation_plan_id` / `batching_rationale` null, and lists only its own xBRIEF in `cohort_vbriefs`; such a section does NOT by itself satisfy the consent token, so the Story Start Gate falls through to the #1371 prose carve-out for a lone interactive dispatch.
 
+## 2.55 Ordered-plan continuation boundary (#2402)
+
+When the operator supplies an ordered plan (delivery sequence, cohort, checklist, review batch, or phase list), continuation language is bounded by that sequence — not by the triage queue, skill chaining, or adjacent backlog memory.
+
+! Record the active sequence with `task plan-sequence:set -- --file <json>` (persists `.deft/plan-sequence.json`). Inspect with `task plan-sequence:current`; advance with `task plan-sequence:advance`; clear with `task plan-sequence:clear`.
+
+! Before creating or dispatching a new external work unit (PR, branch, story activation, sub-agent implementation task), when a sequence is active run `task verify:plan-sequence -- --target-kind <kind> --target <id-or-title>`. Exit non-zero means fail closed.
+
+! "next" / "what's next?" / "proceed" / "resume" / "move on" means **exactly one** next unit in the **narrowest active** ordered sequence. Unit type is inherited from that sequence.
+
+! When the sequence is exhausted (`continuation_past_final` defaults false), stop and ask. Do not open PR 3 after an approved two-PR plan. Do not consult `task triage:queue`, open-issue intuition, or skill-chaining instructions to invent the next unit.
+
+! Explicit queue/backlog asks ("what's the queue?", "build a cohort") remain queue-driven even mid-plan. Bare "what's next?" is **not** such an ask while a sequence is active.
+
+! Skill-exit chaining instructions are advisory entrypoints only — they do not authorize adjacent work unless it matches the current ordered-plan entry or a fresh operator directive.
+
+! Review-cycle exit returns to the ordered-plan context and authorizes at most the next sequence entry (after `plan-sequence:advance` for the completed PR). Cohort/build flows stop after the final approved entry.
+
+⊗ Reuse triage queue `continuationNumbers` / `continuationOrder` for ordered-plan state — those fields are for `[RESUME]` / stale-defer ordering only.
+
+⊗ Treat affirmative continuation ("yes", "proceed") as permission to widen past the approved sequence.
+
 ## 2.6 Provider-neutral worker metadata (#1531)
 
 Heterogeneous swarm dispatch (#1531) assigns each worker a **dispatch provider** (the runtime primitive that launched the agent), a **worker role** (what the agent is allowed to do), and a **selected backend** or **routing policy** (how the harness maps that role to a concrete agent). These fields are provider-neutral: Composer-class coding agents, Grok Build (`spawn_subagent`), Cursor/cloud agents, and future adapters share the same contract.
@@ -58,7 +80,7 @@ Heterogeneous swarm dispatch (#1531) assigns each worker a **dispatch provider**
 When present, the section documents these fields in order:
 
 - `dispatch_provider`: the runtime primitive that launched this worker -- e.g. `spawn_subagent`, `start_agent`, `cursor-composer`, `cursor-cloud-agent`, or a future adapter id. Names the harness surface, not the model.
-- `worker_role`: the role boundary for this dispatch -- one of `leaf-implementation`, `orchestrator`, `review-monitor`, or `merge-release` (stable ids from `scripts/policy.py` `SWARM_WORKER_ROLES`). Tells the worker which preamble rules and skill surfaces apply.
+- `worker_role`: the role boundary for this dispatch -- one of `leaf-implementation`, `orchestrator`, `review-monitor`, or `merge-release` (stable ids from `packages/core/src/swarm/routing.ts` `SWARM_WORKER_ROLES`). Tells the worker which preamble rules and skill surfaces apply.
 - `selected_backend`: the stable backend id from `plan.policy.swarmSubagentBackend` / `task policy:subagent-backends` (e.g. `composer`, `grok-build`, `cursor-cloud`) | null -- which catalogued coding backend the operator selected for this role.
 - `routing_policy`: <path or reference to the operator's routing file / tiering policy> | null -- when backend selection is delegated to harness routing instead of a typed policy field, cite the policy handle here so postmortems can reconstruct the route. The canonical handle is the gitignored, per-machine `.deft/routing.local.json` (#1739), keyed by `(dispatch_provider, worker_role)`; set decisions with `task swarm:routing-set -- --role <role> (--model <slug> | --harness-default)`.
 - `resolved_model` (#1739): the concrete model slug the operator pinned for this `(provider, role)` | null for an explicit harness default. Resolved from `.deft/routing.local.json` and stamped into the `task swarm:launch` manifest. **This is the field the dispatch primitive must actually honor** -- see the threading rule below.
@@ -98,7 +120,7 @@ Worked example (a tiered leaf worker on Composer):
 
 ! Pre-dispatch gate (#1739 / #1877): run `task verify:routing` before spawning ANY sub-agent (cohort OR solo) — it fails when a dispatched worker role has no decision (pinned model or explicit harness default) for the active provider. `task verify:story-ready` chains the same routing gate for single Cursor/Grok Task dispatches (#1877). Session start runs `task verify:routing -- --advise` (non-blocking disclosure).
 
-Reference: `.deft/routing.local.json` + `task swarm:routing-set` + `task verify:routing` (#1739, supersedes the `plan.policy.swarmSubagentBackend` enum of #1531a / #1735), `scripts/policy.py` `SWARM_WORKER_ROLES`, issue #1531 scope update (dispatch provider / worker role / model selection are three separate concerns).
+Reference: `.deft/routing.local.json` + `task swarm:routing-set` + `task verify:routing` (#1739, supersedes the `plan.policy.swarmSubagentBackend` enum of #1531a / #1735), `packages/core/src/swarm/routing.ts` `SWARM_WORKER_ROLES`, issue #1531 scope update (dispatch provider / worker role / model selection are three separate concerns).
 
 ## 2.7 Runtime and GitHub auth mode (#1557)
 
@@ -129,7 +151,7 @@ Worked example (cloud / headless worker):
 - github_auth_mode: injected-token
 ```
 
-Reference: `scripts/platform_capabilities.py` (#1557a), `scripts/github_auth_modes.py` (#1557b), issue #1557.
+Reference: `packages/core/src/platform/platform-capabilities.ts` (#1557a), `packages/core/src/intake/github-auth-modes.ts` (#1557b), issue #1557.
 
 ## 3. PowerShell 5.1 non-ASCII rule (#798)
 
@@ -154,24 +176,24 @@ When running under the Grok Build runtime on Windows + pwsh 7+, `run_terminal_co
 
 This rule applies to the Grok Build runtime (pwsh 7+); Warp + Claude (PTY-based) is not affected by this wrapper leakage.
 
-## 3.6 Safe subprocess on Windows -- UTF-8 capture helper (#1366)
+## 3.6 Safe subprocess on Windows -- UTF-8 capture (#1366)
 
-Windows hosts running deft tooling (Grok Build, native PowerShell, scheduled / cloud agents) inherit the locale codepage (cp1252 / cp437) as the default `text=True` decode encoding for `subprocess.run`. When the child process (most commonly `gh api` returning a Greptile rolling-summary body) emits bytes that are not valid in that codepage, Python's internal `Thread-3 (_readerthread)` crashes with `UnicodeDecodeError`. The calling script then returns empty / malformed stdout, and any monitor parsing the JSON sees `head: None` -- the exact failure mode behind the #1166 swarm `Still waiting... (last reviewed: none, head: None)` symptom.
+**Historical note:** The `scripts/` Python directory was removed in #2022 (TS-native migration). The `scripts/_safe_subprocess.py::run_text` helper no longer exists. The underlying risk -- locale-codepage decode failures when capturing `gh api` output on Windows -- still applies to any TS tooling that shells out.
 
-**Directive rule:** Any deft script that captures `gh` output or another Python subprocess for parsing MUST route its capture through `scripts/_safe_subprocess.py::run_text` (or pass `encoding="utf-8", errors="replace"` to `subprocess.run` directly). The helper FORCES `capture_output=True`, `text=True`, `encoding="utf-8"`, `errors="replace"`, and `shell=False`; callers cannot regress the safety contract via kwargs.
+**Directive rule for TS tooling:** Any TS script that captures `gh` output or other child-process output for parsing MUST use `execa` (preferred) or `child_process.spawn` with explicit `encoding: "utf8"`. Never use `execSync` / `spawnSync` without explicit encoding when the output may carry non-ASCII glyphs (Greptile bodies, gh REST bodies, user-authored commit messages).
 
-```python path=null start=null
-# WRONG -- crashes Thread-3 (_readerthread) on Windows when output contains non-cp1252 bytes
-result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+```typescript
+// WRONG -- Buffer return; non-ASCII bytes become mojibake or throw on .toString()
+const out = execSync("gh api ...");
 
-# RIGHT -- bytes that don't decode under utf-8 become U+FFFD; the reader thread never crashes
-from _safe_subprocess import run_text
-result = run_text(cmd, timeout=60)
+// RIGHT -- explicit utf8 encoding; non-ASCII bytes survive the round-trip
+import { execa } from "execa";
+const { stdout } = await execa("gh", ["api", "..."], { encoding: "utf8" });
 ```
 
-This rule applies on every platform but BITES on Windows + Grok Build / cmd / PowerShell hosts where the locale codepage is not UTF-8. Linux / macOS hosts generally default to UTF-8 already and so do not reproduce the crash, but routing through `run_text` keeps the behavior identical across platforms.
+This rule bites on Windows + Grok Build / cmd / PowerShell hosts where the default codepage is not UTF-8. Linux / macOS generally default to UTF-8 and do not reproduce the crash, but explicit encoding keeps behavior identical across platforms.
 
-Reference: AGENTS.md `## Safe subprocess capture (#1366)`. Recurrence record: the #1166 swarm session repeatedly observed `Thread-3 (_readerthread) UnicodeDecodeError` across multiple gh-shelling tools; #1366 is the structural fix.
+Reference: AGENTS.md `## Safe subprocess capture (#1366)`. Recurrence record: the #1166 swarm session repeatedly observed `Thread-3 (_readerthread) UnicodeDecodeError` across multiple gh-shelling tools; #1366 is the structural fix. `scripts/_safe_subprocess.py` was the Python-era solution; the TS-era solution is explicit encoding on every `execa`/`spawn` call.
 
 ## 3.7 Per-run unique pytest basetemp under concurrent swarm dispatch (#1681)
 
@@ -189,6 +211,18 @@ PYTEST_ADDOPTS="--basetemp=$(mktemp -d)/pt" task check
 
 A clean result under an isolated basetemp is attributable to your change, not to the ambient shared-`/tmp` race. Do NOT point `--basetemp` at a static path shared across workers -- that re-introduces the collision. Solo / single-run invocations on a private worktree do not require this, but it is harmless to apply unconditionally.
 
+## 3.8 Windows Cursor Task-tool console storm (#2563)
+
+On Windows, Cursor Task-tool local subagents can open a visible `cmd.exe` / `conhost` window per shell turn. Framework source checkouts amplify this: many `task <verb>` calls run `engine:_ts-build` → `pnpm`/`tsc` via `shell: true`. Parallel (and even serial) Task agents have frozen the maintainer host; completing the same stories in-parent (no Task subagent) stayed stable.
+
+**Directive rule for orchestrators on Windows:**
+
+- ! Prefer in-parent implementation or cloud workers for Cursor Task cohorts until the branch under test includes the #2563 mitigations (`windowsHide` on engine spawns + warm-dist skip via `tasks/ts-build-fresh.cjs`).
+- ! When local Task agents are required, keep concurrency at **1**, reuse a warm `packages/cli/dist/bin.js` (set `DEFT_SKIP_TS_BUILD=1` only when dist is known current), and avoid spawning nested Task agents from workers.
+- ⊗ Launch a multi-agent local Cursor Task swarm on Windows that multiplies cold `task` rebuilds without operator acceptance of host-freeze risk.
+
+Reference: issue #2563; swarm skill Platform Requirements; env scrub + stdio inherit for nested Task recursion (#2554 / #2438) are necessary but not sufficient alone.
+
 ## 4. pre-pr and review-cycle skills
 
 Before pushing any branch:
@@ -197,6 +231,61 @@ Before pushing any branch:
 - After opening the PR, run `skills/deft-directive-review-cycle/SKILL.md` end-to-end on bot findings. Cap iterations at 3 unless the user explicitly extends.
 
 Anti-pattern: pushing without pre-pr and relying on Greptile to find issues. That burns review-cycle iterations on issues you could have caught locally; each iteration costs GraphQL budget under your shared identity.
+
+## 4.5 Review-surface precedence -- deft review-cycle wins over host review tools (#2308)
+
+The active host harness may expose its own review-labeled surfaces. On Cursor these are the `bugbot` and `security-review` Task **subagent types** and the `review-bugbot` / `review-security` **skills**; other harnesses may ship equivalents. A generic operator request to "review" / "get this reviewed" / "use sub-agents for reviews" must NOT be routed to those host-native tools as the review of record.
+
+- ! Route ALL review work through the canonical `skills/deft-directive-review-cycle/SKILL.md` surface. Map a generic review request to the review cycle **by intent**, not by literal keyword -- "review this", "get this reviewed", and "use sub-agents for reviews" all mean run `deft-directive-review-cycle` (extends the #1862 / #2261 intent-routing fix).
+- ! Map **PR shepherding intent** the same way: `babysit`, `babysit this PR`, `shepherd`, `watch the PR`, and the Cursor product action **babysit-pull-request-in-cloud** all mean run `deft-directive-review-cycle` on Deft-managed repos (`.deft/core/` installed) -- NOT the Cursor-global `babysit` skill (`~/.cursor/skills-cursor/babysit/SKILL.md`) (#2261).
+- ~ Host review tools (Cursor `babysit` / `bugbot` / `security-review` subagent types, `review-bugbot` / `review-security` skills, or any future host equivalent) MAY be folded in as *advisory* finding sources INSIDE the review cycle -- the #2019 harness-aware-reviewer path -- with their findings batched alongside the Greptile / bot findings the cycle already processes.
+- ⊗ Substitute a host-native review subagent type, Cursor global `babysit`, or `review-*` skill for `deft-directive-review-cycle` as the review surface. The host tools are advisory inputs folded into the cycle, never a replacement for it. Reaching for them on a bare "review" or "babysit" request is the #1862 / #2261 wrong-review-surface class (see also #2019, #2018).
+
+## 4.6 Cloud PR-shepherd dispatch -- review-monitor worked example (#2261)
+
+When an operator triggers **babysit-pull-request-in-cloud** (or equivalent PR-shepherding intent) on a Deft-managed repo, the orchestrator MUST dispatch a **review-monitor** worker with this preamble (or a reference to `templates/agent-prompt-preamble.md`) and an explicit mandate to read `skills/deft-directive-review-cycle/SKILL.md` before any PR mutation.
+
+Worked example (cloud background review-monitor on PR #1037):
+
+```markdown
+## Allocation context
+
+- dispatch_kind: solo
+- allocation_plan_id: null
+- batching_rationale: null
+- cohort_vbriefs: []
+- operator_approval_evidence: operator selected babysit-pull-request-in-cloud 2026-07-03
+
+## Worker metadata
+
+- dispatch_provider: cursor-cloud-agent
+- worker_role: review-monitor
+- selected_backend: cursor-cloud
+- routing_policy: null
+- resolved_model: null
+- model_source: harness-default explicit
+
+## Runtime and GitHub auth mode
+
+- runtime_mode: cloud-headless
+- github_auth_mode: injected-token
+
+## Unit of work
+
+drive-to: merge-ready on PR #1037 (repo: deftai/deftvisage, branch: fix/visage-repo-org-scoping)
+
+## Mandates
+
+1. First tool call: read AGENTS.md; confirm Deft alignment.
+2. Read `templates/agent-prompt-preamble.md` (binding) and `skills/deft-directive-review-cycle/SKILL.md` end-to-end -- NOT `~/.cursor/skills-cursor/babysit/SKILL.md`.
+3. Run review-cycle Phase 1 process audit before the fix loop; batch Phase 1 + Phase 2 fixes per review-cycle discipline.
+4. Poll terminal verdict via `task pr:watch -- <N>` when waiting on Greptile/SLizard (#1056).
+5. Exit only on review-cycle Step 6 fail-closed all-of (#1259) -- ad hoc SLizard P2 fixes without the exit predicate are insufficient.
+
+DONE: include PR URL, role review-monitor, and whether Step 6 CLEAN was reached.
+```
+
+Anti-pattern: dispatching `Task(environment=cloud)` with only the Cursor global babysit skill attached and no preamble / `deft-directive-review-cycle` path -- that is the #2261 recurrence class.
 
 ## 5. REST-by-default for read-only gh calls
 
@@ -231,7 +320,7 @@ task scm:body:issue:edit -- --repo OWNER/REPO --issue 1555 --body-file "$bodyFil
 task scm:body:pr:edit -- --repo OWNER/REPO --pr 42 --body-file "$bodyFile"
 ```
 
-The wrapper reads UTF-8 body text from a file or stdin, sends JSON to `gh api --input -` via `_safe_subprocess.run_text` with `shell=False`, and prints the live post-mutation read-back object. Use live `gh` for immediate verification after mutations; do not use `ghx` for the first read-back because it may serve a cached stale GET.
+The wrapper reads UTF-8 body text from a file and invokes the `github-body` TS CLI (which routes through `gh api --input -` with explicit UTF-8 encoding), then prints the live post-mutation read-back object. Use live `gh` for immediate verification after mutations; do not use `ghx` for the first read-back because it may serve a cached stale GET.
 
 ## 5.6 Issue reading — body then comments (#2143 / #2066)
 
@@ -249,6 +338,31 @@ Anti-pattern: reading only the issue body and building a dispatch envelope from 
 ⊗ Conclude what an issue asks for, or build a dispatch envelope, from the issue body alone when the issue has comments (#2143 / #2066).
 
 Reference: AGENTS.md `## Issue body→comments reading (#2143)`, `## Umbrella current-shape convention (#1152)`, issue #2143.
+
+## 5.7 Value feedback opt-in and gap escalation (#1709)
+
+Value attribution, budgeted session readbacks, and upstream gap escalation are gated on `plan.policy.valueFeedback` (default OFF). Workers MUST NOT emit value claims, session readback lines, or file upstream framework-gap issues unless the relevant sub-flag is ON and the operator has confirmed enablement where required.
+
+- ! Trusted-org local auto-enable (#2376): a repo whose GitHub origin belongs to a company-owned org (default `deftai`; extend via `DEFT_VALUE_AUTOENABLE_ORGS`) auto-resolves LOCAL emit + session readback ON with `source=org-auto` and network/upstream OFF -- no per-repo confirmation. An explicit typed `valueFeedback` block (including `enabled: false`) always wins; any other repo or no origin remote stays OFF.
+- ! While `valueFeedback.enabled` is false AND no trusted-org auto-enable applies, treat every value-feedback path as a no-op -- no ledger writes, no session lines, no upstream prompts, no token spend.
+- ! Value claims MUST cite concrete attributed ledger events; silence when nothing is attributable.
+- ! Session readback repeats suppress for 4 hours per attribution event id (same debounce class as #1279 triage welcome). Pull-based detail uses `task value:show` / `deft value:show`, not ambient pushes.
+- ! Upstream gap filing is confirmation-gated -- route through `deft-directive-feedback`; draft + dedup with `task feedback:file` / `deft feedback:file`, then re-run with `--confirm` only after explicit operator approval. Consumer projects only; maintainer repo no-ops unless `DEFT_VALUE_SELF_DOGFOOD=1`.
+- ⊗ File upstream issues without operator confirmation or past duplicate detection.
+- ⊗ Use `Closes`/`Fixes`/`Resolves` on upstream gap bodies -- use `Refs #1709` only.
+
+Reference: AGENTS.md `## Value feedback and attribution (#1709)`, issue #1709.
+
+## 5.8 Deterministic questions runtime self-check (#1470)
+
+The #767 contract applies to skill prose AND to agent-initiated structured questions at runtime. Prose-scanning tests cannot observe host `ask_user_question` tool calls — workers and orchestrators MUST self-enforce before every structured prompt.
+
+- ! Before calling any host structured-question tool (`ask_user_question`, Cursor `AskQuestion`, or equivalent) OR rendering any numbered decision menu in chat — inside or outside a skill — verify the final two options are `Discuss` then `Back`, in that order.
+- ! On `Discuss` selection, halt immediately per the verbatim Discuss-pause semantic in `content/contracts/deterministic-questions.md`: no further tool calls beyond acknowledging the pause; prompt `What would you like to discuss?`; resume only on an explicit user signal (re-asking the original question, saying `resume`/`continue`, or re-issuing the prior selection).
+- ⊗ Rely on the host UI's `Other` affordance as the Discuss escape — it widens the answer space; `Discuss` exits the deterministic flow entirely (#767).
+- ⊗ Omit `Discuss`/`Back` on ad-hoc orchestration prompts (swarm approval, routing decisions, scope confirmations) — the highest-traffic runtime surface (#1470 recurrence).
+
+Reference: AGENTS.md `## Deterministic questions runtime obligation (#1470)`, `content/contracts/deterministic-questions.md`, issue #1470. Refs #767.
 
 ## 6. No Draft re-toggling within a single review cycle
 
@@ -371,7 +485,7 @@ The contract in one paragraph:
 - The record is JSON with at least `agent_id` (matches filename), `parent_id`, `last_heartbeat_at` (ISO-8601 UTC, `Z`-suffix), `last_message` (one human-readable line), `phase` (one of `starting | implementing | validating | committing | pushing | polling | fixing | terminal`), and optional `terminal_state`.
 - Writes MUST be atomic (write-to-temp + rename) so the monitor never reads a half-written file.
 
-The parent monitor watches via `scripts/subagent_monitor.py` (three-state exit 0 ok / 1 stale-or-malformed / 2 config error). Skipping the heartbeat is a hard `⊗` for any long-running sub-agent: a stalled agent with no heartbeat surface is the exact #1166 failure mode this contract closes.
+The parent monitor watches the heartbeat file directly (three-state exit 0 ok / 1 stale-or-malformed / 2 config error). Skipping the heartbeat is a hard `⊗` for any long-running sub-agent: a stalled agent with no heartbeat surface is the exact #1166 failure mode this contract closes.
 
 ## 11. Mandatory DONE message even on early exit
 
@@ -400,7 +514,7 @@ The `--allow-stale` override is per-shell and audited: the dispatcher MAY pass i
 
 The `--allow-missing-bootstrap` flag exists for the framework's own `task check` wiring (so a fresh framework checkout doesn't fail its own `verify:cache-fresh` aggregate run) and MUST NOT be passed by dispatchers. Consumer dispatchers leave it OFF; a missing cache is a real failure for them.
 
-Reference: the gate is implemented at `scripts/preflight_cache.py` and exposed via `task verify:cache-fresh`; the subscription scope is read via the D12 surface `scripts/triage_scope.py` so a consumer that has tightened `plan.policy.triageScope[]` is not gated by stale entries outside their subscription.
+Reference: the gate is exposed via `task verify:cache-fresh`; the subscription scope is read via the D12 surface (`task triage:scope`) so a consumer that has tightened `plan.policy.triageScope[]` is not gated by stale entries outside their subscription.
 
 ## 13. Cancellation Attribution (#1300)
 

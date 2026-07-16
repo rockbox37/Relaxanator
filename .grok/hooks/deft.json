@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deft hook:dispatch --host grok --event session.start",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|WriteFile|CreateFile|MultiEdit|NotebookEdit|StrReplace|SearchReplace|Delete|DeleteFile|ApplyPatch|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deft hook:dispatch --host grok --event tool.before",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

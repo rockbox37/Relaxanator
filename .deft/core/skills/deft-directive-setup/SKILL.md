@@ -24,13 +24,29 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 - User asks to create USER.md, PROJECT-DEFINITION.xbrief.json, or a specification
 - User clones a deft-enabled repo for the first time with no config
 
+## Consumer-first default (#1813)
+
+! Assume the operator is **using Deft in their project** (consumer path). Proceed directly to the Pre-Cutover Detection Guard and Phase 1 — do NOT open with a contributor-vs-consumer fork.
+
+~ The overwhelming majority of setup sessions are consumer installs; contributor onboarding is a separate, opt-in path (see below).
+
+## Contributor / framework-maintainer path (secondary)
+
+? Only enter this branch when the user **explicitly** says they are working on Deft itself (framework source checkout, `deftai/directive` clone, or maintainer tooling).
+
+When that happens:
+
+1. ! Tell the user: "Contributor setup lives in [`CONTRIBUTING.md`](../../../CONTRIBUTING.md) and this repo's root [`AGENTS.md`](../../../AGENTS.md). Use the maintainer installer: `deft-install --yes --upgrade --maintainer --repo-root . --json`."
+2. ⊗ Continue the consumer USER.md / PROJECT-DEFINITION interview — the maintainer path does not use the first-session consumer flow.
+3. **Stop here** unless the user explicitly asks to continue with consumer setup anyway.
+
 ## Pre-Cutover Detection Guard
 
 ! Before proceeding with any setup phase, detect whether the project uses the pre-v0.20 document model and redirect to migration if so.
 
 ### Detection Criteria
 
-A project is **pre-cutover** if ANY of the following are true. This prose mirrors the executable helper in `scripts/_precutover.py`; when in doubt, the helper is canonical.
+A project is **pre-cutover** if ANY of the following are true. When in doubt, run `task verify:pre-cutover` (the deterministic helper).
 
 1. `SPECIFICATION.md` exists and is neither a deprecation redirect nor a current generated spec export. A current generated spec export contains `<!-- Purpose: rendered specification -->` and `<!-- Source of truth: xbrief/specification.xbrief.json -->`, and `xbrief/specification.xbrief.json` plus all five lifecycle folders exist.
 2. `PROJECT.md` exists and contains neither the legacy `<!-- deft:deprecated-redirect -->` sentinel NOR the current `Purpose: deprecation redirect` canonical-banner marker (same one-release-cycle grace window).
@@ -466,7 +482,11 @@ omit = [
 
 - ~ After Phase 2 writes `PROJECT-DEFINITION.xbrief.json`, recommend `task triage:welcome` to the user as the single chained command for picking up the v0.27 triage surface. The N3 ritual (#1143) is the consolidating onboarding step for the #1119 governance swarm verbs (`task triage:bootstrap` / `task triage:scope` / `plan.policy.wipCap` writes / `task scope:demote --batch` relief / `task triage:summary`); without it consumers must learn each verb individually from the v0.27 release notes.
 - ~ `task triage:welcome` is idempotent and detection-bound -- each phase emits an informational stderr line and skips when its precondition is already satisfied, so a re-run after a partial completion resumes cleanly. The destructive phases (subscription / `wipCap` writes, optional WIP-relief invocation) are gated by numbered-menu prompts per [`../../contracts/deterministic-questions.md`](../../contracts/deterministic-questions.md). See [`../../UPGRADING.md`](../../UPGRADING.md) `## From v0.26.x -> v0.27` for the full walkthrough.
-- ? The recommendation is informational, not a hard gate -- consumers who plan to wire triage manually MAY skip the ritual and call the individual verbs in any order; the framework defaults stay fail-open per the umbrella `#1119 §12 framework-vs-consumer-config boundary`.
+### Consumer AGENTS always-pin recommendations (#2508)
+
+! After Phase 2 completes (or when closing a greenfield bootstrap), tell the consumer that process-critical directive skills should be named in their project's AGENTS.md **unmanaged header** when false-negative risk matters — full tier definitions: [`../../docs/skill-pin-policy.md`](../../docs/skill-pin-policy.md).
+~ Recommend the default consumer pin set for lifecycle work: `deft-directive-build` (implementation), `deft-directive-pre-pr` (before PR), `deft-directive-review-cycle` (bot review loop), and `deft-directive-swarm` when they plan parallel agents. Each is referenced by skill id + `.deft/core/.agents/skills/<id>/SKILL.md` path — not by pasting skill bodies.
+⊗ Recommend pinning entire `languages/`, `deployments/`, or other framework doc packs into AGENTS.md (#2508 anti-pattern).
 
 ---
 
@@ -625,7 +645,7 @@ Per [strategies/interview.md](../../strategies/interview.md#interview-rules-shar
 
   - **If the next step is `skills/deft-directive-swarm/SKILL.md`**: the swarm skill's Phase 0 Step 0.5 (Lifecycle Bridge -- Promote and Activate Proposed Scope xBRIEFs) is the canonical bridge. The monitor will scan `xbrief/proposed/` and `xbrief/pending/`, present in-scope candidates, and run `task scope:promote -- <path>` then `task scope:activate -- <path>` on explicit user approval. No manual operator action is required ahead of the swarm invocation.
   - **If the next step is `skills/deft-directive-refinement/SKILL.md`**: the refinement skill's Phase 4 (Promote/Demote) owns the same `task scope:promote` / `task scope:activate` surface and runs the bridge as part of the refinement loop. The refinement skill MAY leave xBRIEFs in `pending/` deliberately when they are queued for prioritisation rather than immediate dispatch.
-  - **If the user wants to invoke an implementation agent directly via `skills/deft-directive-build/SKILL.md` or `start_agent`**: the bridge MUST be run manually before dispatch -- `task scope:promote -- xbrief/proposed/<file>` then `task scope:activate -- xbrief/pending/<file>`. Both commands are idempotent and exit 0 on no-op (see `scripts/scope_lifecycle.py`). The #810 preflight gate (`task xbrief:preflight -- <active-path>`) will exit 0 only after the activate step.
+  - **If the user wants to invoke an implementation agent directly via `skills/deft-directive-build/SKILL.md` or `start_agent`**: the bridge MUST be run manually before dispatch -- `task scope:promote -- xbrief/proposed/<file>` then `task scope:activate -- xbrief/pending/<file>`. Both commands are idempotent and exit 0 on no-op. The #810 preflight gate (`task xbrief:preflight -- <active-path>`) will exit 0 only after the activate step.
 
 ⊗ Auto-run `task scope:promote` or `task scope:activate` from the setup skill on the Phase 3 outputs. The lifecycle commitment belongs to the user ("I am ready to swarm/build on this scope"), not the setup interview; silent promotion would clear the #810 implementation-intent gate without explicit user authorisation and bypass the deterministic-questions contract that protects every other Phase 3 transition.
 

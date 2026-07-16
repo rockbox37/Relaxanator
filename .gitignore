@@ -55,3 +55,24 @@ coverage/
 
 # Local session state
 .claude/scheduled_tasks.lock
+
+# Deft framework: ignore local-only caches and scratch directories
+.deft/.cli/
+.deft/last-session.json
+.deft/routing.local.json
+vbrief/.triage-cache/candidates.jsonl
+vbrief/.triage-cache/summary-history.jsonl
+vbrief/.triage-cache/scope-lifecycle.jsonl
+vbrief/.triage-cache/decompositions/
+vbrief/.triage-cache/doctor-state.json
+xbrief/.triage-cache/candidates.jsonl
+xbrief/.triage-cache/summary-history.jsonl
+xbrief/.triage-cache/scope-lifecycle.jsonl
+xbrief/.triage-cache/decompositions/
+xbrief/.triage-cache/doctor-state.json
+vbrief/*.lock
+.deft/core.bak-*/
+.deft/*.bak-*
+*.premigrate.*
+vbrief/.eval/results/
+xbrief/.eval/results/
