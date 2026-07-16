@@ -11,7 +11,11 @@ export type CueSoundId =
   | "bell-ding"
   | "glass-tap"
   | "rising-triad"
-  | "soft-pluck";
+  | "soft-pluck"
+  | "warm-chord"
+  | "crystal"
+  | "zen-bowl"
+  | "dream";
 
 export interface CueSoundDef {
   id: CueSoundId;
@@ -50,6 +54,26 @@ export const CUE_SOUNDS: readonly CueSoundDef[] = [
     id: "soft-pluck",
     label: "Soft pluck",
     description: "Mellow plucked-string note with a soft attack",
+  },
+  {
+    id: "warm-chord",
+    label: "Warm chord",
+    description: "Soft major-add9 pad that swells in and fades (new age)",
+  },
+  {
+    id: "crystal",
+    label: "Crystal",
+    description: "Gentle major triad with an airy high shimmer",
+  },
+  {
+    id: "zen-bowl",
+    label: "Zen bowl",
+    description: "Singing-bowl tone with a slow shimmer and long, soft decay",
+  },
+  {
+    id: "dream",
+    label: "Dream",
+    description: "Airy open sus2 chord with a gentle swell",
   },
 ];
 

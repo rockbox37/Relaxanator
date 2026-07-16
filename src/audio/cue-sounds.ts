@@ -222,6 +222,139 @@ const softPluck: CueSoundPlayer = (ctx, dest, when, volume) => {
   }
 };
 
+/**
+ * Gentle sustained chord/pad (#98): each note swells in and fades out through
+ * a shared lowpass for warmth. Soft attack + long release = a calm, new-age
+ * feel rather than a sharp transient.
+ */
+function softChord(
+  ctx: BaseAudioContext,
+  dest: AudioNode,
+  when: number,
+  volume: number,
+  notes: Array<[hz: number, gain: number]>,
+  opts: {
+    attackSec: number;
+    holdSec: number;
+    releaseSec: number;
+    lowpassHz: number;
+    scale: number;
+    oscType?: OscillatorType;
+  },
+): void {
+  const { attackSec, holdSec, releaseSec, lowpassHz, scale, oscType = "sine" } =
+    opts;
+  const endSec = when + attackSec + holdSec + releaseSec;
+
+  const out = ctx.createGain();
+  out.gain.value = clampVol(volume) * scale;
+  out.connect(dest);
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = lowpassHz;
+  lp.Q.value = 0.5;
+  lp.connect(out);
+
+  let remaining = notes.length;
+  for (const [hz, gain] of notes) {
+    const osc = ctx.createOscillator();
+    osc.type = oscType;
+    osc.frequency.value = hz;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(gain, when + attackSec);
+    env.gain.setValueAtTime(gain, when + attackSec + holdSec);
+    env.gain.exponentialRampToValueAtTime(0.0001, endSec);
+    osc.connect(env).connect(lp);
+    osc.start(when);
+    osc.stop(endSec + 0.05);
+    osc.onended = () => {
+      remaining -= 1;
+      if (remaining === 0) {
+        lp.disconnect();
+        out.disconnect();
+      }
+    };
+  }
+}
+
+/** Soft major-add9 pad (C–E–G–D) that swells in and fades. */
+const warmChord: CueSoundPlayer = (ctx, dest, when, volume) => {
+  softChord(
+    ctx,
+    dest,
+    when,
+    volume,
+    [
+      [261.63, 1], // C4
+      [329.63, 0.85], // E4
+      [392.0, 0.85], // G4
+      [587.33, 0.6], // D5 (the add9 shimmer)
+    ],
+    { attackSec: 0.08, holdSec: 0.5, releaseSec: 1.6, lowpassHz: 2200, scale: 0.32 },
+  );
+};
+
+/** Gentle major triad with an airy octave shimmer on top. */
+const crystal: CueSoundPlayer = (ctx, dest, when, volume) => {
+  softChord(
+    ctx,
+    dest,
+    when,
+    volume,
+    [
+      [523.25, 1], // C5
+      [659.25, 0.7], // E5
+      [783.99, 0.7], // G5
+      [1046.5, 0.28], // C6 shimmer
+    ],
+    { attackSec: 0.05, holdSec: 0.4, releaseSec: 1.4, lowpassHz: 3600, scale: 0.3 },
+  );
+};
+
+/** Singing-bowl tone: near-detuned fundamentals beat slowly under soft partials. */
+const zenBowl: CueSoundPlayer = (ctx, dest, when, volume) => {
+  const f0 = 432;
+  softChord(
+    ctx,
+    dest,
+    when,
+    volume,
+    [
+      [f0, 1],
+      [f0 * 1.0035, 0.6], // slight detune -> slow shimmer/beating
+      [f0 * 2.76, 0.22], // inharmonic bowl partial
+      [f0 * 5.4, 0.07],
+    ],
+    { attackSec: 0.03, holdSec: 0.15, releaseSec: 3.2, lowpassHz: 2600, scale: 0.36 },
+  );
+};
+
+/** Airy open sus2 chord (C–D–G) with a soft triangle swell. */
+const dream: CueSoundPlayer = (ctx, dest, when, volume) => {
+  softChord(
+    ctx,
+    dest,
+    when,
+    volume,
+    [
+      [261.63, 1], // C4
+      [293.66, 0.8], // D4
+      [392.0, 0.85], // G4
+      [523.25, 0.5], // C5
+    ],
+    {
+      attackSec: 0.1,
+      holdSec: 0.5,
+      releaseSec: 1.8,
+      lowpassHz: 2600,
+      scale: 0.3,
+      oscType: "triangle",
+    },
+  );
+};
+
 const CUE_SOUND_PLAYERS: Record<CueSoundId, CueSoundPlayer> = {
   chime,
   marimba,
@@ -229,6 +362,10 @@ const CUE_SOUND_PLAYERS: Record<CueSoundId, CueSoundPlayer> = {
   "glass-tap": glassTap,
   "rising-triad": risingTriad,
   "soft-pluck": softPluck,
+  "warm-chord": warmChord,
+  crystal,
+  "zen-bowl": zenBowl,
+  dream,
 };
 
 /** Play a cue by id, falling back to the chime for an unknown id. */
