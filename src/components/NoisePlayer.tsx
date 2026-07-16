@@ -91,6 +91,14 @@ import {
   clampCueVolume,
   createDefaultTodoCueSettings,
 } from "@/lib/cue-sounds";
+import {
+  type MuteState,
+  isExceptTodoActive,
+  isMuteAllActive,
+  muteGains,
+  toggleMuteAll,
+  toggleMuteExceptTodo,
+} from "@/lib/mute";
 import { playCueSound } from "@/audio/cue-sounds";
 
 import { BreakBannerStack } from "./BreakBanner";
@@ -146,6 +154,12 @@ export default function NoisePlayer() {
   const [todoCue, setTodoCue] = useState<TodoCueSettings>(
     createDefaultTodoCueSettings,
   );
+  const [muteState, setMuteState] = useState<MuteState>("off");
+  /** Read in ensureEngines so a mute set before playback applies on start. */
+  const muteStateRef = useRef(muteState);
+  useEffect(() => {
+    muteStateRef.current = muteState;
+  }, [muteState]);
   /** Reminder keys (id:dueAt) already sounded, so each due fires the cue once. */
   const cuedTodoKeysRef = useRef<Set<string>>(new Set());
   const activeTodoCueKey = activeTodoReminders
@@ -160,7 +174,8 @@ export default function NoisePlayer() {
     }
     if (!todoCue.enabled) return;
     const ctx = engineRef.current?.context;
-    const bus = engineRef.current?.mixBus;
+    // Dedicated bus so ToDo cues survive "Mute All But ToDo Reminders" (#97).
+    const bus = engineRef.current?.todoCueBus;
     // Cue only while audio is actually running — matches break-cue behavior.
     if (!ctx || !bus || ctx.state !== "running") return;
     let hasNew = false;
@@ -288,6 +303,9 @@ export default function NoisePlayer() {
         // Resume settled after init's sync unlock; prime cold graph edges.
         await engine.resume();
         engine.primeAudioOutput();
+        // Apply any mute set before playback started.
+        const g = muteGains(muteStateRef.current);
+        engine.setMuteGains(g.output, g.mainGroup);
 
         const meditationEngine = new MeditationEngine(
           engine.context,
@@ -561,9 +579,15 @@ export default function NoisePlayer() {
   async function previewTodoCue() {
     if (!(await ensurePreviewAudio())) return;
     const ctx = engineRef.current?.context;
-    const bus = engineRef.current?.mixBus;
+    const bus = engineRef.current?.todoCueBus;
     if (!ctx || !bus) return;
     playCueSound(todoCue.soundId, ctx, bus, ctx.currentTime, todoCue.volume);
+  }
+
+  function applyMute(next: MuteState) {
+    setMuteState(next);
+    const g = muteGains(next);
+    engineRef.current?.setMuteGains(g.output, g.mainGroup);
   }
 
   function dismissBreakBanner(kind: BreakKind) {
@@ -635,6 +659,24 @@ export default function NoisePlayer() {
             disabled={starting}
           >
             Stop All Sounds
+          </button>
+          <button
+            type="button"
+            className="mute-all"
+            onClick={() => applyMute(toggleMuteAll(muteState))}
+            aria-pressed={isMuteAllActive(muteState)}
+            title="Silence all audio without stopping playback"
+          >
+            {isMuteAllActive(muteState) ? "Unmute All" : "Mute All"}
+          </button>
+          <button
+            type="button"
+            className="mute-except-todo"
+            onClick={() => applyMute(toggleMuteExceptTodo(muteState))}
+            aria-pressed={isExceptTodoActive(muteState)}
+            title="Silence everything except ToDo reminder cues"
+          >
+            Mute All But ToDo
           </button>
         </div>
 
