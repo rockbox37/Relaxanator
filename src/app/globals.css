@@ -319,6 +319,34 @@ main > p {
   padding: 0.3rem 0.4rem;
 }
 
+.voice-mode,
+.voice-tempo,
+.voice-timbre {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  color: var(--muted);
+}
+
+.voice-mode select,
+.voice-timbre select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.3rem 0.4rem;
+  max-width: 11rem;
+}
+
+.voice-tempo input {
+  width: 4rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.25rem 0.4rem;
+}
+
 .announce-note {
   margin: 0.6rem 0 0;
   font-size: 0.8rem;

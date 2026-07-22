@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AnnounceEngine } from "@/audio/announce-engine";
 import { unlockAudioContext } from "@/audio/audio-unlock";
 import { BreakEngine } from "@/audio/break-engine";
+import { ChordsEngine } from "@/audio/chords-engine";
 import { MeditationEngine } from "@/audio/meditation-engine";
 import { NoiseEngine } from "@/audio/noise-engine";
 import {
@@ -42,6 +43,11 @@ import {
   subscribeBreakTallies,
   updateBreakTallies,
 } from "@/lib/break-tallies";
+import {
+  type ChordSettings,
+  type ChordVoiceSettings,
+  createDefaultChordSettings,
+} from "@/lib/chords";
 import {
   type MeditationSettings,
   type VoiceSettings,
@@ -103,6 +109,7 @@ import { playCueSound } from "@/audio/cue-sounds";
 
 import { BreakBannerStack } from "./BreakBanner";
 import BreakPanel from "./BreakPanel";
+import ChordsPanel from "./ChordsPanel";
 import MeditationPanel from "./MeditationPanel";
 import TimeAnnouncePanel from "./TimeAnnouncePanel";
 import TodoPanel from "./TodoPanel";
@@ -116,12 +123,14 @@ const TODO_REMINDER_POLL_MS = 15_000;
 export default function NoisePlayer() {
   const engineRef = useRef<NoiseEngine | null>(null);
   const meditationRef = useRef<MeditationEngine | null>(null);
+  const chordsRef = useRef<ChordsEngine | null>(null);
   const announceRef = useRef<AnnounceEngine | null>(null);
   const breakRef = useRef<BreakEngine | null>(null);
   const [state, setState] = useState(createDefaultNoiseState);
   const [meditation, setMeditation] = useState<MeditationSettings>(
     createDefaultMeditationSettings,
   );
+  const [chords, setChords] = useState<ChordSettings>(createDefaultChordSettings);
   const [announce, setAnnounce] = useState<AnnounceSettings>(
     createDefaultAnnounceSettings,
   );
@@ -191,6 +200,7 @@ export default function NoisePlayer() {
   }, [activeTodoCueKey, todoCue.enabled, todoCue.soundId, todoCue.volume]);
   const announceSettingsRef = useRef(announce);
   const meditationSettingsRef = useRef(meditation);
+  const chordsSettingsRef = useRef(chords);
   const breakSettingsRef = useRef(breaks);
   useEffect(() => {
     announceSettingsRef.current = announce;
@@ -198,6 +208,9 @@ export default function NoisePlayer() {
   useEffect(() => {
     meditationSettingsRef.current = meditation;
   }, [meditation]);
+  useEffect(() => {
+    chordsSettingsRef.current = chords;
+  }, [chords]);
   useEffect(() => {
     breakSettingsRef.current = breaks;
   }, [breaks]);
@@ -231,6 +244,8 @@ export default function NoisePlayer() {
       announceRef.current = null;
       meditationRef.current?.stop();
       meditationRef.current = null;
+      chordsRef.current?.stop();
+      chordsRef.current = null;
       engineRef.current?.dispose();
       engineRef.current = null;
     };
@@ -315,6 +330,14 @@ export default function NoisePlayer() {
         meditationEngine.start();
         meditationRef.current = meditationEngine;
 
+        const chordsEngine = new ChordsEngine(
+          engine.context,
+          engine.mixBus,
+          chordsSettingsRef.current,
+        );
+        chordsEngine.start();
+        chordsRef.current = chordsEngine;
+
         const announceEngine = new AnnounceEngine(
           engine.context,
           engine.announceBus,
@@ -389,6 +412,8 @@ export default function NoisePlayer() {
     setPlaying(false);
     meditationRef.current?.stop();
     meditationRef.current?.start();
+    chordsRef.current?.stop();
+    chordsRef.current?.start();
     announceRef.current?.stop();
     announceRef.current?.start();
     breakRef.current?.stop();
@@ -434,6 +459,8 @@ export default function NoisePlayer() {
 
     meditationRef.current?.stop();
     meditationRef.current?.start();
+    chordsRef.current?.stop();
+    chordsRef.current?.start();
     announceRef.current?.stop();
     announceRef.current?.start();
     breakRef.current?.stop();
@@ -493,6 +520,19 @@ export default function NoisePlayer() {
   async function previewVoice(voiceId: string) {
     if (!(await ensurePreviewAudio())) return;
     meditationRef.current?.preview(voiceId);
+  }
+
+  function changeChord(voiceId: string, update: Partial<ChordVoiceSettings>) {
+    setChords((c) => {
+      const next = { ...c, [voiceId]: { ...c[voiceId], ...update } };
+      chordsRef.current?.updateSettings(next);
+      return next;
+    });
+  }
+
+  async function previewChord(voiceId: string) {
+    if (!(await ensurePreviewAudio())) return;
+    chordsRef.current?.preview(voiceId);
   }
 
   function changeAnnounce(update: Partial<AnnounceSettings>) {
@@ -770,6 +810,13 @@ export default function NoisePlayer() {
         settings={meditation}
         onChange={changeVoice}
         onPreview={previewVoice}
+        previewDisabled={starting}
+      />
+
+      <ChordsPanel
+        settings={chords}
+        onChange={changeChord}
+        onPreview={previewChord}
         previewDisabled={starting}
       />
 
