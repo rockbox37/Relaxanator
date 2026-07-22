@@ -1,0 +1,41 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF",
+    "created": "2026-07-22T14:30:00Z"
+  },
+  "plan": {
+    "title": "Chords sound type (single chords + progressions)",
+    "status": "running",
+    "narratives": {
+      "Overview": "Add a new sound section — Chords — alongside meditation sounds and break prompts. A chord voice plays either a single chord or a short sequence of chords (a progression), layered over the noise bed on a repeat interval like meditation voices. Each voice can be played as a block (all notes at once) or arpeggiated (spread out), with a tempo (BPM) that sets the arpeggio note spacing and the pace of a progression. The instrument timbre of each voice is chosen from a picklist covering electric pianos, harpsichords, pianos, and several airy synth/synth-pad sounds. Follows the established lib (pure, tested) / audio (Web Audio wiring) / component (UI) split and reuses the meditation registry + lookahead-scheduler pattern.",
+      "Requirements": "FR-1: A chord/progression voice registry with single chords and multi-chord progressions, built from semitone intervals over a root note; extensible like MEDITATION_VOICES. FR-2: Per-voice settings — enable, block/arpeggiated mode, tempo (BPM), timbre, repeat interval (minutes), and volume. FR-3: Timbre picklist covering electric pianos (Rhodes, Wurlitzer, FM), harpsichord, pianos (grand, bright), and several airy synth pads (glass, warm, airy choir, vapor, crystal). FR-4: Block vs arpeggiated playback with tempo-driven note spacing; block plays all chord notes simultaneously, arpeggiated spreads them. FR-5: A Chords panel section in the player UI with preview, mounted after Meditation sounds. NFR-1: Chord scheduling is driven by the AudioContext clock and stays accurate in background tabs (lookahead pump like meditation). NFR-2: Chord voices mix over the noise/meditation bed via the shared mixBus without clipping. NFR-3: Pure chord logic (registry, theory helpers, play-plan, scheduler) lives in src/lib and meets the 85% per-file coverage gate."
+    },
+    "items": [
+      {
+        "title": "src/lib/chords.ts — timbre + voice registries, theory helpers, play-plan and lookahead scheduler (pure, unit-tested)",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, FR-4, NFR-3"
+        }
+      },
+      {
+        "title": "src/audio/chord-voices.ts + chords-engine.ts — timbre synths and the pump loop wired to the shared mixBus",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-3, FR-4, NFR-1, NFR-2"
+        }
+      },
+      {
+        "title": "ChordsPanel UI + NoisePlayer wiring (state, engine lifecycle, handlers, preview)",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-2, FR-5"
+        }
+      }
+    ],
+    "references": [],
+    "updated": "2026-07-22T14:51:04Z"
+  }
+}
