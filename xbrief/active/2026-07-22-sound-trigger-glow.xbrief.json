@@ -1,0 +1,47 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF",
+    "created": "2026-07-22T15:25:00Z"
+  },
+  "plan": {
+    "title": "Sound-trigger row glow (visual feedback)",
+    "status": "running",
+    "narratives": {
+      "Overview": "GitHub issue #104. When a scheduled sound fires (or its preview button is pressed), softly light up that sound's row in the UI with an accent glow that eases in quickly and fades back over a few seconds, so the user can see which sound is playing. Covers meditation and chord rows at minimum. Engines schedule on the audio clock ahead of real time, so each engine surfaces an onFire(voiceId, whenSec) callback and defers the visual trigger via a timeout so the glow lands when the sound is heard. NoisePlayer maps fires to transient per-row highlight state; MeditationPanel and ChordsPanel add a .voice--playing class. Respects prefers-reduced-motion.",
+      "Requirements": "FR-1: MeditationEngine and ChordsEngine expose an onFire callback ({voiceId, whenSec}) fired (via a deferred timeout) when a scheduled voice actually sounds, and immediately on preview. FR-2: NoisePlayer holds transient highlight state keyed by voiceId that refreshes (not stacks) on re-trigger and clears after the glow duration. FR-3: MeditationPanel and ChordsPanel highlight the active row via a CSS class. FR-4: Glow uses the app accent color, eases in ~200ms and fades back over ~2-3s; prefers-reduced-motion disables the animation. NFR-1: Pure/scheduling logic unchanged; thin engine-callback + UI change. NFR-2: Any new source file ships a co-located test (forward-coverage gate); src/lib timing helper (if added) meets 85% coverage."
+    },
+    "items": [
+      {
+        "title": "Engine onFire callbacks (Meditation + Chords) with audio-clock-deferred trigger",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-1, NFR-1"
+        }
+      },
+      {
+        "title": "NoisePlayer transient highlight state + glow timing helper (tested)",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-2, NFR-2"
+        }
+      },
+      {
+        "title": "Panel row highlight class + accent glow CSS with reduced-motion",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-3, FR-4"
+        }
+      }
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/104",
+        "type": "x-xbrief/github-issue",
+        "TrustLevel": "external"
+      }
+    ],
+    "updated": "2026-07-22T15:27:31Z"
+  }
+}

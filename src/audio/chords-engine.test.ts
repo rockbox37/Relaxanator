@@ -84,6 +84,68 @@ describe("ChordsEngine", () => {
     engine.stop();
   });
 
+  it("fires onFire immediately on preview (#104)", () => {
+    const ctx = mockCtx(10);
+    const engine = new ChordsEngine(ctx, {} as AudioNode, createDefaultChordSettings());
+    const onFire = vi.fn();
+    engine.setOnFire(onFire);
+    engine.preview("c-major");
+    expect(onFire).toHaveBeenCalledWith(
+      expect.objectContaining({ voiceId: "c-major", whenSec: 10 }),
+    );
+    engine.stop();
+  });
+
+  it("defers onFire to the scheduled audio-heard time when pumped (#104)", () => {
+    vi.useFakeTimers();
+    let now = 100;
+    const ctx = mockCtx(now);
+    Object.defineProperty(ctx, "currentTime", {
+      get: () => now,
+      configurable: true,
+    });
+    const settings = createDefaultChordSettings();
+    settings["c-major"].intervalMin = 1;
+
+    const engine = new ChordsEngine(ctx, {} as AudioNode, settings);
+    const onFire = vi.fn();
+    engine.setOnFire(onFire);
+    engine.start();
+
+    now = 159.7; // inside the lookahead window of the 160s fire
+    vi.advanceTimersByTime(250); // pump schedules the chord + defers onFire
+    expect(onFire).not.toHaveBeenCalled(); // not heard yet (~300ms out)
+
+    vi.advanceTimersByTime(400); // reach the deferred audio-heard time
+    expect(onFire).toHaveBeenCalledWith(
+      expect.objectContaining({ voiceId: "c-major", whenSec: 160 }),
+    );
+    engine.stop();
+  });
+
+  it("stop() cancels pending fire callbacks (#104)", () => {
+    vi.useFakeTimers();
+    let now = 100;
+    const ctx = mockCtx(now);
+    Object.defineProperty(ctx, "currentTime", {
+      get: () => now,
+      configurable: true,
+    });
+    const settings = createDefaultChordSettings();
+    settings["c-major"].intervalMin = 1;
+
+    const engine = new ChordsEngine(ctx, {} as AudioNode, settings);
+    const onFire = vi.fn();
+    engine.setOnFire(onFire);
+    engine.start();
+
+    now = 159.7;
+    vi.advanceTimersByTime(250); // schedules a deferred onFire
+    engine.stop(); // must cancel it
+    vi.advanceTimersByTime(1000);
+    expect(onFire).not.toHaveBeenCalled();
+  });
+
   it("start is idempotent and updateSettings/stop do not throw", () => {
     const ctx = mockCtx(0);
     const engine = new ChordsEngine(ctx, {} as AudioNode, createDefaultChordSettings());

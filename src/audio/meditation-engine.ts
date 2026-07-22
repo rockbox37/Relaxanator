@@ -12,6 +12,7 @@ import {
   collectDueEvents,
   initFireSchedule,
 } from "@/lib/meditation";
+import type { VoiceFireEvent } from "@/lib/sound-glow";
 
 import { playVoice } from "./voices";
 
@@ -24,6 +25,9 @@ export class MeditationEngine {
   private schedule: FireSchedule = {};
   private settings: MeditationSettings;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private onFire: ((event: VoiceFireEvent) => void) | null = null;
+  /** Pending "voice heard" callbacks, cleared on stop so none fire late. */
+  private fireTimers = new Set<ReturnType<typeof setTimeout>>();
 
   constructor(
     private readonly ctx: BaseAudioContext,
@@ -31,6 +35,26 @@ export class MeditationEngine {
     settings: MeditationSettings,
   ) {
     this.settings = settings;
+  }
+
+  /** Register a callback fired when a voice is actually heard (for UI glow). */
+  setOnFire(cb: (event: VoiceFireEvent) => void): void {
+    this.onFire = cb;
+  }
+
+  /**
+   * Defer `onFire` until the scheduled audio-clock time `whenSec` is reached,
+   * so the row lights up in sync with what's heard rather than when it was
+   * scheduled (up to LOOKAHEAD_SEC early).
+   */
+  private notifyFireAt(voiceId: string, whenSec: number): void {
+    if (!this.onFire) return;
+    const delayMs = Math.max(0, (whenSec - this.ctx.currentTime) * 1000);
+    const timer = setTimeout(() => {
+      this.fireTimers.delete(timer);
+      this.onFire?.({ voiceId, whenSec });
+    }, delayMs);
+    this.fireTimers.add(timer);
   }
 
   start(): void {
@@ -53,11 +77,14 @@ export class MeditationEngine {
     const voice = this.settings[voiceId];
     if (!synth || !voice) return;
     playVoice(synth, this.ctx, this.dest, this.ctx.currentTime, voice.volume);
+    this.onFire?.({ voiceId, whenSec: this.ctx.currentTime });
   }
 
   stop(): void {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+    for (const timer of this.fireTimers) clearTimeout(timer);
+    this.fireTimers.clear();
   }
 
   private pump(): void {
@@ -74,6 +101,7 @@ export class MeditationEngine {
       const voice = this.settings[event.voiceId];
       if (synth && voice) {
         playVoice(synth, this.ctx, this.dest, event.whenSec, voice.volume);
+        this.notifyFireAt(event.voiceId, event.whenSec);
       }
     }
   }

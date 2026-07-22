@@ -19,6 +19,8 @@ interface ChordsPanelProps {
   onChange: (voiceId: string, update: Partial<ChordVoiceSettings>) => void;
   onPreview: (voiceId: string) => void;
   previewDisabled?: boolean;
+  /** voiceIds currently lit by the "just played" glow (#104). */
+  playingVoiceIds?: ReadonlySet<string>;
 }
 
 const TIMBRE_GROUPS: { category: ChordTimbreCategory; label: string }[] = [
@@ -33,6 +35,7 @@ export default function ChordsPanel({
   onChange,
   onPreview,
   previewDisabled = false,
+  playingVoiceIds,
 }: ChordsPanelProps) {
   return (
     <section className="meditation chords" aria-label="Chords">
@@ -41,8 +44,12 @@ export default function ChordsPanel({
         {CHORD_VOICES.map((voice) => {
           const state = settings[voice.id];
           const arpeggiated = state.mode === "arpeggiated";
+          const playing = playingVoiceIds?.has(voice.id) ?? false;
           return (
-            <li key={voice.id} className="voice">
+            <li
+              key={voice.id}
+              className={playing ? "voice voice--playing" : "voice"}
+            >
               <label className="voice-enable" title={voice.description}>
                 <input
                   type="checkbox"

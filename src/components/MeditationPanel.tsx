@@ -14,6 +14,8 @@ interface MeditationPanelProps {
   onChange: (voiceId: string, update: Partial<VoiceSettings>) => void;
   onPreview: (voiceId: string) => void;
   previewDisabled?: boolean;
+  /** voiceIds currently lit by the "just played" glow (#104). */
+  playingVoiceIds?: ReadonlySet<string>;
 }
 
 export default function MeditationPanel({
@@ -21,6 +23,7 @@ export default function MeditationPanel({
   onChange,
   onPreview,
   previewDisabled = false,
+  playingVoiceIds,
 }: MeditationPanelProps) {
   return (
     <section className="meditation" aria-label="Meditation sounds">
@@ -28,8 +31,12 @@ export default function MeditationPanel({
       <ul className="voices">
         {MEDITATION_VOICES.map((voice) => {
           const state = settings[voice.id];
+          const playing = playingVoiceIds?.has(voice.id) ?? false;
           return (
-            <li key={voice.id} className="voice">
+            <li
+              key={voice.id}
+              className={playing ? "voice voice--playing" : "voice"}
+            >
               <label className="voice-enable" title={voice.description}>
                 <input
                   type="checkbox"
