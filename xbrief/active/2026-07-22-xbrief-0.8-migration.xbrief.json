@@ -1,0 +1,46 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for migrating xBRIEF artifacts 0.6 -> 0.8 and clearing legacy vbrief/ drift",
+    "created": "2026-07-22T18:16:00Z"
+  },
+  "plan": {
+    "title": "Migrate xBRIEF artifacts to schema 0.8 and clear legacy vbrief/ drift",
+    "status": "running",
+    "narratives": {
+      "Overview": "Bring the xBRIEF data plane up to date with the current framework (Deft v0.82.0, which ships only xbrief-core-0.8.schema.json). Two gaps: (1) every xBRIEF artifact (all files under xbrief/ plus PROJECT-DEFINITION.xbrief.json) still declares xBRIEFInfo.version '0.6' while the 0.8 core schema requires the const '0.8'; (2) deft verify:xbrief-drift (#2109) flags three files still tracked under the deprecated top-level vbrief/ lifecycle directory (vbrief/.eval/doctor-state.json, vbrief/.eval/summary-history.jsonl, vbrief/DEPRECATED.md). Resolve both so the artifacts validate against xbrief-core-0.8 and the drift check passes, without regressing the converged layout marker that deft migrate:xbrief relies on.",
+      "Requirements": "FR-1: Every xBRIEF artifact declares xBRIEFInfo.version '0.8' and validates against xbrief/schemas/xbrief-core-0.8.schema.json (fix any structural deltas beyond the version field, if the schema requires them). FR-2: The three legacy vbrief/ drift tokens are resolved so deft verify:xbrief-drift passes — remove the per-machine legacy .eval state files from tracking, and handle vbrief/DEPRECATED.md via the canonical route (keep + documented allow-list exception, or remove) without un-converging the layout. FR-3: The pending housekeeping-xBRIEF active/->completed/ rename is included so the working tree ends clean. NFR-1: Required CI check no-mixed-core-and-app passes and the PR merges via merge-commit convention. NFR-2: deft verify:xbrief-drift and any xBRIEF conformance gate report clean afterward."
+    },
+    "items": [
+      {
+        "title": "Bump xBRIEFInfo.version 0.6 -> 0.8 across all artifacts and validate against xbrief-core-0.8 schema",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1"
+        }
+      },
+      {
+        "title": "Resolve the 3 legacy vbrief/ drift tokens (remove legacy .eval state; handle DEPRECATED.md canonically)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2, NFR-2"
+        }
+      },
+      {
+        "title": "Land as a single migration PR with required CI green; leave working tree clean",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-3, NFR-1"
+        }
+      }
+    ],
+    "tags": [
+      "chore",
+      "xbrief",
+      "migration"
+    ],
+    "references": [],
+    "updated": "2026-07-22T18:17:28Z"
+  }
+}

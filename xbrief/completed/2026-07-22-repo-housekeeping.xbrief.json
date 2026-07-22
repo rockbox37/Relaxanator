@@ -1,13 +1,13 @@
 {
   "xBRIEFInfo": {
-    "version": "0.6",
+    "version": "0.8",
     "author": "agent:cursor",
     "description": "Scope xBRIEF for repo housekeeping (gitignore + leftover artifacts)",
     "created": "2026-07-22T18:10:00Z"
   },
   "plan": {
     "title": "Repo housekeeping: track cost-estimate doc + xBRIEF history, gitignore local churn",
-    "status": "running",
+    "status": "completed",
     "narratives": {
       "Overview": "Clean up the last uncommitted dirtiness in the working tree with the correct per-file treatment, landed as a small housekeeping PR against main. Commit the legitimately-shippable leftovers (COST-ESTIMATE.md project doc, the completed 2026-07-18-cost-estimate xBRIEF, and the cancelled 2026-07-22-meditation-horns xBRIEF) into the repo's xBRIEF/doc history. Decide whether xbrief/.triage-cache/** and xbrief/.eval/** are intentionally tracked Deft state or local machine churn; if churn, gitignore them and git rm --cached; if intentionally tracked, leave them. Prefer the less-destructive option when in doubt.",
       "Requirements": "FR-1: COST-ESTIMATE.md and the completed/cancelled xBRIEF artifacts are committed to main via a housekeeping PR. FR-2: The tracked-vs-ignored decision for xbrief/.triage-cache/** and xbrief/.eval/** is made from evidence (existing .gitignore, Deft docs, git history) and applied correctly. NFR-1: Required CI check no-mixed-core-and-app passes (no .deft/core changes) and the PR merges via merge-commit convention. NFR-2: Working tree ends clean or with only ignored churn remaining."
@@ -40,6 +40,9 @@
       "housekeeping"
     ],
     "references": [],
-    "updated": "2026-07-22T18:12:17Z"
+    "updated": "2026-07-22T18:15:57Z",
+    "metadata": {
+      "completedAt": "2026-07-22T18:15:57Z"
+    }
   }
 }
