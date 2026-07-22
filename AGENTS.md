@@ -17,7 +17,7 @@ Scoped work, ranked queue, and tracked bugs live in authoritative sources — no
 
 (Optional) Ephemeral shell quirks or uncommitted local artifacts only — not tracked work state.
 
-<!-- deft:managed-section v3 sha=f05c48216ebb refreshed=2026-07-16T20:51:15Z session=fb1d7363f050 -->
+<!-- deft:managed-section v3 sha=unknown refreshed=2026-07-22T14:34:02Z session=5383b191b3e8 -->
 # Deft — AI Development Framework
 
 Deft is installed in .deft/core/. Full guidelines: .deft/core/main.md
@@ -46,9 +46,9 @@ Legacy `vbrief/` read-accepted; `deft migrate:xbrief` for `xbrief/` (v0.6→v0.8
 
 ## Cache-as-authoritative work selection (#1149)
 
-! "what next?" → ordered-plan first (#2402 / `deft plan-sequence:*`); else `deft triage:queue --limit=10` (D11) — `commands.md` § Backlog Triage.
+! "what next?" → two work-selection modes (#2402): **ordered plan** (`deft plan-sequence:*`) or **ranked queue** (`deft triage:queue`) — `commands.md` § Backlog Triage → Two paths. ordered-plan first; else `deft-directive-triage` + `deft triage:queue --limit=10` (D11). Empty cache auto-populates from GitHub (#2575).
 
-⊗ Recommend work without queue/plan consult; ⊗ widen past an exhausted plan.
+⊗ Recommend work without queue/plan consult; ⊗ widen past an exhausted plan; ⊗ conclude "nothing to do" from `xbrief/{pending,active}` folder scans or GitHub-only reads without `deft triage:queue` (#2576).
 
 ## Umbrella status reading (#1152 / #2066)
 
@@ -96,15 +96,19 @@ Legacy `vbrief/` read-accepted; `deft migrate:xbrief` for `xbrief/` (v0.6→v0.8
 
 ## Branch policy & branch verification
 
-! Feature branches — `deft verify:branch`, `deft verify:forward-coverage`, hooks, `deft check` (#746 / #747) — `.deft/core/scm/github.md` § Branch policy.
+! Feature branches — `deft verify:branch`, `deft verify:forward-coverage`, `deft coverage:hotspots`, hooks, `deft check` (#746 / #747) — `.deft/core/scm/github.md` § Branch policy.
 
 ## Branch Policy Disclosure (#746)
 
 ! When `plan.policy.allowDirectCommitsToMaster = true`, surface via `deft policy:show --field=allowDirectCommitsToMaster` (#746) — `.deft/core/scm/github.md` § Branch policy.
 
+## Windows PowerShell: multi-line git/gh bodies (#2646 / #2744)
+
+! Multi-line git commit / gh issue|pr|comment bodies: write UTF-8 (no BOM) to OS temp, then `git commit -F` / `gh --body-file` / `deft scm:body:* --body-file`. Issue-body RMW on win32: `deft scm:body:issue:fetch --out-file` then edit the file then `deft scm:body:issue:edit --body-file` (#2607 postcondition verify). ⊗ bash heredocs, `<<<`, inline multi-line `--body`, or PS capture-concat of `gh api --jq .body` (string[]/$OFS destroys bodies — #2087, #2741, #1492). Detail: `.deft/core/scm/github.md` § #2646 / #2744. `ghx` is read-only — mutations stay on live `gh`.
+
 ## Contextual guardrails (runtime-detect lazy-load)
 
-! Lazy-load `.deft/core/scm/github.md` before risky ops (#2157 / #2369): PowerShell → `deft verify:encoding` (#798); TS capture (#1366); cascade → `deft pr:wait-mergeable-and-merge` (#1369); SCM → `deft verify:scm-boundary` (#884).
+! Detect OS/shell; use portable syntax or explicit shell (#2568). `.deft/core/scm/github.md` (#2157/#2369): PS encoding→`deft verify:encoding` (#798); TS capture; cascade→`deft pr:wait-mergeable-and-merge`; SCM→`deft verify:scm-boundary`.
 
 ## Development Process
 

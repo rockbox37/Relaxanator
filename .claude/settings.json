@@ -21,6 +21,38 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Task|SubagentStart|spawn_subagent|start_agent|CreateAgent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deft hook:dispatch --host claude --event tool.before",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deft hook:dispatch --host claude --event session.compact",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deft hook:dispatch --host claude --event session.compact",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }

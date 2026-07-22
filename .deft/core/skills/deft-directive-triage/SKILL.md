@@ -1,12 +1,13 @@
 ---
 name: deft-directive-triage
 description: >-
-  Triage-cache hygiene and "what's next?" queue selection -- the agent-facing
-  playbook for syncing the triage cache, classifying candidates, presenting a
-  ranked queue, walking per-item decisions (accept / reject / defer / needs-ac
-  / mark-duplicate), and auditing the session. Use when the operator asks what
-  to work on next, wants to build a cohort, work the cache, or run a triage
-  hygiene pass.
+  Triage-cache hygiene and "what's next?" work selection (ordered plan or
+  ranked queue) -- the agent-facing playbook for syncing the triage cache,
+  classifying candidates, presenting a ranked queue or binding to an active
+  plan-sequence, walking per-item decisions (accept / reject / defer /
+  needs-ac / mark-duplicate), and auditing the session. Use when the operator
+  asks what to work on next, wants to build a cohort, work the cache, or run a
+  triage hygiene pass.
 triggers:
   - triage
   - triage hygiene
@@ -26,7 +27,7 @@ triggers:
 
 # Deft Directive Triage
 
-Triage-cache hygiene + "what's next?" queue selection. Operates against the unified `.deft-cache/github-issue/` mirror (#883 Story 2) and the append-only `xbrief/.eval/candidates.jsonl` audit log (#845 Story 2); writes only via the canonical `task triage:*` verbs.
+Triage-cache hygiene + "what's next?" work selection (ordered plan or ranked queue). Operates against the unified `.deft-cache/github-issue/` mirror (#883 Story 2) and the append-only `xbrief/.eval/candidates.jsonl` audit log (#845 Story 2); writes only via the canonical `task triage:*` verbs.
 
 Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 
@@ -38,11 +39,17 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 
 ! Every numbered-menu prompt rendered in this skill (Phase 2 candidate selection, Phase 3 per-item decision walk) ! MUST follow [`../../contracts/deterministic-questions.md`](../../contracts/deterministic-questions.md): render the canonical numbered menu in chat unless the host UI visibly preserves numeric option labels and returns numeric selections or exact displayed option text. The final two numbered options are `Discuss` and `Back`, in that order, and the Discuss-pause semantic from the contract applies verbatim -- on `Discuss` the agent halts the in-progress sequence and resumes only on an explicit user signal.
 
+## Work selection fork (#2542 / #2402)
+
+Directive does not guess your mix: **ordered plan** (`task plan-sequence:*`) when you know the next units in order, or **ranked queue** (`task triage:queue`) when picking from the backlog. Labels bias the queue; they do not override an active plan.
+
+! Before Phase 2 on bare "what's next?", run `task plan-sequence:current`. Active sequence → that entry only; exhausted → fail closed. Explicit "what's the queue?" / "build a cohort" → Phase 2. See `commands.md` § Backlog Triage → Two paths.
+
 ## Phase 0 -- Sync
 
 ! Probe cache freshness before doing any classification or selection. Stale cache reads produce stale decisions; the gate is the contract.
 
-1. ! Run `task verify:cache-fresh` (D5 / #1127). Exit 0 -> proceed to Phase 1. Exit 1 (stale or blocked) -> refresh per the printed remediation. Exit 2 (no bootstrap) -> run `task triage:bootstrap` first.
+1. ! Run `task verify:cache-fresh` (D5 / #1127). Exit 0 -> proceed to Phase 1. Exit 1 (stale or blocked) -> refresh per the printed remediation. Exit 2 (no bootstrap) -> run `task triage:bootstrap` first. When the cache has zero entries, read paths auto-fetch from GitHub first (#2575).
 2. ~ Refresh path: `task cache:fetch-all -- --source=github-issue --repo OWNER/NAME` for an already-bootstrapped project (idempotent, TTL-aware, re-applies the #883 scanner v2 quarantine rules); `task triage:bootstrap` for a first-time seed.
 3. ~ If `xbrief/active/*.xbrief.json` references are in play, run `task triage:refresh-active` to compare cached `meta.json.fetched_at` against live upstream `updatedAt` and surface drift before the queue is rendered.
 4. ~ When the one-liner emitted by the session-start ritual carries a `[scope-drift] N` segment (D14 / #1133), run `task triage:scope-drift` to see the per-label / per-milestone breakdown of upstream signals on cached open issues that fall outside the active `plan.policy.triageScope[]` subscription. The output documents both opt-in (`task triage:subscribe -- --label=<L>`) and opt-out (`task triage:scope-drift -- --ignore-label=<L>`) paths -- pick one before walking the queue so the cohort reflects the operator's current intent rather than a stale subscription.
@@ -59,14 +66,9 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 5. ⊗ Re-classify items already terminally decided (accept / reject / mark-duplicate) without explicit operator approval -- the audit log is append-only and supersession runs through Layer 5 (`task triage:reset <N>`), not through silent re-walks.
 6. ⊗ Block issue creation solely because no label was selected, or invent ad hoc labels outside the repository's existing label set.
 
-
-## Ordered-plan precedence (#2402)
-
-! Before queue selection on bare "what's next?", run `task plan-sequence:current`. Active sequence → that entry only; exhausted → fail closed and ask. Explicit "what's the queue?" / "build a cohort" still use Phase 2. Chaining is non-authorizing. ⊗ Reuse triage `continuationNumbers`/`continuationOrder` for ordered-plan state.
-
 ## Phase 2 -- Present
 
-! When no ordered-plan is active, render `task triage:queue` before suggesting work (#1149). Active sequence yields to the ordered-plan entry (#2402).
+! Apply the Work selection fork gate (#2542): when no ordered-plan is active, render `task triage:queue` before suggesting work (#1149). Active sequence yields to the ordered-plan entry (#2402).
 
 1. ! Run `task triage:queue --limit=N` (D11 / #1128) -- default `N=10` per the umbrella Current Shape v3 WIP cap. Output is grouped `[RESUME]` -> `[URGENT]` -> untriaged -> other; within-group ordering follows the consumer-supplied `plan.policy.triageRankingLabels[]` (framework default empty per §12 boundary), tiebroken by `updated_at` descending.
 2. ! For per-item detail, run `task triage:show <N>` -- prints the cached upstream payload, the latest triage decision, the audit timeline, and the active-xBRIEF reference flag. Exit 0 on hit, 1 on cache miss (re-sync per Phase 0).
@@ -118,6 +120,7 @@ What would you like to do with this candidate?
 ## Anti-Patterns
 
 - ⊗ Recommend a specific issue without first consulting `task triage:queue` (binding under AGENTS.md `## Cache-as-authoritative work selection (#1149)`).
+- ⊗ Conclude "nothing to do" from `xbrief/{pending,active}` scans or live GitHub reads alone — `task triage:queue` is the ranked superset (#2576).
 - ⊗ Walk the queue against a stale cache (Phase 0 gate skipped).
 - ⊗ Reimplement audit-log append / `proposed/` write inline -- the `task triage:*` verbs own those surfaces (#845, #883).
 - ⊗ Treat `defer` / `needs-ac` as terminal -- they intentionally resurface on the next pass.

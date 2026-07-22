@@ -12,6 +12,20 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 
 ---
 
+## TypeScript 7 side-by-side (pre-7.1) (#2591)
+
+- **Applies when:** a Deft TypeScript project (or agent upgrading its toolchain) needs TypeScript 7 before ~7.1, while `typescript-eslint` and other programmatic consumers still require the TS 6 compiler API. This is **not** a Directive framework-version migration — read [languages/typescript.md](./languages/typescript.md) instead of treating it like a `deft update` step.
+- **Safe to auto-run:** Yes for the alias + Dependabot-ignore edits in the project's own `package.json` / `.github/dependabot.yml` when following the documented pattern.
+- **Restart required:** No. Re-run `task check` / `npm install` (or your package manager equivalent) after changing devDependencies.
+- **Commands:**
+  - Read the full pattern: [languages/typescript.md — TypeScript 7 side-by-side (pre-7.1)](./languages/typescript.md#typescript-7-side-by-side-pre-71)
+  - After edits: `npm install` (or `pnpm install` / `yarn`) then `task check`
+- **References:**
+  - [#2591](https://github.com/deftai/directive/issues/2591) — document side-by-side setup for Deft TypeScript projects.
+  - [deftai/cartograph#111](https://github.com/deftai/cartograph/pull/111) — precedent implementation.
+
+---
+
 ## Helped + health metrics relocation (#2545)
 
 - **Applies when:** any project that upgraded to a release shipping #2545 and still has append logs under `<lifecycle-root>/.eval/results/crud-metrics.jsonl` or `health-history.jsonl` inside the git worktree.
@@ -73,6 +87,8 @@ From v0.55.1 onwards `@deftai/directive` is published on npm. The canonical cons
    ```
 
    This re-copies the vendored `.deft/core/` payload and refreshes project-root `.githooks/` (#2049).
+
+   **Prettier / format gate (#2534):** managed `.deft/core/` is outside your consumer Prettier gate. `directive init` and `directive update` idempotently deposit or heal a root `.prettierignore` entry for `.deft/core/` so `prettier --check .` (and `task check` when Prettier is wired) does not fail on the vendored framework payload. You do not need to reformat `.deft/core/` after upgrade.
 
    > **`deft update` is the single canonical upgrade verb (#2064).** The older `deft install-upgrade` (and its `task upgrade` maintainer alias) now print a one-line notice and delegate to this exact `deft update` path — they no longer have their own semantics. Previously `install-upgrade` only rewrote the marker/manifest without swapping the payload, so on a stale deposit it reported a false "Project already at X. Nothing to do." Use `deft update`; there is nothing `install-upgrade` does that `deft update` does not.
 
@@ -376,7 +392,7 @@ Run those from your project root after any bucket-specific hops (`deft update` r
   - `deft verify:hooks-installed` (confirm pre-commit/pre-push dispatch via `deft verify:branch`, `deft verify:encoding`, `deft preflight-gh`)
   - `deft doctor` (install integrity + managed-section freshness)
 
-If `deft update` is unavailable (older deposit), fall back to `deft setup` to re-install the hooks path and copy current hook templates.
+If `deft update` is unavailable (older deposit), run `deft init` on a greenfield tree or upgrade the global CLI first — `task setup` / `deft setup` only wires `core.hooksPath` and refuses when project-root `.githooks/` is missing (#2530).
 
 ---
 
@@ -417,6 +433,17 @@ Run it from your project root. Unlike the legacy metadata-only verbs, this comma
 - Old AGENTS.md thin pointers and upgrade prose that pre-date the unified handoff
 
 All documentation (README, AGENTS.md, this file, `deft-directive-sync` skill) now points agents at the headless installer command + doctor handoff as the authoritative flow. Old sections below are retained for migration archaeology only.
+
+---
+
+## Coverage hotspots + pre-PR headroom (#2683)
+
+After `deft update` / deposit, consumer projects gain:
+
+- `deft coverage:hotspots` (and deposited `task coverage:hotspots`) — cheap branch headroom + hotspot report from the latest `coverage/coverage-final.json`; `--json` for agents.
+- Updated `deft-directive-pre-pr` guidance — run targeted coverage on changed modules first, exercise both sides of new branches, aim for ≥ project floor + 0.3–0.5pp headroom, then use `coverage:hotspots` before full `task check`.
+
+This complements (does not replace) `deft verify:forward-coverage` (#1310) or `--allow-coverage-debt=#N` (#2573).
 
 ---
 

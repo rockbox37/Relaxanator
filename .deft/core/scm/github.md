@@ -70,6 +70,42 @@ task scm:body:comment:edit -- \
 
 The helper's stdout is the live post-mutation GitHub object, so inspect the `body` field from that output first. If you need a second manual verification, use live REST through `gh api repos/OWNER/REPO/issues/comments/<id>` or `gh api repos/OWNER/REPO/issues/<number>`; do not use `ghx` for immediate read-back after the mutation because it may return a cached GET.
 
+### Win32 issue-body read-modify-write footgun (#2744 / #2607)
+
+#2646 covers safe **write** delivery (`--body-file`). A distinct failure mode persists on **read-modify-write** (amending an existing issue body): capturing `gh api repos/OWNER/REPO/issues/<N> --jq .body` into a PowerShell variable, concatenating amended text, writing a temp file, and PATCHing.
+
+When `--jq` emits JSON with embedded newlines, PowerShell 5.x/7+ often stores the result as a **string array** (`string[]`). String interpolation or `$body + $append` coerces via `$OFS` (Output Field Separator, default single space), collapsing paragraph breaks into one line. The PATCH then persists a flattened body; agents may treat a zero exit code as success unless postcondition verify catches the damage (#2607).
+
+**Canonical RMW recipe (all platforms; mandatory on win32):**
+
+1. Fetch the live body to a UTF-8 file — no shell capture:
+
+```bash
+task scm:body:issue:fetch -- \
+  --repo OWNER/REPO \
+  --issue <N> \
+  --out-file "$bodyFile"
+```
+
+2. Edit `$bodyFile` with the editor/Write tool or Python `pathlib` — not PowerShell string concat on captured `gh` output.
+
+3. PATCH via verified edit:
+
+```bash
+task scm:body:issue:edit -- \
+  --repo OWNER/REPO \
+  --issue <N> \
+  --body-file "$bodyFile"
+```
+
+`scm:body:issue:edit` re-fetches after PATCH and fails closed when the live body is flattened, mojibaked, or otherwise mismatched vs the intended payload (#2607).
+
+- ! For issue-body RMW on win32, MUST use `task scm:body:issue:fetch --out-file` then file edit then `task scm:body:issue:edit --body-file` — never rebuild the body from PowerShell-captured `gh api --jq .body` output
+- ⊗ Capture-concat of `gh api repos/.../issues/<N> --jq .body` (or `$body = (gh api ... | ConvertFrom-Json).body`) into PowerShell variables for amendment — the string[]/$OFS join destroys multi-line Markdown bodies silently
+- ⊗ Treat a successful `gh api -X PATCH` exit code as proof the body survived intact without read-back — use `scm:body:issue:edit` postcondition verify instead
+
+**Incident record:** #2087 (automation-declaration body corruption), #2741 (win32 RMW flattening during issue amend), #1492 (issue-body integrity class). Parent helper: #2607 / PR #2750.
+
 ## PR Workflow Conventions
 
 ### Merge Strategy
@@ -149,6 +185,43 @@ PowerShell 5.x (Windows default) uses UTF-16LE internally and may inject a BOM o
 
 - ! Never paste multi-line PowerShell string literals (here-strings `@" ... "@`) directly into the Warp agent input box -- Warp splits multi-line input across separate command blocks, causing syntax errors or silent truncation. Always write multi-line PS content to a temp file first (e.g. `[System.IO.File]::WriteAllText($tmpFile, $content, [System.Text.UTF8Encoding]::new($false))`), then use the temp file path in subsequent commands
 
+### Windows PowerShell: safe multi-line git/gh bodies (#2646 / #1417)
+
+On Windows PowerShell (5.1 and often `pwsh` when commands are not routed through bash), multi-line git and gh payloads MUST NOT be authored inline in agent shell commands. Bash-style heredocs, POSIX here-document redirection (including `<<<`), inline multi-line `--body` flags, and multi-line PS here-strings pasted into the agent command box all fail or corrupt the payload before git/gh receives it. Related but distinct failure modes: #240 (Warp splits PS here-strings across command blocks) and #798 (PS 5.1 encoding corruption on read/write round-trips -- use the safe write path when creating temp files).
+
+**Canonical pattern (Windows PowerShell agents):**
+
+1. Write the multi-line payload to a UTF-8 (no BOM) temp file in the OS temp directory (`$env:TEMP` / `[System.IO.Path]::GetTempFileName()`), not the worktree.
+2. Prefer creating that file **outside the shell** (editor/Write tool, Node script on disk) so host/agent shell wrappers cannot rewrite strings that look like git commit or gh body invocations.
+3. Pass the file to git/gh: `git commit -F <file>`, `gh pr create --body-file <file>`, `gh issue create --body-file <file>`, `gh issue comment --body-file <file>`, or `gh api ... --input <file>` (JSON bodies for PATCH/POST).
+
+**PowerShell example (commit message + PR body):**
+
+```powershell
+$bodyFile = [System.IO.Path]::GetTempFileName()
+[System.IO.File]::WriteAllText($bodyFile, $prBody, [System.Text.UTF8Encoding]::new($false))
+git commit -F $bodyFile
+gh pr create --title "feat: example" --body-file $bodyFile
+```
+
+**Recovery pattern for issue/PR PATCH (when wrappers corrupt inline payloads):** write a Node (or other) script to disk with the editor/Write tool, have it emit JSON to a temp file, then `gh api -X PATCH ... --input <file>` via `execFileSync` / equivalent. Verify the posted body afterward for injected Co-authored-by or Made-with markers.
+
+**Dogfood failure modes (Cursor on win32, 2026-07-19, #2646):**
+
+1. Bash `<<<` in a PowerShell script -- parse abort (`Missing file specification after redirection operator`); the whole script never runs.
+2. Host wrapper rewrote `git commit ...` prose inside an issue-body PATCH -- injected angle brackets made PowerShell treat `<...>` as operators (`The '<' operator is reserved for future use`).
+3. Host wrapper rewrote inline `--body "..."` prose -- corrupted failure-mode examples mid-PATCH.
+4. File-staged `gh api --input <file>` (payload written outside the shell) succeeded.
+
+- ! Under Windows PowerShell, MUST use temp-file delivery for all multi-line git commit messages (`git commit -F`) and gh bodies (`--body-file` / `gh api --input`) -- never bash heredocs, `<<<`, or inline multi-line `--body` flags
+- ! For `gh issue create`, `gh issue comment`, and `gh pr create`, long bodies MUST use `--body-file` (temp file), not an inline `--body` flag (#1417)
+- ! Create temp payload files via a safe UTF-8 write path (#798) -- prefer editor/Write/Node on disk over PS here-strings in the agent command box (#240)
+- ⊗ Use bash-style heredocs or `<<<` redirection under Windows PowerShell -- not valid; payloads never reach git/gh intact
+- ⊗ Embed multi-line markdown inside a PowerShell agent shell string for git/gh -- quoting splits arguments, angle brackets parse as operators, and host wrappers may rewrite the text
+- ⊗ Build multi-line gh/git PATCH JSON inside an instrumented agent shell one-liner -- stage the file first, then `gh api --input`
+
+Refs #240, #798, #1417, #2646.
+
 ## PowerShell platform-conditional rules for agents (#798 / #1353)
 
 These runtime-specific rules are lazy-loaded here rather than shipped in the always-loaded AGENTS.md, so they don't crowd context for sessions that can't trigger them (#2157 / #1882). Load this section **before** the risky operation when your session matches one of the triggers below.
@@ -186,6 +259,7 @@ Rationale + recurrence record: `docs/analysis/2026-07-02-agents-md-incident-rule
 Rationale + recurrence record + cross-references: `docs/analysis/2026-07-02-agents-md-incident-rule-rationale.md` § Cascade automation surface (#1369). Canonical surface: `task pr:wait-mergeable-and-merge`.
 
 - ! Cascade automation on the Grok Build hybrid path MUST go through `task pr:wait-mergeable-and-merge -- <N> --repo <owner>/<repo>`. Do NOT hand-roll a `while ...; do task pr:merge-ready ...; done` shell loop or a per-cascade ad-hoc Python monitor. The helper composes the resilient wait-until-ready loop (#1368) with the Layer-3 protected-issue check (#701) and the `gh pr merge --squash --delete-branch --admin` invocation behind a single three-state exit (0 merged / 1 timeout-or-escalation / 2 config error).
+- ! Multi-PR merge cascades MUST pass `--cascade` on each `task pr:wait-mergeable-and-merge` invocation so merge-tree-clean PRs whose base SHA is behind the current target branch HEAD are refused (semantically stale pre-spine CI, #2385). After the first merge in a cascade, also pass `--require-master-ci-green` before merging the next PR. Rebase/update-branch onto the post-spine target and wait for fresh green CI before re-invoking.
 - ! The per-PR atomic gate (`task pr:merge-ready -- <N> && gh pr merge <N> --squash --delete-branch --admin`) documented in `content/skills/deft-directive-swarm/SKILL.md` Phase 5 -> 6 STILL applies for any in-cascade merge an operator runs by hand. The Wave-3 cascade surface is the automated wrapper; the per-PR atomic gate is the manual freshness-window-atomic check. The two co-exist -- one does not retire the other.
 - ! When `--protected <issue-numbers>` is supplied, the helper runs the protected-issue check (#701) BEFORE the wait loop. A persistent `closingIssuesReferences` link short-circuits the cascade with exit 1 (escalation) AHEAD of any `gh pr merge` call. New cascade scripts MUST preserve this ordering -- the protected-issue check is structurally a pre-condition that cannot be resolved by waiting.
 - ⊗ Hand-roll a cascade `while ... task pr:merge-ready` shell loop (or equivalent ad-hoc Python monitor) when `task pr:wait-mergeable-and-merge` is available. The Wave-1+2 hardening is in the helpers the new task composes; hand-rolled loops re-introduce the `head: None` / babysit-each-PR failure mode #1369 closes.
@@ -252,6 +326,14 @@ Following a v1.0.0 release, commits:
 - ! Run `task check` for quality gates
 - ~ Upload coverage reports
 
+**Framework CI runners (#2672)**:
+- ! `deftai/directive` required CI prefers Blacksmith (`blacksmith-4vcpu-ubuntu-2404`) for TypeScript and Go cost
+- ! Capacity watchdog (~20 minute budget): if a Blacksmith primary job stays `queued` with `runner_name` null and no `started_at`, cancel that queued attempt (concurrency cancel-in-progress) and run the same suite on `ubuntu-latest`
+- ! Branch-protection required check names (`TypeScript (build + lint + test)`, `Go (test + build)`) live **only** on the aggregator jobs — never on primary/failover lane names
+- ⊗ Fail over `in_progress` jobs (execution hangs) — those stay timeout + fix (#2652); capacity failover is queue-stall only
+- ! Consumer scaffolds and `npm-publish.yml` stay on GitHub-hosted `ubuntu-latest` (Blacksmith is opt-in for consumer orgs; npm `--provenance` requires GH-hosted)
+- ! Agents seeing `runner_capacity_stall` / `RUNNER_CAPACITY_STALL` MUST wait for auto-failover — ⊗ `--skip-ci` as a capacity remedy
+
 **Security**:
 - ! Use GitHub Secrets for CI/CD credentials
 - ⊗ Commit secrets to repo
@@ -309,7 +391,7 @@ Phrasing from `deft policy:show --field=allowDirectCommitsToMaster`. When OFF (d
 
 ## Local git hooks (#747 / #2049)
 
-Project-root `.githooks/` enforce branch policy and encoding gates through the **`deft` CLI only** — no Python `scripts/*.py` dispatch (#2049). Hooks are installed idempotently via `deft setup` (`git config core.hooksPath .githooks`).
+Project-root `.githooks/` enforce branch policy and encoding gates through the **`deft` CLI only** — no Python `scripts/*.py` dispatch (#2049). `deft init` and `deft update` deposit hook files; `deft setup` / `task setup` wires `core.hooksPath=.githooks` and refuses when the directory is missing (#2530).
 
 | Hook | Dispatches | Purpose |
 |------|------------|---------|
@@ -318,7 +400,7 @@ Project-root `.githooks/` enforce branch policy and encoding gates through the *
 
 - ! Verify wiring after install or framework upgrade: `deft verify:hooks-installed` (also wired into `deft check`).
 - ! After upgrading the framework payload, run `deft update` from the project root to refresh `.githooks/` to the current TS-native templates (#2049). Stale hooks that still invoke `python scripts/preflight_branch.py` or other legacy paths fail `deft verify:hooks-installed`.
-- ~ Recovery when hooks are stale or broken: `deft setup` (re-installs hooks path) or `deft update` (refreshes hook files from the deposited payload).
+- ~ Recovery when hooks are stale or broken: `deft update` (deposits/refreshes hook files from the framework payload, including on an already-current deposit) then `deft setup` / `task setup` (wires `core.hooksPath` when files are present).
 
 ## Destructive gh verbs (#1019)
 

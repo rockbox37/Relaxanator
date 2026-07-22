@@ -87,6 +87,12 @@ includes:
   verify:
     taskfile: ./tasks/verify.yml
     optional: true
+  coverage:
+    taskfile: ./tasks/coverage.yml
+    optional: true
+  review-monitor:
+    taskfile: ./tasks/review-monitor.yml
+    optional: true
   architecture:
     taskfile: ./tasks/architecture.yml
     optional: true
@@ -151,6 +157,9 @@ includes:
     optional: true
   session:
     taskfile: ./tasks/session.yml
+    optional: true
+  lifecycle:
+    taskfile: ./tasks/lifecycle.yml
     optional: true
   plan-sequence:
     taskfile: ./tasks/plan-sequence.yml
@@ -321,6 +330,9 @@ includes:
   value:
     taskfile: ./tasks/value.yml
     optional: true
+  product-signal:
+    taskfile: ./tasks/product-signal.yml
+    optional: true
   # Pack-slicing surface (#1283 design, #1294 pilot, ADR-001 Layer B). Exposes
   # `task packs:slice` (named-slice API), `task packs:render` (regenerate the
   # meta/lessons.md projection), and `task packs:verify-drift` (the drift gate,
@@ -361,7 +373,12 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'check --framework-root "{{.TASKFILE_DIR}}" --project-root "{{.USER_WORKING_DIR}}"' 
+          ENGINE_CMD: 'check --framework-root "{{.TASKFILE_DIR}}" --project-root "{{.USER_WORKING_DIR}}"'
+
+  test:coverage:
+    desc: "Run tests with coverage (alias for ts:test; canonical coverage path used by task check, #2528)"
+    cmds:
+      - task: ts:test
 
   check:framework-source:
     desc: "Run all framework source-repo pre-commit checks (TS-only after #1860). Sole wired consumer of maintainer-only core:build / core:clean."
@@ -373,6 +390,7 @@ tasks:
       - verify:rule-ownership
       - verify:biome-config
       - verify:content-manifest
+      - verify:skill-external-fetch-gate
       - verify:contract-drift
       - verify:cursor-tier1
       - verify:go-freeze
@@ -388,6 +406,7 @@ tasks:
       - verify:cache-fresh
       - verify:pack-drift
       - verify-wip-cap-framework-self-check
+      - verify:orphan-active
       - verify:agents-md-budget
       - verify-eval-health-relocation-framework-check
       - verify-eval-triggers-relocation-framework-check
@@ -406,6 +425,7 @@ tasks:
       - verify:branch
       - verify:cache-fresh
       - verify:wip-cap
+      - verify:orphan-active
       - vbrief:validate
       - verify-strategy-output
     cmds:
@@ -460,7 +480,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'validate-strategy-output --project-root "{{.USER_WORKING_DIR}}"' 
+          ENGINE_CMD: 'validate-strategy-output --project-root "{{.USER_WORKING_DIR}}"'
 
   # Pack-projection drift gate (#1294 / #1283, ADR-001). User-facing alias for
   # `packs:verify-drift`, defined at the root Taskfile so it carries the
@@ -550,6 +570,18 @@ tasks:
       # detect the no-op so the task prints a friendly message rather than
       # silently re-asserting on every invocation.
       - |
+        missing=0
+        for f in pre-commit pre-push _deft-run.sh; do
+          if [ ! -f ".githooks/$f" ]; then
+            missing=1
+            break
+          fi
+        done
+        if [ "$missing" = 1 ]; then
+          echo "❌ deft setup refused: project-root .githooks/ is missing hook files (#2530)."
+          echo "  Recovery: run \`deft update\` (or \`deft init\` on a greenfield tree) to deposit hooks first."
+          exit 1
+        fi
         configured=$(git config --get core.hooksPath || true)
         if [ "$configured" = ".githooks" ]; then
           echo "✓ core.hooksPath already set to .githooks (no change)."
@@ -632,7 +664,7 @@ tasks:
   # Per `conventions/task-caching.md` (#574): tasks that accept user-facing recovery flags
   # via {{.CLI_ARGS}} (here: --dry-run / --skip-tag / --skip-release / --allow-dirty /
   # --repo / --no-draft / --allow-low-downloads / --allow-data-loss / --force-strict-0 /
-  # --owner / --keep-repo) MUST NOT declare `sources:` / `generates:` -- the cached `cmds:`
+  # --owner / --destroy-repo) MUST NOT declare `sources:` / `generates:` -- the cached `cmds:`
   # skip would silently discard the recovery flag.
   #
   # Path resolution uses `{{.TASKFILE_DIR}}/scripts/<script>.py` directly because these
@@ -675,7 +707,7 @@ tasks:
           ENGINE_CMD: 'release-rollback {{.CLI_ARGS}}'
 
   release:e2e:
-    desc: "End-to-end release rehearsal against an auto-created+destroyed temp repo (#716) -- task release:e2e [-- --dry-run] [--owner OWNER] [--keep-repo]"
+    desc: "End-to-end release rehearsal against an auto-created temp repo (#716, #2572 keep+report default) -- task release:e2e [-- --dry-run] [--owner OWNER] [--destroy-repo]"
     deps: [ts:build]
     dir: '{{.USER_WORKING_DIR}}'
     cmds:
