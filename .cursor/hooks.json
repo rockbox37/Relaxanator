@@ -11,7 +11,19 @@
       {
         "command": "deft hook:dispatch --host cursor --event tool.before",
         "matcher": "Edit|Write|WriteFile|CreateFile|MultiEdit|NotebookEdit|StrReplace|SearchReplace|Delete|DeleteFile|ApplyPatch|apply_patch",
-        "failClosed": true,
+        "failClosed": false,
+        "timeout": 5
+      },
+      {
+        "command": "deft hook:dispatch --host cursor --event tool.before",
+        "matcher": "Task|SubagentStart|spawn_subagent|start_agent|CreateAgent",
+        "failClosed": false,
+        "timeout": 5
+      }
+    ],
+    "preCompact": [
+      {
+        "command": "deft hook:dispatch --host cursor --event session.compact",
         "timeout": 5
       }
     ]

@@ -37,11 +37,19 @@ Legend (from RFC2119): !=MUST, ~=SHOULD, ≉=SHOULD NOT, ⊗=MUST NOT, ?=MAY.
 task policy:allow-direct-commits -- --confirm
 ```
 
-This writes `plan.policy.allowDirectCommitsToMaster = true` on `xbrief/PROJECT-DEFINITION.xbrief.json` with a capability-cost disclosure. After the release completes (or if the session aborts), restore enforcement:
+This writes `plan.policy.allowDirectCommitsToMaster = true` on `xbrief/PROJECT-DEFINITION.xbrief.json` with a capability-cost disclosure. After the release completes (or if the session aborts), restore enforcement **and commit the restore in the same closeout** (#2623):
 
 ```
 task policy:enforce-branches
+# enforce flips the typed flag to false locally — the commit that lands that
+# flip cannot use the typed opt-in anymore. Scope the emergency env bypass to
+# ONLY this closeout commit+push (do NOT export it for the whole session):
+DEFT_ALLOW_DEFAULT_BRANCH_COMMIT=1 git add xbrief/PROJECT-DEFINITION.xbrief.json meta/policy-changes.log
+DEFT_ALLOW_DEFAULT_BRANCH_COMMIT=1 git commit -m "chore(policy): restore branch protection after vX.Y.Z"
+DEFT_ALLOW_DEFAULT_BRANCH_COMMIT=1 git push origin HEAD
 ```
+
+⊗ Leave `allowDirectCommitsToMaster=true` on origin after publish. ⊗ Run `policy:enforce-branches` and leave the dirty restore under protection ON without committing (forces a follow-up PR — the v0.79.0 / #2619 failure mode).
 
 **Branch-guard probe (either path).** Regardless of which opt-out path you chose, confirm the guard passes before Phase 1 mutates state:
 
@@ -72,6 +80,17 @@ The release pipeline's Step 9/10/11 git mutations carry the bypass in subprocess
 ## Phase 1 — Pre-flight
 
 ! Validate the local + remote state before any irreversible action.
+
+
+### Parallel prep — #1880 Gap D (#2692)
+
+! Phase 1 long steps (`task reconcile:issues -- --apply-lifecycle-fixes`, cache refresh when ritual-stale, `task ci:local` / `task check`) and Phase 3 `task release:e2e` MUST be backgrounded or subagent-dispatched when the host supports it (Cursor: Task tool `run_in_background: true`), with progress surfaced via DONE/heartbeat — same ownership as review-cycle / merge-ready workers (#1880 Gap D). The operator conversation MUST stay interactive for version magnitude confirmation, `--summary`, and the Phase 2 dry-run `yes`/`back`/`quit` gate while prep runs.
+
+! **Checklist:** Phase 1 prep parallelized — long prep started in background before (or while) collecting version magnitude / summary / npm irrevocability disclosure.
+
+! On Windows PowerShell, do NOT wrap long task output in `Select-Object -Last` (it buffers until the process exits); stream to the terminal or log to a file and read incrementally. See `scm/github.md` § #2646 / Windows encoding guidance for related PS pitfalls.
+
+⊗ Foreground-block the operator chat on reconcile / `ci:local` / `release:e2e` when background dispatch is available (#1880 Gap D / #2692).
 
 ~ **Frozen Go-installer bridge (#1912 / #1972 / #1987):** by default a release tag *above* the frozen line (the `LAST_GO_INSTALLER` constant in `packages/core/src/legacy-bridge/sot.ts`) will NOT rebuild the 6 Go binaries -- the CI `freeze-gate` job in `.github/workflows/release.yml` skips the build (the run stays green; npm still ships from the separate `npm-publish.yml`). If this release must rebuild the Go installer, follow the runbook in [`docs/RELEASING.md`](../../../docs/RELEASING.md) § Frozen Go-installer bridge: roll `LAST_GO_INSTALLER` forward to the cut tag BEFORE tagging (pinning to the exact cut tag both releases the gate AND re-freezes at the new line), then see that section's "After the release" step for the re-pin.
 
@@ -113,13 +132,17 @@ The dry-run prints `[N/13] <step>... DRYRUN (would <action>)` for every pipeline
 
 ## Phase 3 — E2E sanity
 
-! Invoke `task release:e2e` against an auto-created+destroyed temp repo to verify the full pipeline shape works end-to-end before touching the real repo.
+! Invoke `task release:e2e` against an auto-created temp repo to verify the full pipeline shape works end-to-end before touching the real repo.
+
+! **#1880 Gap D (#2692):** `task release:e2e` is a long-running step — MUST background / subagent-dispatch it when the host supports it so Phase 2 confirmation and other human gates stay interactive. Do not wrap its output in PowerShell `Select-Object -Last`.
 
 ```
 task release:e2e
 ```
 
-The harness provisions `deftai/deftai-release-test-<ts>-<uuid6>`, runs the smoke-test rehearsal, and destroys the temp repo in a `try/finally` clause. Cleanup runs even if the rehearsal fails. If `gh repo delete` fails, surface the manual-cleanup hint to the user and continue.
+The harness provisions `deftai/deftai-release-test-<ts>-<uuid6>`, runs the smoke-test rehearsal, and **by default keeps** the temp repo (#2572). Stderr always includes the full `owner/slug` and a copy-pasteable manual-cleanup command (`gh repo delete <owner>/<slug> --yes`). Privileged environments (CI or an operator with `delete_repo`) MAY pass `task release:e2e -- --destroy-repo` to attempt auto-delete; destroy failure emits a WARN and does **not** block Phase 4 when the rehearsal succeeded.
+
+! After Phase 3, the agent MUST NOT retry or escalate temp-repo deletion. Include any leftover temp repo(s) in the phase summary for the operator to clean up manually.
 
 ! Treat a non-zero exit from `task release:e2e` as a hard refusal to proceed to Phase 4. Surface the diagnostic and ask whether to debug (return to Phase 1) or abort (`quit`).
 
@@ -133,7 +156,9 @@ The harness provisions `deftai/deftai-release-test-<ts>-<uuid6>`, runs the smoke
 
 ! **Last human gate before npm (#1972, #2002).** Immediately before invoking `task release`, re-state that the tag push in this step will irrevocably publish all four `@deftai/directive*` packages to npm via `.github/workflows/npm-publish.yml`. There is no undo on npm; only forward recovery (deprecate / dist-tag / patch). Proceed only when the operator explicitly confirms.
 
-! Invoke `task release -- <version>` (NO `--dry-run`, NO `--skip-tag`, NO `--skip-release`). If Phase 1 collected an operator summary, pass `--summary "<text>"` so the production cut writes the same blockquote the dry-run previewed.
+! Invoke `task release -- <version>` (NO `--dry-run`, NO `--skip-tag`, NO `--skip-release`, NO `--skip-ci`). If Phase 1 collected an operator summary, pass `--summary "<text>"` so the production cut writes the same blockquote the dry-run previewed.
+
+⊗ Use `--skip-ci` on a production cut except under explicit operator incident review — it skips Step 5 vitest coverage and ships untested npm builds (#2652). When unavoidable, pass `--allow-skip-ci=#N` citing the tracked issue; Step 5 emits a loud WARN. See [`docs/RELEASING.md`](../../../docs/RELEASING.md) § Vitest coverage hang recovery. The next patch after the hang fix must cut without `--skip-ci`.
 
 ```
 task release -- <version> --summary "<text>"
@@ -269,6 +294,8 @@ Where `<one-line guidance>` is one of:
 
 ## Anti-Patterns
 
+- ⊗ Foreground-block the operator chat on Phase 1 long prep (`reconcile:issues`, cache refresh, `ci:local` / `check`) or Phase 3 `release:e2e` when background / subagent dispatch is available (#1880 Gap D / #2692) — the interactive channel must stay free for version confirmation, `--summary`, and the Phase 2 dry-run gate
+- ⊗ Wrap long release-prep task output in PowerShell `Select-Object -Last` — it buffers until exit and makes the session look hung (#2692)
 - ⊗ Run `task release` without a Phase 2 dry-run preview -- the dry-run is the only safe place to catch a bad version, malformed CHANGELOG, or wrong base branch
 - ⊗ Skip Phase 3 (e2e rehearsal) on the assumption that "the dry-run is enough" -- the e2e harness catches gh-CLI auth issues, repo permission gaps, and pipeline-shape regressions that the dry-run cannot detect
 - ⊗ Pass `--no-draft` to `task release` without explicit operator opt-in -- the default-draft contract is the foundation of the safety hardening surface
@@ -281,4 +308,6 @@ Where `<one-line guidance>` is one of:
 - ⊗ Hardcode `master` as the base branch -- delegate to the configured base branch from `task release --base-branch <branch>`
 - ⊗ Skip the post-create verify-isDraft gate (#724) -- a successful `gh release create` exit code does NOT prove the release actually landed in draft state; the 5-second poll-and-flip gate in `scripts/release.py` Step 11 is the only safety net against operator-error variants and partial-success races, and any manual recovery path that bypasses `scripts/release.py` MUST run `gh release view --json isDraft` followed by `gh release edit --draft=true` on `isDraft=false` before handing off to Phase 5
 - ⊗ Manually rewrite the Phase 8 Slack `*Summary*:` line to deviate from the CHANGELOG `[<version>]` blockquote -- the canonical narrative is authored ONCE at Phase 1 via `--summary` and propagates verbatim across all three audiences (CHANGELOG / GitHub release body / Slack). Per-audience hand-edits create documentation drift that the deterministic `--summary` flow is designed to prevent. If the operator wants Slack-specific tone, fold it into the canonical Phase 1 wording before passing `--summary`, OR amend the CHANGELOG blockquote BEFORE Phase 8 so all three surfaces stay aligned
-- ⊗ Export `DEFT_ALLOW_DEFAULT_BRANCH_COMMIT=1` for the entire release session or wrap `task release` / `task ci:local` in it (#1553) -- the env var is process-wide and leaks into nested tests and temporary repos, producing false preflight failures. Prefer `task policy:allow-direct-commits -- --confirm` and restore with `task policy:enforce-branches` after the cut
+- ⊗ Export `DEFT_ALLOW_DEFAULT_BRANCH_COMMIT=1` for the entire release session or wrap `task release` / `task ci:local` in it (#1553) -- the env var is process-wide and leaks into nested tests and temporary repos, producing false preflight failures. Prefer `task policy:allow-direct-commits -- --confirm` and restore with `task policy:enforce-branches` after the cut (closeout commit+push may use a **scoped** env prefix on those three git commands only — see Branch-Protection Policy Guard, #2623)
+- ⊗ Pass `--allow-coverage-debt=#N` unquoted on Windows PowerShell (#2621) -- `#` starts a comment and silently drops the issue number. Use `--allow-coverage-debt=N` or `--allow-coverage-debt="#N"`
+- ⊗ Soft-pass coverage debt on consecutive releases when the prior cut already cited debt (#2618 / #2573) -- restore real branch coverage >= 85% instead of reusing the escape hatch

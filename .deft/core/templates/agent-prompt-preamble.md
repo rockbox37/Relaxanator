@@ -211,17 +211,29 @@ PYTEST_ADDOPTS="--basetemp=$(mktemp -d)/pt" task check
 
 A clean result under an isolated basetemp is attributable to your change, not to the ambient shared-`/tmp` race. Do NOT point `--basetemp` at a static path shared across workers -- that re-introduces the collision. Solo / single-run invocations on a private worktree do not require this, but it is harmless to apply unconditionally.
 
-## 3.8 Windows Cursor Task-tool console storm (#2563)
+## 3.8 Windows Cursor Task-tool console windows (#2563)
 
-On Windows, Cursor Task-tool local subagents can open a visible `cmd.exe` / `conhost` window per shell turn. Framework source checkouts amplify this: many `task <verb>` calls run `engine:_ts-build` → `pnpm`/`tsc` via `shell: true`. Parallel (and even serial) Task agents have frozen the maintainer host; completing the same stories in-parent (no Task subagent) stayed stable.
+On Windows, Cursor Task-tool local subagents historically opened a visible `cmd.exe` / `conhost` window per shell turn. Framework source checkouts amplified this when every `task <verb>` cold-ran `engine:_ts-build` → `pnpm`/`tsc` via `shell: true`.
+
+**Shipped mitigations (keep; do not regress):**
+
+- `windowsHide: true` (CREATE_NO_WINDOW) on engine invoke / package-manager probe / `spawnCommandText` paths
+- Warm-dist skip via `tasks/ts-build-fresh.cjs` so `_ts-build` does not rebuild when `packages/cli/dist` is current (override with `DEFT_FORCE_TS_BUILD=1` / `DEFT_SKIP_TS_BUILD=1`)
 
 **Directive rule for orchestrators on Windows:**
 
-- ! Prefer in-parent implementation or cloud workers for Cursor Task cohorts until the branch under test includes the #2563 mitigations (`windowsHide` on engine spawns + warm-dist skip via `tasks/ts-build-fresh.cjs`).
-- ! When local Task agents are required, keep concurrency at **1**, reuse a warm `packages/cli/dist/bin.js` (set `DEFT_SKIP_TS_BUILD=1` only when dist is known current), and avoid spawning nested Task agents from workers.
-- ⊗ Launch a multi-agent local Cursor Task swarm on Windows that multiplies cold `task` rebuilds without operator acceptance of host-freeze risk.
+- ! Use **local** Cursor Task swarm workers as the default dispatch path — same as other platforms. Do not route to cloud solely because the host is Windows.
+- ! Parallel local cohorts are allowed; do not force concurrency=1 because of #2563.
+- ~ Prefer the normal warm `task` / `dist/bin.js` path; avoid unnecessary `DEFT_FORCE_TS_BUILD=1` across a parallel cohort.
+- ⊗ Drop or weaken the #2563 `windowsHide` / warm-dist mitigations without a replacement that keeps Windows local swarm workable.
 
-Reference: issue #2563; swarm skill Platform Requirements; env scrub + stdio inherit for nested Task recursion (#2554 / #2438) are necessary but not sufficient alone.
+Reference: issue #2563; swarm skill Platform Requirements; env scrub + stdio inherit for nested Task recursion (#2554 / #2438).
+
+## 3.9 Windows PowerShell: safe multi-line git/gh bodies (#2646 / #1417)
+
+! Multi-line git commit / gh issue|pr|comment bodies: write UTF-8 (no BOM) to OS temp, then `git commit -F` / `gh --body-file` / `deft scm:body:* --body-file`. ⊗ bash heredocs, `<<<`, inline multi-line `--body`, or multi-line PS here-strings in the agent command box on Windows PowerShell — those patterns fail at parse time, split arguments, or get rewritten by host shell wrappers before git/gh runs. This applies to your own commit and PR tooling on win32; do not use bash heredocs even when user rules show POSIX patterns. `ghx` is read-only — mutations stay on live `gh`. Detail: `content/scm/github.md` § #2646 (#1417, #240, #798).
+
+! Issue-body read-modify-write on win32: `task scm:body:issue:fetch --out-file` then edit the body file then `task scm:body:issue:edit --body-file` (fail-closed postcondition verify, #2607). ⊗ Capture-concat of `gh api repos/.../issues/<N> --jq .body` into PowerShell variables — PS string[]/$OFS collapses newlines to spaces and silently destroys live bodies (#2744, #2087, #2741, #1492). Detail: `content/scm/github.md` § #2744.
 
 ## 4. pre-pr and review-cycle skills
 
@@ -316,6 +328,7 @@ Use the canonical safe wrapper for issue bodies, PR bodies, and issue/PR comment
 task scm:body:comment:create -- --repo OWNER/REPO --issue 1555 --body-file "$bodyFile"
 task scm:body:comment:edit -- --repo OWNER/REPO --comment 123456789 --body-file "$bodyFile"
 task scm:body:issue:create -- --repo OWNER/REPO --title "Title" --body-file "$bodyFile"
+task scm:body:issue:fetch -- --repo OWNER/REPO --issue 1555 --out-file "$bodyFile"
 task scm:body:issue:edit -- --repo OWNER/REPO --issue 1555 --body-file "$bodyFile"
 task scm:body:pr:edit -- --repo OWNER/REPO --pr 42 --body-file "$bodyFile"
 ```
@@ -436,8 +449,10 @@ These rules bind **orchestrators** dispatching implementation, fix, or review-cy
 **Worker-owns-lifecycle (Gap C):**
 
 - ! When dispatching an implementation worker, the dispatch envelope MUST declare the unit-of-work boundary explicitly: `stop-at: pr-open` (worker opens PR and exits) OR `drive-to: merge-ready` (worker owns PR + Greptile review cycle + fix batches through merge-ready as ONE unit of work, spawning its own review poller per `skills/deft-directive-review-cycle/SKILL.md` monitoring tiers). Default for story implementation dispatches is `drive-to: merge-ready`.
+- ! **Post-merge scope lifecycle (#2321 / Gap C):** Workers scoped `stop-at: pr-open` MUST NOT run `task scope:complete` before exit — their activation checkpoint rides into master on merge. The **orchestrator** (or Phase 6 `task swarm:finalize-cohort` / `task swarm:complete-cohort` on the headless path) MUST run `task scope:complete` or `task scope:cancel` for each shipped story xBRIEF after its PR merges. Workers scoped `drive-to: merge-ready` (or `drive-to: merge`) MUST include `task scope:complete` on their active xBRIEF as part of the same unit of work (after merge when appropriate).
 - ! Workers scoped `drive-to: merge-ready` MUST drive to merge-ready in their own tool loop — pre-PR, push, PR open, review-cycle poll/fix loop, and the #1259 Step 6 fail-closed exit — without handing back at PR-open for the orchestrator to re-dispatch separate leaf agents for review or fixes.
 - ⊗ Re-dispatch a separate review-monitor or fix agent after an implementation worker exits at PR-open when the original envelope scoped `drive-to: merge-ready` — that split recreates cross-agent state-handoff hazards and terminal lifecycle gaps (#1878 / Gap C).
+- ⊗ Leave an `xbrief/active/` brief with `plan.status == running` on master after the story's issue is closed or its PR merged — `task verify:orphan-active` fails closed on that signature (#2321).
 
 **Background / independent dispatch (Gap D):**
 
