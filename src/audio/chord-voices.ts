@@ -23,6 +23,22 @@ interface TimbrePartial {
   detuneCents?: number;
 }
 
+/**
+ * Optional LFO-modulated chorus: the shared lowpass fans out to a dry path and
+ * a delayed "wet" path whose delay time is swept by a sine LFO, summing back at
+ * the master gain. Only presets that set `chorus` build these extra nodes.
+ */
+interface ChorusConfig {
+  /** LFO sweep rate (Hz) — slow for a lush shimmer. */
+  rateHz: number;
+  /** Peak delay-time deviation (seconds) the LFO adds/subtracts. */
+  depthSec: number;
+  /** Base delay time (seconds) the LFO sweeps around. */
+  delaySec: number;
+  /** Wet mix (0..1); dry is `1 - mix`. */
+  mix: number;
+}
+
 interface TimbrePreset {
   kind: TimbreKind;
   oscType: OscillatorType;
@@ -36,10 +52,36 @@ interface TimbrePreset {
   lowpassHz: number;
   /** Headroom scalar so presets are loudness-matched. */
   scale: number;
+  /**
+   * Optional overdrive amount. When > 0, notes pass through a WaveShaperNode
+   * (soft-clip curve) before the lowpass, adding harmonic grit for the metal
+   * timbre. Presets that omit it build the exact original additive graph.
+   */
+  drive?: number;
+  /** Optional LFO-modulated chorus stage (see {@link ChorusConfig}). */
+  chorus?: ChorusConfig;
 }
 
 function clampVol(volume: number): number {
   return Math.max(0, Math.min(1, volume));
+}
+
+/**
+ * Build a symmetric soft-clip overdrive curve for a WaveShaperNode. `drive`
+ * sets how hard the curve bends (0 = linear/no distortion, higher = grittier).
+ * The classic `((1 + k) * x) / (1 + k * |x|)` transfer keeps the output bounded
+ * to [-1, 1] while adding progressively stronger harmonics.
+ */
+function makeDriveCurve(drive: number, samples = 1024): Float32Array<ArrayBuffer> {
+  const curve = new Float32Array(
+    new ArrayBuffer(samples * Float32Array.BYTES_PER_ELEMENT),
+  );
+  const k = Math.max(0, drive);
+  for (let i = 0; i < samples; i += 1) {
+    const x = (i * 2) / (samples - 1) - 1;
+    curve[i] = ((1 + k) * x) / (1 + k * Math.abs(x));
+  }
+  return curve;
 }
 
 /* ------------------------------------------------------------------ *
@@ -220,6 +262,108 @@ const PRESETS: Record<ChordTimbreId, TimbrePreset> = {
     lowpassHz: 6000,
     scale: 0.2,
   },
+  // Nylon guitar: warm, soft classical pluck — few partials, mellow lowpass.
+  "nylon-guitar": {
+    kind: "percussive",
+    oscType: "triangle",
+    partials: [
+      { ratio: 1, gain: 1 },
+      { ratio: 2, gain: 0.35 },
+      { ratio: 3, gain: 0.12 },
+    ],
+    attackSec: 0.006,
+    decaySec: 1.6,
+    releaseSec: 0,
+    lowpassHz: 2200,
+    scale: 0.3,
+  },
+  // Steel-string acoustic: brighter, ringing pluck with more upper partials.
+  "steel-guitar": {
+    kind: "percussive",
+    oscType: "sawtooth",
+    partials: [
+      { ratio: 1, gain: 1 },
+      { ratio: 2, gain: 0.5 },
+      { ratio: 3, gain: 0.3 },
+      { ratio: 4, gain: 0.16 },
+      { ratio: 5, gain: 0.09 },
+    ],
+    attackSec: 0.003,
+    decaySec: 2.0,
+    releaseSec: 0,
+    lowpassHz: 4600,
+    scale: 0.2,
+  },
+  // Clean electric: quacky, mid-focused single-coil pluck.
+  "clean-electric": {
+    kind: "percussive",
+    oscType: "sawtooth",
+    partials: [
+      { ratio: 1, gain: 1 },
+      { ratio: 2, gain: 0.4 },
+      { ratio: 3, gain: 0.24 },
+      { ratio: 4, gain: 0.1 },
+    ],
+    attackSec: 0.004,
+    decaySec: 2.2,
+    releaseSec: 0,
+    lowpassHz: 3200,
+    scale: 0.22,
+  },
+  // Jazz archtop: warm, rounded body (low lowpass, mellow partials) with an
+  // LFO-modulated chorus shimmer.
+  "jazz-guitar": {
+    kind: "percussive",
+    oscType: "triangle",
+    partials: [
+      { ratio: 1, gain: 1 },
+      { ratio: 2, gain: 0.3 },
+      { ratio: 3, gain: 0.1 },
+    ],
+    attackSec: 0.006,
+    decaySec: 2.4,
+    releaseSec: 0,
+    lowpassHz: 1900,
+    scale: 0.26,
+    chorus: { rateHz: 0.8, depthSec: 0.0025, delaySec: 0.02, mix: 0.4 },
+  },
+  // Metal: distorted electric — sawtooth + strong upper partials driven through
+  // a waveshaper, a presence-shaped lowpass to tame fizz, and a long power-chord
+  // ring.
+  "metal-guitar": {
+    kind: "percussive",
+    oscType: "sawtooth",
+    partials: [
+      { ratio: 1, gain: 1 },
+      { ratio: 2, gain: 0.5 },
+      { ratio: 3, gain: 0.35 },
+      { ratio: 4, gain: 0.2 },
+      { ratio: 5, gain: 0.12 },
+    ],
+    attackSec: 0.004,
+    decaySec: 3.2,
+    releaseSec: 0,
+    lowpassHz: 2600,
+    scale: 0.14,
+    drive: 12,
+  },
+  // 12-string: octave-doubled, lightly detuned layers for a shimmering jangle.
+  "twelve-string": {
+    kind: "percussive",
+    oscType: "sawtooth",
+    partials: [
+      { ratio: 1, gain: 1 },
+      { ratio: 1, gain: 0.7, detuneCents: 8 },
+      { ratio: 2, gain: 0.6 },
+      { ratio: 2, gain: 0.5, detuneCents: -8 },
+      { ratio: 3, gain: 0.2 },
+    ],
+    attackSec: 0.003,
+    decaySec: 2.2,
+    releaseSec: 0,
+    lowpassHz: 4800,
+    scale: 0.17,
+  },
 };
 
 /* ------------------------------------------------------------------ *
@@ -278,8 +422,17 @@ function scheduleNote(
 
 /**
  * Play a whole chord/progression play-plan through one timbre. Builds a shared
- * lowpass → master-gain chain (so the voice's volume is applied once), schedules
- * every note event, and disconnects the chain after the final oscillator ends.
+ * chain — optional waveshaper drive → lowpass → optional LFO-modulated chorus →
+ * master-gain (so the voice's volume is applied once) — schedules every note
+ * event, and disconnects the whole chain (including any drive/chorus nodes and
+ * the chorus LFO) after the final note oscillator ends.
+ *
+ * The teardown is still driven purely by the note oscillators: `remaining`
+ * counts one per partial per note exactly as before, so presets that opt into
+ * no extra stages get the identical original graph and teardown. The chorus LFO
+ * is deliberately NOT counted — it is a free-running modulator that is stopped
+ * and disconnected inside the teardown, so the graph fully releases with no
+ * leaked nodes.
  */
 export function playChordVoice(
   timbreId: ChordTimbreId,
@@ -299,21 +452,76 @@ export function playChordVoice(
   lp.type = "lowpass";
   lp.frequency.value = preset.lowpassHz;
   lp.Q.value = 0.5;
-  lp.connect(out);
+
+  // Extra effect nodes to disconnect on teardown, plus the optional chorus LFO.
+  const extraNodes: AudioNode[] = [];
+  let lfo: OscillatorNode | null = null;
+
+  if (preset.chorus) {
+    // lp fans out to a dry path and an LFO-swept delayed wet path, both
+    // summing into out.
+    const { rateHz, depthSec, delaySec, mix } = preset.chorus;
+    const dry = ctx.createGain();
+    dry.gain.value = 1 - mix;
+    const wet = ctx.createGain();
+    wet.gain.value = mix;
+    const delay = ctx.createDelay();
+    delay.delayTime.value = delaySec;
+
+    lfo = ctx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.value = rateHz;
+    const lfoDepth = ctx.createGain();
+    lfoDepth.gain.value = depthSec;
+    lfo.connect(lfoDepth).connect(delay.delayTime);
+
+    lp.connect(dry).connect(out);
+    lp.connect(delay).connect(wet).connect(out);
+    extraNodes.push(dry, wet, delay, lfoDepth);
+  } else {
+    lp.connect(out);
+  }
+
+  // Notes feed the optional waveshaper drive stage (metal) or the lowpass.
+  let noteDest: AudioNode = lp;
+  if (preset.drive && preset.drive > 0) {
+    const shaper = ctx.createWaveShaper();
+    shaper.curve = makeDriveCurve(preset.drive);
+    shaper.oversample = "4x";
+    shaper.connect(lp);
+    extraNodes.push(shaper);
+    noteDest = shaper;
+  }
 
   let remaining = events.length * preset.partials.length;
+  const teardown = () => {
+    if (lfo) {
+      try {
+        lfo.stop();
+      } catch {
+        // Already stopped; ignore.
+      }
+      lfo.disconnect();
+    }
+    for (const node of extraNodes) node.disconnect();
+    lp.disconnect();
+    out.disconnect();
+  };
   const onOscEnded = () => {
     remaining -= 1;
-    if (remaining <= 0) {
-      lp.disconnect();
-      out.disconnect();
-    }
+    if (remaining <= 0) teardown();
   };
+
+  // Run the chorus LFO for the life of the voice; teardown stops/disconnects it.
+  if (lfo) {
+    const firstWhen = Math.min(...events.map((e) => e.whenSec));
+    lfo.start(firstWhen);
+  }
 
   for (const event of events) {
     scheduleNote(
       ctx,
-      lp,
+      noteDest,
       preset,
       event.hz,
       event.whenSec,

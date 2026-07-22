@@ -28,6 +28,7 @@ const TIMBRE_GROUPS: { category: ChordTimbreCategory; label: string }[] = [
   { category: "harpsichord", label: "Harpsichords" },
   { category: "piano", label: "Pianos" },
   { category: "synth-pad", label: "Airy synths & pads" },
+  { category: "guitar", label: "Guitars" },
 ];
 
 export default function ChordsPanel({

@@ -54,7 +54,13 @@ describe("CHORD_TIMBRES registry", () => {
     }
     const categories = new Set(CHORD_TIMBRES.map((t) => t.category));
     expect(categories).toEqual(
-      new Set(["electric-piano", "harpsichord", "piano", "synth-pad"]),
+      new Set([
+        "electric-piano",
+        "harpsichord",
+        "piano",
+        "synth-pad",
+        "guitar",
+      ]),
     );
   });
 
@@ -66,6 +72,24 @@ describe("CHORD_TIMBRES registry", () => {
     expect(byCat("harpsichord")).toBeGreaterThanOrEqual(1);
     expect(byCat("piano")).toBeGreaterThanOrEqual(2);
     expect(byCat("synth-pad")).toBeGreaterThanOrEqual(3);
+    // A family of guitars (metal, nylon, jazz, steel, clean electric, 12-string).
+    expect(byCat("guitar")).toBeGreaterThanOrEqual(5);
+  });
+
+  it("includes the guitar timbre family with a stable id set", () => {
+    const guitarIds = CHORD_TIMBRES.filter((t) => t.category === "guitar").map(
+      (t) => t.id,
+    );
+    expect(new Set(guitarIds)).toEqual(
+      new Set([
+        "nylon-guitar",
+        "steel-guitar",
+        "clean-electric",
+        "jazz-guitar",
+        "metal-guitar",
+        "twelve-string",
+      ]),
+    );
   });
 });
 
@@ -73,6 +97,8 @@ describe("isChordTimbreId", () => {
   it("recognizes registered ids and rejects unknown ones", () => {
     expect(isChordTimbreId("rhodes")).toBe(true);
     expect(isChordTimbreId("harpsichord")).toBe(true);
+    expect(isChordTimbreId("metal-guitar")).toBe(true);
+    expect(isChordTimbreId("jazz-guitar")).toBe(true);
     expect(isChordTimbreId("tuba")).toBe(false);
   });
 });
