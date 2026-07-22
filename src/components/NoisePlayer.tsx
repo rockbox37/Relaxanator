@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { AnnounceEngine } from "@/audio/announce-engine";
 import { unlockAudioContext } from "@/audio/audio-unlock";
@@ -53,6 +60,12 @@ import {
   type VoiceSettings,
   createDefaultMeditationSettings,
 } from "@/lib/meditation";
+import {
+  GLOW_DURATION_MS,
+  type GlowState,
+  pruneGlow,
+  triggerGlow,
+} from "@/lib/sound-glow";
 import {
   NOISE_COLORS,
   type NoiseColor,
@@ -131,6 +144,9 @@ export default function NoisePlayer() {
     createDefaultMeditationSettings,
   );
   const [chords, setChords] = useState<ChordSettings>(createDefaultChordSettings);
+  /** Transient per-row "just played" glow state, keyed by voiceId (#104). */
+  const [medGlow, setMedGlow] = useState<GlowState>({});
+  const [chordGlow, setChordGlow] = useState<GlowState>({});
   const [announce, setAnnounce] = useState<AnnounceSettings>(
     createDefaultAnnounceSettings,
   );
@@ -252,6 +268,21 @@ export default function NoisePlayer() {
   }, []);
 
   /**
+   * Light a row's glow now and schedule a prune once it has fully faded, so a
+   * re-trigger refreshes (rather than stacks) the effect (#104). Called from
+   * each engine's onFire, which the engine defers to the audio-heard time.
+   */
+  function flashVoice(
+    setGlow: Dispatch<SetStateAction<GlowState>>,
+    voiceId: string,
+  ) {
+    setGlow((g) => triggerGlow(g, voiceId, Date.now()));
+    window.setTimeout(() => {
+      setGlow((g) => pruneGlow(g, Date.now()));
+    }, GLOW_DURATION_MS + 50);
+  }
+
+  /**
    * Tab foreground / AudioContext wake: wall time advanced while timers were
    * throttled or the context was interrupted — re-map the next announce
    * boundary onto the live audio clock (#47).
@@ -327,6 +358,9 @@ export default function NoisePlayer() {
           engine.mixBus,
           meditationSettingsRef.current,
         );
+        meditationEngine.setOnFire(({ voiceId }) =>
+          flashVoice(setMedGlow, voiceId),
+        );
         meditationEngine.start();
         meditationRef.current = meditationEngine;
 
@@ -334,6 +368,9 @@ export default function NoisePlayer() {
           engine.context,
           engine.mixBus,
           chordsSettingsRef.current,
+        );
+        chordsEngine.setOnFire(({ voiceId }) =>
+          flashVoice(setChordGlow, voiceId),
         );
         chordsEngine.start();
         chordsRef.current = chordsEngine;
@@ -811,6 +848,7 @@ export default function NoisePlayer() {
         onChange={changeVoice}
         onPreview={previewVoice}
         previewDisabled={starting}
+        playingVoiceIds={new Set(Object.keys(medGlow))}
       />
 
       <ChordsPanel
@@ -818,6 +856,7 @@ export default function NoisePlayer() {
         onChange={changeChord}
         onPreview={previewChord}
         previewDisabled={starting}
+        playingVoiceIds={new Set(Object.keys(chordGlow))}
       />
 
       <BreakPanel

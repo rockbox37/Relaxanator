@@ -254,6 +254,40 @@ main > p {
   padding: 0.5rem 0.75rem;
 }
 
+/*
+ * Sound-trigger glow (#104): when a voice fires (schedule or preview) its row
+ * gets .voice--playing for a few seconds. Ease in to a soft accent tint + glow
+ * quickly (~200ms), then fade back. Accent channels mirror --accent (#7fc8a9).
+ */
+.voice--playing {
+  animation: voice-glow 2.6s ease-out;
+}
+
+@keyframes voice-glow {
+  0% {
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: 0 0 0 0 rgba(127, 200, 169, 0);
+  }
+  8% {
+    background: rgba(127, 200, 169, 0.16);
+    box-shadow:
+      0 0 0 1px rgba(127, 200, 169, 0.55),
+      0 0 14px 2px rgba(127, 200, 169, 0.35);
+  }
+  100% {
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: 0 0 0 0 rgba(127, 200, 169, 0);
+  }
+}
+
+/* Opt out of animation: a plain accent tint that clears when the class drops. */
+@media (prefers-reduced-motion: reduce) {
+  .voice--playing {
+    animation: none;
+    background: rgba(127, 200, 169, 0.16);
+  }
+}
+
 .voice-enable {
   display: inline-flex;
   gap: 0.4rem;

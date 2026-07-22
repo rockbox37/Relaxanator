@@ -19,6 +19,7 @@ import {
   collectDueChordEvents,
   initChordSchedule,
 } from "@/lib/chords";
+import type { VoiceFireEvent } from "@/lib/sound-glow";
 
 import { playChordVoice } from "./chord-voices";
 
@@ -33,6 +34,9 @@ export class ChordsEngine {
   private schedule: ChordFireSchedule = {};
   private settings: ChordSettings;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private onFire: ((event: VoiceFireEvent) => void) | null = null;
+  /** Pending "voice heard" callbacks, cleared on stop so none fire late. */
+  private fireTimers = new Set<ReturnType<typeof setTimeout>>();
 
   constructor(
     private readonly ctx: BaseAudioContext,
@@ -52,6 +56,22 @@ export class ChordsEngine {
     this.settings = settings;
   }
 
+  /** Register a callback fired when a voice is actually heard (for UI glow). */
+  setOnFire(cb: (event: VoiceFireEvent) => void): void {
+    this.onFire = cb;
+  }
+
+  /** Defer `onFire` until the scheduled audio-clock time `whenSec` is reached. */
+  private notifyFireAt(voiceId: string, whenSec: number): void {
+    if (!this.onFire) return;
+    const delayMs = Math.max(0, (whenSec - this.ctx.currentTime) * 1000);
+    const timer = setTimeout(() => {
+      this.fireTimers.delete(timer);
+      this.onFire?.({ voiceId, whenSec });
+    }, delayMs);
+    this.fireTimers.add(timer);
+  }
+
   /** Play a voice immediately from now (UI preview button). */
   preview(voiceId: string): void {
     const voice = VOICE_BY_ID.get(voiceId);
@@ -59,11 +79,14 @@ export class ChordsEngine {
     if (!voice || !settings) return;
     const events = buildChordPlan(voice, settings, this.ctx.currentTime);
     playChordVoice(settings.timbreId, this.ctx, this.dest, events, settings.volume);
+    this.onFire?.({ voiceId, whenSec: this.ctx.currentTime });
   }
 
   stop(): void {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+    for (const timer of this.fireTimers) clearTimeout(timer);
+    this.fireTimers.clear();
   }
 
   private pump(): void {
@@ -80,6 +103,7 @@ export class ChordsEngine {
       if (!voice || !settings) continue;
       const plan = buildChordPlan(voice, settings, event.whenSec);
       playChordVoice(settings.timbreId, this.ctx, this.dest, plan, settings.volume);
+      this.notifyFireAt(event.voiceId, event.whenSec);
     }
   }
 }

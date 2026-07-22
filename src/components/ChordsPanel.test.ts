@@ -32,4 +32,26 @@ describe("ChordsPanel", () => {
     expect(list).toBeDefined();
     expect(list.props.children).toHaveLength(CHORD_VOICES.length);
   });
+
+  it("adds the .voice--playing glow class only to lit rows (#104)", () => {
+    const litId = CHORD_VOICES[0].id;
+    const element = ChordsPanel({
+      settings: createDefaultChordSettings(),
+      onChange: vi.fn(),
+      onPreview: vi.fn(),
+      playingVoiceIds: new Set([litId]),
+    }) as ReactElement<{ children: ReactElement[] }>;
+
+    const list = element.props.children.find(
+      (child) => child?.type === "ul",
+    ) as ReactElement<{ children: ReactElement<{ className: string }>[] }>;
+    const rows = list.props.children;
+
+    expect(rows[0].props.className).toBe("voice voice--playing");
+    // Exactly the one lit row gets the glow class; the rest stay plain.
+    const litRows = rows.filter(
+      (row) => row.props.className === "voice voice--playing",
+    );
+    expect(litRows).toHaveLength(1);
+  });
 });
