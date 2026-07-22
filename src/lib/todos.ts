@@ -37,6 +37,15 @@ export interface ActiveTodoReminder {
 const listeners = new Set<() => void>();
 let memoryCache: TodoItem[] | null = null;
 
+/**
+ * Stable, frozen empty list for the SSR/hydration snapshot. Returning a
+ * module-level constant (rather than a fresh `[]` each call) keeps the
+ * `useSyncExternalStore` server snapshot referentially stable and avoids the
+ * "getServerSnapshot should be cached to avoid an infinite loop" warning (#106).
+ */
+const EMPTY_TODOS: TodoItem[] = [];
+Object.freeze(EMPTY_TODOS);
+
 export function createTodoId(now: number = Date.now()): string {
   return `todo-${now}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -325,7 +334,7 @@ export function getTodosSnapshot(): TodoItem[] {
 }
 
 export function getTodosServerSnapshot(): TodoItem[] {
-  return [];
+  return EMPTY_TODOS;
 }
 
 export function replaceTodos(next: TodoItem[]): void {

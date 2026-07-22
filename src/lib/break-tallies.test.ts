@@ -231,4 +231,23 @@ describe("break tallies store", () => {
     updateBreakTallies((prev) => incrementBreakTally(prev, "custom"));
     expect(listener).toHaveBeenCalledTimes(2);
   });
+
+  it("server snapshot is a stable, frozen reference across calls (#106)", () => {
+    const a = getBreakTalliesServerSnapshot();
+    const b = getBreakTalliesServerSnapshot();
+    expect(a).toBe(b);
+    expect(Object.isFrozen(a)).toBe(true);
+  });
+
+  it("client snapshot is stable until a mutation, then a fresh reference (#106)", () => {
+    const first = getBreakTalliesSnapshot();
+    // Repeated reads without mutation return the identical reference.
+    expect(getBreakTalliesSnapshot()).toBe(first);
+    updateBreakTallies((prev) => incrementBreakTally(prev, "walk"));
+    const afterMutation = getBreakTalliesSnapshot();
+    // A mutation swaps the cached reference…
+    expect(afterMutation).not.toBe(first);
+    // …and subsequent reads are stable again.
+    expect(getBreakTalliesSnapshot()).toBe(afterMutation);
+  });
 });

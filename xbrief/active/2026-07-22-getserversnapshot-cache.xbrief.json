@@ -1,0 +1,47 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:deft-directive-build",
+    "description": "Scope xBRIEF",
+    "created": "2026-07-22T15:32:00Z"
+  },
+  "plan": {
+    "title": "Cache useSyncExternalStore server snapshots (#106)",
+    "status": "running",
+    "narratives": {
+      "Overview": "Eliminate the React/Turbopack warning \"The result of getServerSnapshot should be cached to avoid an infinite loop\" surfaced via NoisePlayer.tsx. The break-tallies and todos server-snapshot getters construct a fresh object/array on every call, so React sees a new reference each render during SSR/hydration. Return referentially-stable module-level constants instead.",
+      "Requirements": "FR-1: getBreakTalliesServerSnapshot returns a stable, frozen module-level BreakTallies constant (same reference across calls). FR-2: getTodosServerSnapshot returns a stable, frozen module-level empty TodoItem[] constant (same reference across calls). FR-3: Client get*Snapshot getters continue to return a cached reference that changes only when the store mutates (already the case; verified). NFR-1: Getters remain pure and side-effect free. NFR-2: No behavioral change to tallies, daily goal, or todos values. NFR-3: >=85% per-file coverage on src/lib preserved; add tests asserting repeated get*Snapshot()/get*ServerSnapshot() calls return the same reference when unchanged and a fresh reference after mutation."
+    },
+    "items": [
+      {
+        "title": "Return frozen module-level constant from getBreakTalliesServerSnapshot",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-1, NFR-1, NFR-2"
+        }
+      },
+      {
+        "title": "Return frozen module-level constant from getTodosServerSnapshot",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-2, NFR-1, NFR-2"
+        }
+      },
+      {
+        "title": "Add referential-stability unit tests for snapshot getters",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-3, NFR-3"
+        }
+      }
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/106",
+        "type": "x-xbrief/github-issue",
+        "TrustLevel": "external"
+      }
+    ],
+    "updated": "2026-07-22T15:34:05Z"
+  }
+}

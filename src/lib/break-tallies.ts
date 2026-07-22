@@ -13,6 +13,15 @@ export type BreakTallies = Record<BreakKind, number>;
 const listeners = new Set<() => void>();
 let memoryCache: BreakTallies | null = null;
 
+/**
+ * Stable, frozen empty tallies for the SSR/hydration snapshot. Returning a
+ * module-level constant (rather than a fresh object each call) keeps the
+ * `useSyncExternalStore` server snapshot referentially stable and avoids the
+ * "getServerSnapshot should be cached to avoid an infinite loop" warning (#106).
+ */
+const EMPTY_BREAK_TALLIES: BreakTallies = createEmptyBreakTallies();
+Object.freeze(EMPTY_BREAK_TALLIES);
+
 export function createEmptyBreakTallies(): BreakTallies {
   const tallies = {} as BreakTallies;
   for (const def of BREAK_TYPES) {
@@ -121,7 +130,7 @@ export function getBreakTalliesSnapshot(): BreakTallies {
 }
 
 export function getBreakTalliesServerSnapshot(): BreakTallies {
-  return createEmptyBreakTallies();
+  return EMPTY_BREAK_TALLIES;
 }
 
 export function replaceBreakTallies(next: BreakTallies): void {
