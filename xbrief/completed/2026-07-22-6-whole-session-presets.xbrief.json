@@ -7,7 +7,7 @@
   },
   "plan": {
     "title": "Whole-session presets",
-    "status": "running",
+    "status": "completed",
     "narratives": {
       "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/6",
       "Overview": "Let users save the entire current session configuration as a named preset and recall it later, so a favorite combination of noise + meditation + chords + announcements + break prompts + ToDo reminders + mute state can be restored in one action. Presets persist across sessions using the app's established offline-first localStorage pattern (relaxanator.* keys, SSR-safe storage resolution, pure lib + co-located tests, same as break-tallies/break-daily-goal/todos). A Presets UI lets users save (with a name), overwrite/update, load/apply, rename, and delete presets. Applying a preset updates both the React settings state AND the live audio engines so it takes effect immediately, whether or not playback is active. GitHub issue #6 is a stub ('Scope vBRIEF: Whole-session presets') with no further detail, so scope below is defined from the app's current state model; see Assumptions.",
@@ -48,6 +48,9 @@
         "title": "Issue #6: Whole-session presets"
       }
     ],
-    "updated": "2026-07-22T19:07:34Z"
+    "updated": "2026-07-22T19:21:29Z",
+    "metadata": {
+      "completedAt": "2026-07-22T19:21:29Z"
+    }
   }
 }
