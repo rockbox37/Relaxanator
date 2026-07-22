@@ -119,11 +119,26 @@ import {
   toggleMuteExceptTodo,
 } from "@/lib/mute";
 import { playCueSound } from "@/audio/cue-sounds";
+import {
+  type SessionPreset,
+  type SessionSettings,
+  addPreset,
+  deletePreset,
+  findPreset,
+  getPresetsServerSnapshot,
+  getPresetsSnapshot,
+  makePreset,
+  renamePreset,
+  replacePresets,
+  subscribePresets,
+  updatePreset,
+} from "@/lib/session-presets";
 
 import { BreakBannerStack } from "./BreakBanner";
 import BreakPanel from "./BreakPanel";
 import ChordsPanel from "./ChordsPanel";
 import MeditationPanel from "./MeditationPanel";
+import PresetsPanel from "./PresetsPanel";
 import TimeAnnouncePanel from "./TimeAnnouncePanel";
 import TodoPanel from "./TodoPanel";
 import { TodoReminderStack } from "./TodoReminderBanner";
@@ -180,6 +195,16 @@ export default function NoisePlayer() {
     createDefaultTodoCueSettings,
   );
   const [muteState, setMuteState] = useState<MuteState>("off");
+  // Whole-session presets (#6). Read via useSyncExternalStore so the list stays
+  // SSR-safe (empty server snapshot, localStorage-hydrated client snapshot) and
+  // consistent with the tallies / todos stores.
+  const presets = useSyncExternalStore(
+    subscribePresets,
+    getPresetsSnapshot,
+    getPresetsServerSnapshot,
+  );
+  const [selectedPresetId, setSelectedPresetId] = useState("");
+  const [presetNameInput, setPresetNameInput] = useState("");
   /** Read in ensureEngines so a mute set before playback applies on start. */
   const muteStateRef = useRef(muteState);
   useEffect(() => {
@@ -667,6 +692,105 @@ export default function NoisePlayer() {
     engineRef.current?.setMuteGains(g.output, g.mainGroup);
   }
 
+  /* -------------------------------------------------------------- *
+   * Whole-session presets (#6)
+   * -------------------------------------------------------------- */
+
+  /** Snapshot the serializable settings blocks a preset captures (FR-1). */
+  function buildCurrentSessionSettings(): SessionSettings {
+    return { state, meditation, chords, announce, breaks, todoCue, muteState };
+  }
+
+  /**
+   * Apply a preset to React state AND push it into the live engines so the
+   * change is audible immediately, playing or not (FR-4). Each block mirrors
+   * the propagation its own change handler uses.
+   */
+  function applySessionSettings(next: SessionSettings) {
+    // Noise: sliders (state) + audible color/EQ; volume only bites while playing.
+    setState(next.state);
+    const engine = engineRef.current;
+    engine?.setColor(next.state.color);
+    engine?.setEqCurve(next.state.eqCurve);
+    if (playing) engine?.setMasterVolume(next.state.masterVolume);
+
+    // Meditation → meditationRef.updateSettings (mirrors changeVoice).
+    setMeditation(next.meditation);
+    meditationSettingsRef.current = next.meditation;
+    meditationRef.current?.updateSettings(next.meditation);
+
+    // Chords → chordsRef.updateSettings (mirrors changeChord).
+    setChords(next.chords);
+    chordsSettingsRef.current = next.chords;
+    chordsRef.current?.updateSettings(next.chords);
+
+    // Announce → announceRef.updateSettings + resync (mirrors changeAnnounce).
+    setAnnounce(next.announce);
+    announceSettingsRef.current = next.announce;
+    announceRef.current?.updateSettings(next.announce);
+    announceRef.current?.resync();
+
+    // Breaks → breakRef.updateSettings (mirrors changeBreakSettings).
+    setBreaks(next.breaks);
+    breakSettingsRef.current = next.breaks;
+    breakRef.current?.updateSettings(next.breaks);
+
+    // ToDo cue: no persistent engine — the cue plays on demand when a reminder
+    // comes due, reading the latest todoCue state.
+    setTodoCue(next.todoCue);
+
+    // Mute → engine gate (mirrors applyMute).
+    applyMute(next.muteState);
+  }
+
+  /** Persist a mutated collection and notify the presets store. */
+  function commitPresets(next: SessionPreset[]) {
+    replacePresets(next);
+  }
+
+  function selectPreset(id: string) {
+    setSelectedPresetId(id);
+    setPresetNameInput(findPreset(presets, id)?.name ?? "");
+  }
+
+  function saveNewPreset() {
+    const preset = makePreset(presetNameInput, buildCurrentSessionSettings());
+    commitPresets(addPreset(presets, preset));
+    setSelectedPresetId(preset.id);
+    setPresetNameInput(preset.name);
+  }
+
+  function updateSelectedPreset() {
+    if (!findPreset(presets, selectedPresetId)) return;
+    commitPresets(
+      updatePreset(presets, selectedPresetId, buildCurrentSessionSettings()),
+    );
+  }
+
+  function applySelectedPreset() {
+    const preset = findPreset(presets, selectedPresetId);
+    if (preset) applySessionSettings(preset.settings);
+  }
+
+  function renameSelectedPreset() {
+    if (!findPreset(presets, selectedPresetId)) return;
+    commitPresets(renamePreset(presets, selectedPresetId, presetNameInput));
+  }
+
+  function deleteSelectedPreset() {
+    const preset = findPreset(presets, selectedPresetId);
+    if (!preset) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`Delete preset “${preset.name}”?`)
+    ) {
+      return;
+    }
+    commitPresets(deletePreset(presets, selectedPresetId));
+    setSelectedPresetId("");
+    setPresetNameInput("");
+  }
+
   function dismissBreakBanner(kind: BreakKind) {
     setActiveBreaks((prev) => removeActiveBreak(prev, kind));
   }
@@ -842,6 +966,19 @@ export default function NoisePlayer() {
           </label>
         ))}
       </div>
+
+      <PresetsPanel
+        presets={presets}
+        selectedId={selectedPresetId}
+        nameInput={presetNameInput}
+        onNameInputChange={setPresetNameInput}
+        onSelect={selectPreset}
+        onSaveNew={saveNewPreset}
+        onUpdate={updateSelectedPreset}
+        onApply={applySelectedPreset}
+        onRename={renameSelectedPreset}
+        onDelete={deleteSelectedPreset}
+      />
 
       <MeditationPanel
         settings={meditation}
