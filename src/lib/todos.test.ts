@@ -276,6 +276,25 @@ describe("persistence store", () => {
     expect(getTodosServerSnapshot()).toEqual([]);
   });
 
+  it("server snapshot is a stable, frozen reference across calls (#106)", () => {
+    const a = getTodosServerSnapshot();
+    const b = getTodosServerSnapshot();
+    expect(a).toBe(b);
+    expect(Object.isFrozen(a)).toBe(true);
+  });
+
+  it("client snapshot is stable until a mutation, then a fresh reference (#106)", () => {
+    const first = getTodosSnapshot();
+    // Repeated reads without mutation return the identical reference.
+    expect(getTodosSnapshot()).toBe(first);
+    addTodo("Ship the fix", null, 500);
+    const afterMutation = getTodosSnapshot();
+    // A mutation swaps the cached reference…
+    expect(afterMutation).not.toBe(first);
+    // …and subsequent reads are stable again.
+    expect(getTodosSnapshot()).toBe(afterMutation);
+  });
+
   it("returns null when localStorage access throws", () => {
     Object.defineProperty(globalThis, "localStorage", {
       get() {
