@@ -29,13 +29,20 @@ export type ChordTimbreId =
   | "warm-pad"
   | "air-choir"
   | "vapor-pad"
-  | "crystal-synth";
+  | "crystal-synth"
+  | "nylon-guitar"
+  | "steel-guitar"
+  | "clean-electric"
+  | "jazz-guitar"
+  | "metal-guitar"
+  | "twelve-string";
 
 export type ChordTimbreCategory =
   | "electric-piano"
   | "harpsichord"
   | "piano"
-  | "synth-pad";
+  | "synth-pad"
+  | "guitar";
 
 export interface ChordTimbreDef {
   id: ChordTimbreId;
@@ -116,6 +123,42 @@ export const CHORD_TIMBRES: readonly ChordTimbreDef[] = [
     label: "Crystal synth",
     description: "Bright bell-synth with an airy octave sparkle",
     category: "synth-pad",
+  },
+  {
+    id: "nylon-guitar",
+    label: "Guitar — Nylon (classical)",
+    description: "Warm, soft-plucked nylon-string classical guitar",
+    category: "guitar",
+  },
+  {
+    id: "steel-guitar",
+    label: "Guitar — Steel-string acoustic",
+    description: "Bright, ringing steel-string acoustic pluck",
+    category: "guitar",
+  },
+  {
+    id: "clean-electric",
+    label: "Guitar — Clean electric",
+    description: "Quacky, mid-focused clean electric guitar",
+    category: "guitar",
+  },
+  {
+    id: "jazz-guitar",
+    label: "Guitar — Jazz (archtop)",
+    description: "Mellow, rounded archtop with a chorus shimmer",
+    category: "guitar",
+  },
+  {
+    id: "metal-guitar",
+    label: "Guitar — Metal (distorted)",
+    description: "Distorted electric with a ringing power-chord sustain",
+    category: "guitar",
+  },
+  {
+    id: "twelve-string",
+    label: "Guitar — 12-string",
+    description: "Shimmering octave-doubled, detuned 12-string jangle",
+    category: "guitar",
   },
 ];
 
@@ -301,7 +344,7 @@ export const CHORD_VOICES: readonly ChordVoiceDef[] = [
   },
   {
     id: "jazz-ii-V-I",
-    label: "Jazz (ii–V–I)",
+    label: "Jazz 2–5–1 (Dm7–G7–Cmaj7)",
     description: "Smooth jazz cadence in C (Dm7–G7–Cmaj7)",
     kind: "progression",
     rootMidi: C4,

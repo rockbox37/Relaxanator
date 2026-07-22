@@ -33,6 +33,51 @@ describe("ChordsPanel", () => {
     expect(list.props.children).toHaveLength(CHORD_VOICES.length);
   });
 
+  it("renders a Guitars optgroup with the guitar timbres in the picker", () => {
+    const element = ChordsPanel({
+      settings: createDefaultChordSettings(),
+      onChange: vi.fn(),
+      onPreview: vi.fn(),
+    }) as ReactElement<{ children: ReactElement[] }>;
+
+    const list = element.props.children.find(
+      (child) => child?.type === "ul",
+    ) as ReactElement<{
+      children: ReactElement<{ children: ReactElement[] }>[];
+    }>;
+    const firstRow = list.props.children[0];
+
+    // Walk the row's <label>s to the instrument <select>.
+    const labels = firstRow.props.children as ReactElement<{
+      className?: string;
+      children: ReactElement<{ children: ReactElement[] }>;
+    }>[];
+    const timbreLabel = labels.find(
+      (label) => label?.props?.className === "voice-timbre",
+    );
+    expect(timbreLabel).toBeDefined();
+
+    const select = timbreLabel!.props.children;
+    const optgroups = select.props.children as ReactElement<{
+      label: string;
+      children: ReactElement<{ value: string }>[];
+    }>[];
+    const guitars = optgroups.find((group) => group.props.label === "Guitars");
+    expect(guitars).toBeDefined();
+
+    const values = guitars!.props.children.map((option) => option.props.value);
+    expect(values).toEqual(
+      expect.arrayContaining([
+        "nylon-guitar",
+        "steel-guitar",
+        "clean-electric",
+        "jazz-guitar",
+        "metal-guitar",
+        "twelve-string",
+      ]),
+    );
+  });
+
   it("adds the .voice--playing glow class only to lit rows (#104)", () => {
     const litId = CHORD_VOICES[0].id;
     const element = ChordsPanel({
