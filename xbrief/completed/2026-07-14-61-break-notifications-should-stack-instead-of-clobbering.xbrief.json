@@ -1,6 +1,6 @@
 {
   "xBRIEFInfo": {
-    "version": "0.6",
+    "version": "0.8",
     "description": "Scope xBRIEF ingested from GitHub issue #61",
     "updated": "2026-07-14T17:05:00Z"
   },
@@ -18,15 +18,15 @@
     "items": [
       {
         "title": "Firing break type B while banner A is still visible does not discard A without user action",
-        "status": "in-progress"
+        "status": "running"
       },
       {
         "title": "Stacked/queued breaks remain actionable (dismiss / snooze per item, or equivalent clear UX)",
-        "status": "in-progress"
+        "status": "running"
       },
       {
         "title": "Behavior is predictable when several kinds fire close together",
-        "status": "in-progress"
+        "status": "running"
       },
       {
         "title": "(Optional) Align OS notification tagging with stacking intent if in-app and system surfaces should match",
