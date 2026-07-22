@@ -1,0 +1,53 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF ingested from GitHub issue #6",
+    "created": "2026-07-22T19:05:00Z"
+  },
+  "plan": {
+    "title": "Whole-session presets",
+    "status": "running",
+    "narratives": {
+      "Origin": "Ingested from https://github.com/rockbox37/Relaxanator/issues/6",
+      "Overview": "Let users save the entire current session configuration as a named preset and recall it later, so a favorite combination of noise + meditation + chords + announcements + break prompts + ToDo reminders + mute state can be restored in one action. Presets persist across sessions using the app's established offline-first localStorage pattern (relaxanator.* keys, SSR-safe storage resolution, pure lib + co-located tests, same as break-tallies/break-daily-goal/todos). A Presets UI lets users save (with a name), overwrite/update, load/apply, rename, and delete presets. Applying a preset updates both the React settings state AND the live audio engines so it takes effect immediately, whether or not playback is active. GitHub issue #6 is a stub ('Scope vBRIEF: Whole-session presets') with no further detail, so scope below is defined from the app's current state model; see Assumptions.",
+      "Requirements": "FR-1: A preset captures the serializable session settings held in NoisePlayer: noise state (color/EQ/volume from createDefaultNoiseState), meditation (MeditationSettings), chords (ChordSettings), announce (AnnounceSettings), breaks (BreakSettings), todoCue (TodoCueSettings), and muteState (MuteState). FR-2: Users can save the current session as a named preset, overwrite/update an existing preset, load/apply a preset, rename a preset, and delete a preset. FR-3: Presets persist in localStorage under a versioned schema (e.g. relaxanator.sessionPresets) following the existing offline-first pattern, with a schema version field for forward migration and graceful fallback on corrupt/absent/legacy data. FR-4: Applying a preset updates React state for every captured section AND pushes the new settings into the live engines (meditationRef, chordsRef, and any others) so the change is audible immediately when playing. FR-5: A Presets UI section (mounted in NoisePlayer) exposes save / save-as-named / update / load / rename / delete with sensible affordances and a confirm on destructive delete. NFR-1: Pure preset logic (serialize/deserialize/validate/migrate + CRUD over the presets collection) lives in src/lib (e.g. src/lib/session-presets.ts), is framework-free, and meets the 85% per-file coverage gate with co-located tests. NFR-2: No regression to existing settings/persistence; loading a preset must not corrupt unrelated persisted state (tallies, daily goal, todo items). NFR-3: SSR-safe (no localStorage access at module scope / during SSR), consistent with existing storage helpers.",
+      "Assumptions": "A-1: Presets capture SETTINGS, not runtime/session data — excluded: playback on/off, glow state, activeBreaks, sleep-timer value, break tallies, daily goal, and the ToDo item list contents (only todoCue reminder settings are captured). A-2: Loading a preset applies live and overwrites current in-memory settings (no implicit merge). A-3: Noise color/EQ/volume ARE part of a preset. These defaults can be adjusted if the operator prefers a narrower/wider capture."
+    },
+    "items": [
+      {
+        "title": "src/lib/session-presets.ts — versioned preset shape, serialize/deserialize/validate/migrate, CRUD over presets collection, SSR-safe localStorage helper (pure, unit-tested to 85%)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-3, NFR-1, NFR-3"
+        }
+      },
+      {
+        "title": "Capture + apply wiring in NoisePlayer — build a preset from current state; apply a preset to React state and push into live engines",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-4, NFR-2"
+        }
+      },
+      {
+        "title": "Presets UI section — save / save-as / update / load / rename / delete with confirm-on-delete",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2, FR-5"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "feature"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/6",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #6: Whole-session presets"
+      }
+    ],
+    "updated": "2026-07-22T19:07:34Z"
+  }
+}
