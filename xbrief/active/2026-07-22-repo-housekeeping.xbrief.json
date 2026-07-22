@@ -1,0 +1,45 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for repo housekeeping (gitignore + leftover artifacts)",
+    "created": "2026-07-22T18:10:00Z"
+  },
+  "plan": {
+    "title": "Repo housekeeping: track cost-estimate doc + xBRIEF history, gitignore local churn",
+    "status": "running",
+    "narratives": {
+      "Overview": "Clean up the last uncommitted dirtiness in the working tree with the correct per-file treatment, landed as a small housekeeping PR against main. Commit the legitimately-shippable leftovers (COST-ESTIMATE.md project doc, the completed 2026-07-18-cost-estimate xBRIEF, and the cancelled 2026-07-22-meditation-horns xBRIEF) into the repo's xBRIEF/doc history. Decide whether xbrief/.triage-cache/** and xbrief/.eval/** are intentionally tracked Deft state or local machine churn; if churn, gitignore them and git rm --cached; if intentionally tracked, leave them. Prefer the less-destructive option when in doubt.",
+      "Requirements": "FR-1: COST-ESTIMATE.md and the completed/cancelled xBRIEF artifacts are committed to main via a housekeeping PR. FR-2: The tracked-vs-ignored decision for xbrief/.triage-cache/** and xbrief/.eval/** is made from evidence (existing .gitignore, Deft docs, git history) and applied correctly. NFR-1: Required CI check no-mixed-core-and-app passes (no .deft/core changes) and the PR merges via merge-commit convention. NFR-2: Working tree ends clean or with only ignored churn remaining."
+    },
+    "items": [
+      {
+        "title": "Decide tracked-vs-ignored treatment for xbrief/.triage-cache and xbrief/.eval from evidence",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2"
+        }
+      },
+      {
+        "title": "Commit COST-ESTIMATE.md + completed/cancelled xBRIEF artifacts via a housekeeping PR",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1"
+        }
+      },
+      {
+        "title": "Get required CI green and land the housekeeping PR; leave working tree clean",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-1, NFR-2"
+        }
+      }
+    ],
+    "tags": [
+      "chore",
+      "housekeeping"
+    ],
+    "references": [],
+    "updated": "2026-07-22T18:12:17Z"
+  }
+}
