@@ -1,0 +1,68 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for finalizing PR #25 (meditation horn voices)",
+    "created": "2026-07-22T17:52:00Z"
+  },
+  "plan": {
+    "title": "Fog horn, ship's horn, and train horn meditation voices (finalize PR #25)",
+    "status": "cancelled",
+    "narratives": {
+      "Overview": "Finalize and land the in-flight PR #25, which adds three synthesized meditation voices — fog horn (#22), ship's horn, and train horn (#23) — built on a shared distantHorn synth helper (low fundamental, soft attack, lowpass filtering for distance, long 16-18 s decay), with the train horn adding minor-third tierce partials for a distinct timbre. The voices auto-wire into the Meditation panel registry and are disabled by default like other non-bell voices. This scope covers bringing the branch up to date with main (which has advanced significantly: chords section, sound-trigger glow, MeditationEngine.setOnFire, etc.), addressing all outstanding review/bot findings (P0/P1/P2), resolving merge conflicts so the horns integrate with the CURRENT meditation registry and engine, and getting required CI green so the PR can merge.",
+      "Requirements": "FR-1: Fog horn, ship's horn, and train horn voices exist in the meditation voice registry and appear in the Meditation panel with correct labels, disabled by default. FR-2: Shared distantHorn synth helper produces a distant/deep tone with soft attack, lowpass distance filtering, and a long decay; train horn adds minor-third tierce partials. FR-3: The branch is merged up to date with main and integrates with the current registry/engine (including setOnFire/glow wiring) without regressions. FR-4: All P0/P1/P2 review or bot findings on PR #25 are resolved (fixed or justified). NFR-1: typecheck, lint, and the full vitest suite pass; new source files have co-located tests per the forward-coverage gate and src/lib meets the 85% coverage gate. NFR-2: Required CI check no-mixed-core-and-app passes and the PR is mergeable via merge-commit convention."
+    },
+    "items": [
+      {
+        "title": "Bring feat/meditation-horns up to date with main and resolve conflicts against the current meditation registry/engine",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-3"
+        }
+      },
+      {
+        "title": "Address all P0/P1/P2 review and bot findings on PR #25 (fix or justify)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-4"
+        }
+      },
+      {
+        "title": "Verify typecheck/lint/test/build clean with co-located tests and coverage gates satisfied",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-1"
+        }
+      },
+      {
+        "title": "Get required CI green and land PR #25 via merge commit",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-2"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "audio"
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/pull/25",
+        "type": "x-xbrief/github-pr",
+        "title": "PR #25: fog horn, ship's horn, and train horn meditation sounds"
+      },
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/22",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #22: fog horn voice"
+      },
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/23",
+        "type": "x-xbrief/github-issue",
+        "title": "Issue #23: train horn voice"
+      }
+    ],
+    "updated": "2026-07-22T18:03:22Z"
+  }
+}

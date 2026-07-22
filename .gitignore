@@ -65,11 +65,16 @@ vbrief/.triage-cache/summary-history.jsonl
 vbrief/.triage-cache/scope-lifecycle.jsonl
 vbrief/.triage-cache/decompositions/
 vbrief/.triage-cache/doctor-state.json
+vbrief/.triage-cache/release-availability-state.json
 xbrief/.triage-cache/candidates.jsonl
 xbrief/.triage-cache/summary-history.jsonl
 xbrief/.triage-cache/scope-lifecycle.jsonl
 xbrief/.triage-cache/decompositions/
 xbrief/.triage-cache/doctor-state.json
+# release-availability-state.json -> gitignored (per-machine "new deft
+# release available" notification throttle: {latestVersion, notifiedAt};
+# same local-only class as doctor-state.json, never committed).
+xbrief/.triage-cache/release-availability-state.json
 vbrief/*.lock
 .deft/core.bak-*/
 .deft/*.bak-*

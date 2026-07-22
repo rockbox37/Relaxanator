@@ -1,0 +1,60 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.6",
+    "author": "agent:deft-directive-cost",
+    "description": "Scope xBRIEF",
+    "created": "2026-07-18T21:35:00Z"
+  },
+  "plan": {
+    "title": "Pre-build cost estimate (COST-ESTIMATE.md)",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Produce the Deft Cost Phase Gate artifact COST-ESTIMATE.md at the project root from the approved specification and current app shape (offline-capable PWA on Fly.io, no backend state). Plain-English USD bands so a human can Build / Rescope / No-build / Skip before further build work.",
+      "Requirements": "FR-1: Create COST-ESTIMATE.md at repo root using .deft/core/templates/COST-ESTIMATE.md and .deft/core/references/cost-models.md. FR-2: Reflect real project costs only (Fly.io hosting, domain, light CI; no invented database/LLM/runtime APIs). FR-3: Leave Decision recorded blank until the operator picks Build / Rescope / No-build / Skip. NFR-1: Non-technical plain English; loose low/typical/high bands. NFR-2: Do not commit unless asked; do not touch triage cache noise."
+    },
+    "items": [
+      {
+        "title": "Draft COST-ESTIMATE.md from Deft template + project facts",
+        "status": "completed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, NFR-1"
+        }
+      },
+      {
+        "title": "Surface decision point menu to operator",
+        "status": "completed",
+        "narrative": {
+          "Traces": "FR-3"
+        }
+      },
+      {
+        "title": "Record Build decision and close cost phase",
+        "status": "completed",
+        "narrative": {
+          "Traces": "FR-3; Decision=build 2026-07-18 by Baba"
+        }
+      }
+    ],
+    "references": [
+      {
+        "uri": ".deft/core/templates/COST-ESTIMATE.md",
+        "type": "x-xbrief/spec-section",
+        "TrustLevel": "internal"
+      },
+      {
+        "uri": ".deft/core/references/cost-models.md",
+        "type": "x-xbrief/spec-section",
+        "TrustLevel": "internal"
+      },
+      {
+        "uri": "xbrief/specification.xbrief.json",
+        "type": "x-xbrief/spec-section",
+        "TrustLevel": "internal"
+      }
+    ],
+    "updated": "2026-07-18T21:34:54Z",
+    "metadata": {
+      "completedAt": "2026-07-18T21:34:54Z"
+    }
+  }
+}
