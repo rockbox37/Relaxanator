@@ -1,0 +1,35 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for deploying chord loop mode + Bell clock-sync default to Fly.io",
+    "created": "2026-07-23T15:09:00Z"
+  },
+  "plan": {
+    "title": "Deploy chord loop mode + Bell clock-sync default to Fly.io",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Deploy current main (commit c79f72a) to Fly.io so two merged features reach production: the continuous BPM-driven chord loop mode (PR #123) and the Bell meditation voice defaulting to clock-synced every 30 minutes (PR #122). Deploy-only using the existing fly.toml / Dockerfile; no code changes.",
+      "Requirements": "FR-1: Deploy main@c79f72a to Fly.io via the Fly CLI using the existing config. FR-2: Do not commit/push/modify source; deploy-only. FR-3: Verify the app is live (HTTP 200 on root URL); report app name, URL, release version, machine health. NFR-1: On non-transient failure (auth, unrecoverable build/config), stop and report rather than making risky changes.",
+      "Assumptions": "A-1: Fly CLI installed + authenticated. A-2: fly.toml/Dockerfile correct from prior deploys (release 43 last shipped). A-3: Remote build acceptable."
+    },
+    "items": [
+      {
+        "title": "Run fly deploy for main@c79f72a and verify the live app returns HTTP 200",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, NFR-1"
+        }
+      }
+    ],
+    "tags": [
+      "deploy",
+      "ops"
+    ],
+    "references": [],
+    "updated": "2026-07-23T15:15:47Z",
+    "metadata": {
+      "completedAt": "2026-07-23T15:15:47Z"
+    }
+  }
+}

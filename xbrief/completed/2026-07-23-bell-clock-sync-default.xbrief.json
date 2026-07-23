@@ -7,7 +7,7 @@
   },
   "plan": {
     "title": "Default the Bell sound to clock-synced, every 30 minutes",
-    "status": "running",
+    "status": "completed",
     "narratives": {
       "Overview": "Change the default configuration of the 'bell' meditation voice so that, out of the box, it is synced to the wall clock and triggers every 30 minutes (i.e. on the :00 and :30 clock boundaries). The meditation model already supports both concepts: MeditationSettings has a per-voice `syncToClock` boolean, and each voice has a `defaultIntervalMin`. Today the bell defaults to intervalMin 15 and syncToClock false (see src/lib/meditation.ts: MEDITATION_VOICES bell entry `defaultIntervalMin: 15`, and createDefaultMeditationSettings which sets `syncToClock: false` for every voice). This brief updates those defaults for the bell voice only. No scheduler or synth changes — the clock-sync scheduling already exists; we are only changing default values.",
       "Requirements": "FR-1: The bell voice's default interval becomes 30 minutes (change bell `defaultIntervalMin` from 15 to 30 in MEDITATION_VOICES). FR-2: The bell voice defaults to syncToClock = true, so a fresh session has the bell aligned to clock boundaries (every 30 minutes ⇒ on :00 and :30). Implement this cleanly: add an optional `defaultSyncToClock?: boolean` to the voice def (default falsey) and have createDefaultMeditationSettings honor it (`syncToClock: voice.defaultSyncToClock ?? false`), setting it true for bell — OR an equivalently clean approach. Do NOT hardcode a bell-specific branch that would rot; keep it data-driven per the existing registry style. FR-3: Only the bell voice changes; every other voice keeps its current defaultIntervalMin and syncToClock=false, and bell stays enabled-by-default as it is today. FR-4: This only affects DEFAULTS for fresh sessions — do not force the setting onto users who have already customized bell (persisted settings / presets keep their stored values; only the default factory changes). NFR-1: Pure logic in src/lib/meditation.ts; deterministic + unit-tested; src/lib per-file coverage gate (85%) met. NFR-2: No changes to the meditation engine/scheduler or synths. NFR-3: typecheck, lint, full test suite, and production build pass.",
@@ -35,6 +35,9 @@
       "meditation"
     ],
     "references": [],
-    "updated": "2026-07-23T14:39:05Z"
+    "updated": "2026-07-23T15:15:47Z",
+    "metadata": {
+      "completedAt": "2026-07-23T15:15:47Z"
+    }
   }
 }
