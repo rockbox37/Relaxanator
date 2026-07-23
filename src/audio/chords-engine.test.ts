@@ -154,4 +154,80 @@ describe("ChordsEngine", () => {
     expect(() => engine.updateSettings(createDefaultChordSettings())).not.toThrow();
     expect(() => engine.stop()).not.toThrow();
   });
+
+  it("reschedules a looping voice back-to-back on the BPM grid", () => {
+    vi.useFakeTimers();
+    let now = 0;
+    const ctx = mockCtx(now);
+    Object.defineProperty(ctx, "currentTime", {
+      get: () => now,
+      configurable: true,
+    });
+
+    const settings = createDefaultChordSettings();
+    // c-major is a single 4-beat bar; at 60bpm that loops every 4 seconds.
+    // The 5-minute one-shot interval would be 300s — never reached below —
+    // so any second fire proves loop is driving the cadence, not minutes.
+    settings["c-major"].loop = true;
+    settings["c-major"].tempoBpm = 60;
+    settings["c-major"].intervalMin = 5;
+
+    const engine = new ChordsEngine(ctx, {} as AudioNode, settings);
+    engine.start(); // seeds first fire one bar out, at t=4
+
+    // Pump into the first fire's lookahead window (~t=4).
+    now = 3.8;
+    vi.advanceTimersByTime(200);
+    const afterFirst = (ctx.createOscillator as ReturnType<typeof vi.fn>).mock
+      .calls.length;
+    expect(afterFirst).toBeGreaterThan(0);
+
+    // Only ~4 more seconds of audio time later the voice fires AGAIN — a
+    // continuous bar cadence, not the 5-minute one-shot interval.
+    now = 7.8;
+    vi.advanceTimersByTime(200);
+    const afterSecond = (ctx.createOscillator as ReturnType<typeof vi.fn>).mock
+      .calls.length;
+    expect(afterSecond).toBeGreaterThan(afterFirst);
+
+    engine.stop();
+  });
+
+  it("stop() tears a looping voice down cleanly — no leaked timers or new oscillators", () => {
+    vi.useFakeTimers();
+    let now = 0;
+    const ctx = mockCtx(now);
+    Object.defineProperty(ctx, "currentTime", {
+      get: () => now,
+      configurable: true,
+    });
+
+    const settings = createDefaultChordSettings();
+    settings["c-major"].loop = true;
+    settings["c-major"].tempoBpm = 60;
+
+    const engine = new ChordsEngine(ctx, {} as AudioNode, settings);
+    const onFire = vi.fn();
+    engine.setOnFire(onFire);
+    engine.start();
+
+    now = 3.8;
+    vi.advanceTimersByTime(200); // schedules the first loop iteration + onFire
+    const scheduled = (ctx.createOscillator as ReturnType<typeof vi.fn>).mock
+      .calls.length;
+    expect(scheduled).toBeGreaterThan(0);
+
+    engine.stop();
+    // No pump interval and no deferred fire callbacks remain.
+    expect(vi.getTimerCount()).toBe(0);
+
+    // Advancing far past several would-be bar boundaries schedules nothing new
+    // and fires no callbacks — no stacked/leaked scheduling survives teardown.
+    now = 1000;
+    vi.advanceTimersByTime(5000);
+    expect(
+      (ctx.createOscillator as ReturnType<typeof vi.fn>).mock.calls.length,
+    ).toBe(scheduled);
+    expect(onFire).not.toHaveBeenCalled();
+  });
 });

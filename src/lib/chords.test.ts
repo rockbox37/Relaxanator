@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ARP_STEP_BEATS,
+  BEATS_PER_BAR,
   CHORD_MAX_INTERVAL_MIN,
   CHORD_MIN_INTERVAL_MIN,
   CHORD_TIMBRES,
@@ -14,6 +15,8 @@ import {
   STRUM_MAX_STEP_SEC,
   STRUM_MIN_STEP_SEC,
   buildChordPlan,
+  chordLoopIntervalSec,
+  chordPlanBeats,
   chordPlanDurationSec,
   clampChordIntervalMin,
   clampTempoBpm,
@@ -33,6 +36,7 @@ function voiceSettings(
   return {
     enabled: true,
     mode: "block",
+    loop: false,
     tempoBpm: 60, // 1 beat === 1 second, keeps timing arithmetic obvious
     timbreId: "rhodes",
     intervalMin: 1,
@@ -279,6 +283,13 @@ describe("createDefaultChordSettings", () => {
       expect(s.timbreId).toBe(voice.defaultTimbreId);
       expect(s.intervalMin).toBe(voice.defaultIntervalMin);
       expect(s.volume).toBe(voice.defaultVolume);
+    }
+  });
+
+  it("defaults loop off for every voice so nothing loops unless opted in", () => {
+    const settings = createDefaultChordSettings();
+    for (const voice of CHORD_VOICES) {
+      expect(settings[voice.id].loop).toBe(false);
     }
   });
 });
@@ -531,6 +542,82 @@ describe("chordPlanDurationSec", () => {
   });
 });
 
+describe("chordPlanBeats", () => {
+  it("sums each chord's beats, flooring each at a single beat", () => {
+    expect(chordPlanBeats(findVoice("c-major"))).toBe(4); // one 4-beat chord
+    expect(chordPlanBeats(findVoice("pop-I-V-vi-IV"))).toBe(8); // 4 * 2 beats
+    expect(chordPlanBeats(findVoice("jazz-ii-V-I"))).toBe(8); // 2 + 2 + 4
+    // Sub-beat chords floor to one beat, matching buildChordPlan's duration.
+    const tiny: ChordVoiceDef = {
+      ...findVoice("c-major"),
+      chords: [{ intervals: [0, 4, 7], beats: 0.25 }],
+    };
+    expect(chordPlanBeats(tiny)).toBe(1);
+  });
+});
+
+describe("chordLoopIntervalSec", () => {
+  it("loops a single chord as a one-bar pulse on the BPM grid", () => {
+    const voice = findVoice("c-major"); // one 4-beat chord === one bar
+    // 60bpm => 1s/beat => one bar (4 beats) === 4s.
+    expect(chordLoopIntervalSec(voice, voiceSettings({ tempoBpm: 60 }))).toBeCloseTo(
+      4,
+      9,
+    );
+    // 120bpm => 0.5s/beat => 2s.
+    expect(
+      chordLoopIntervalSec(voice, voiceSettings({ tempoBpm: 120 })),
+    ).toBeCloseTo(2, 9);
+  });
+
+  it("loops a whole progression, quantized to bars", () => {
+    const voice = findVoice("pop-I-V-vi-IV"); // 8 beats === 2 bars
+    // 60bpm => 8 beats === 8s (already a whole number of bars, so gapless).
+    expect(chordLoopIntervalSec(voice, voiceSettings({ tempoBpm: 60 }))).toBeCloseTo(
+      8,
+      9,
+    );
+  });
+
+  it("rounds a partial-bar plan UP to the next bar (no overlap)", () => {
+    const threeBeat: ChordVoiceDef = {
+      ...findVoice("c-major"),
+      chords: [{ intervals: [0, 4, 7], beats: 3 }], // 3 beats -> quantize to 4
+    };
+    // 60bpm => plan is 3s but the loop re-triggers on the 4s (one-bar) grid.
+    expect(
+      chordLoopIntervalSec(threeBeat, voiceSettings({ tempoBpm: 60 })),
+    ).toBeCloseTo(4, 9);
+  });
+
+  it("never returns a shorter-than-plan interval (no overlap) and stays positive", () => {
+    for (const voice of CHORD_VOICES) {
+      for (const tempoBpm of [MIN_TEMPO_BPM, 60, 96, 132, MAX_TEMPO_BPM]) {
+        const settings = voiceSettings({ tempoBpm, loop: true });
+        const loopSec = chordLoopIntervalSec(voice, settings);
+        expect(loopSec).toBeGreaterThan(0);
+        // The loop length is >= the plan length, so an iteration never starts
+        // before the previous one has finished playing.
+        expect(loopSec + 1e-9).toBeGreaterThanOrEqual(
+          chordPlanDurationSec(voice, settings),
+        );
+        // And it is a whole number of bars on the beat grid.
+        const beatSec = 60 / tempoBpm;
+        const beats = loopSec / beatSec;
+        expect(beats % BEATS_PER_BAR).toBeCloseTo(0, 6);
+      }
+    }
+  });
+
+  it("is deterministic for identical inputs", () => {
+    const voice = findVoice("canon-in-d");
+    const settings = voiceSettings({ tempoBpm: 90, loop: true });
+    expect(chordLoopIntervalSec(voice, settings)).toBe(
+      chordLoopIntervalSec(voice, settings),
+    );
+  });
+});
+
 describe("computeNextChordFire", () => {
   it("advances exactly one interval", () => {
     expect(computeNextChordFire(100, voiceSettings({ intervalMin: 2 }))).toBe(
@@ -542,6 +629,24 @@ describe("computeNextChordFire", () => {
     expect(
       computeNextChordFire(50, voiceSettings({ intervalMin: -100 })),
     ).toBeGreaterThan(50);
+  });
+
+  it("uses the bar-length loop interval when loop is on (ignores minutes)", () => {
+    const voice = findVoice("c-major"); // one bar; 60bpm => 4s
+    const settings = voiceSettings({ loop: true, tempoBpm: 60, intervalMin: 5 });
+    // Loop on => +4s (a bar), NOT +300s (the 5-minute interval).
+    expect(computeNextChordFire(100, settings, voice)).toBeCloseTo(104, 9);
+  });
+
+  it("falls back to the minutes interval when loop is on but no voice is given", () => {
+    const settings = voiceSettings({ loop: true, intervalMin: 2 });
+    expect(computeNextChordFire(100, settings)).toBe(100 + 120);
+  });
+
+  it("ignores loop-derived timing when loop is off even if a voice is given", () => {
+    const voice = findVoice("c-major");
+    const settings = voiceSettings({ loop: false, intervalMin: 2 });
+    expect(computeNextChordFire(100, settings, voice)).toBe(100 + 120);
   });
 });
 
@@ -621,5 +726,44 @@ describe("collectDueChordEvents", () => {
       intervalSec * 2 + 1,
     );
     expect(events.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("reschedules a looping voice back-to-back on the bar grid, not the minutes interval", () => {
+    const voice = findVoice("c-major"); // one bar; 60bpm => 4s per loop
+    const lookup = (id: string) => (id === "c-major" ? voice : undefined);
+    const settings = {
+      "c-major": voiceSettings({ loop: true, tempoBpm: 60, intervalMin: 5 }),
+    };
+    // A 9s lookahead from t=100 with a 4s loop surfaces fires at 104 and 108,
+    // then parks the schedule at 112 — a continuous 4s cadence, never +300s.
+    const { events, schedule } = collectDueChordEvents(
+      { "c-major": 104 },
+      settings,
+      100,
+      9,
+      lookup,
+    );
+    expect(events).toEqual([
+      { voiceId: "c-major", whenSec: 104 },
+      { voiceId: "c-major", whenSec: 108 },
+    ]);
+    expect(schedule["c-major"]).toBeCloseTo(112, 9);
+  });
+
+  it("keeps the minutes cadence for a non-looping voice even with a lookup", () => {
+    const voice = findVoice("c-major");
+    const lookup = (id: string) => (id === "c-major" ? voice : undefined);
+    const settings = {
+      "c-major": voiceSettings({ loop: false, intervalMin: 1 }),
+    };
+    const { schedule } = collectDueChordEvents(
+      { "c-major": 100.2 },
+      settings,
+      100,
+      0.5,
+      lookup,
+    );
+    // Loop off => advance by the full 60s minutes interval, unchanged.
+    expect(schedule["c-major"]).toBe(100.2 + 60);
   });
 });

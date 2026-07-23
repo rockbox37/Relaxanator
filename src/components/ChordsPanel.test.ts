@@ -106,6 +106,56 @@ describe("ChordsPanel", () => {
     expect(values).toEqual(["block", "arpeggiated", "strum"]);
   });
 
+  it("renders a per-voice Loop toggle that reflects state and fires onChange", () => {
+    const onChange = vi.fn();
+    const settings = createDefaultChordSettings();
+    settings[CHORD_VOICES[0].id].loop = true; // first row is looping
+    const element = ChordsPanel({
+      settings,
+      onChange,
+      onPreview: vi.fn(),
+    }) as ReactElement<{ children: ReactElement[] }>;
+
+    const list = element.props.children.find(
+      (child) => child?.type === "ul",
+    ) as ReactElement<{
+      children: ReactElement<{ children: ReactElement[] }>[];
+    }>;
+
+    // Every voice row carries a loop toggle...
+    const rows = list.props.children;
+    for (const row of rows) {
+      const labels = row.props.children as ReactElement<{ className?: string }>[];
+      expect(
+        labels.some((label) => label?.props?.className === "voice-loop"),
+      ).toBe(true);
+    }
+
+    // ...the first row's toggle is checked (loop on) and wired to onChange.
+    const firstRowLabels = rows[0].props.children as ReactElement<{
+      className?: string;
+      children: [
+        ReactElement<{
+          type: string;
+          checked: boolean;
+          onChange: (e: { target: { checked: boolean } }) => void;
+        }>,
+        string,
+      ];
+    }>[];
+    const loopLabel = firstRowLabels.find(
+      (label) => label?.props?.className === "voice-loop",
+    );
+    expect(loopLabel).toBeDefined();
+    // The label's children are [<input>, "loop"]; the toggle is the input.
+    const input = loopLabel!.props.children[0];
+    expect(input.props.type).toBe("checkbox");
+    expect(input.props.checked).toBe(true);
+
+    input.props.onChange({ target: { checked: false } });
+    expect(onChange).toHaveBeenCalledWith(CHORD_VOICES[0].id, { loop: false });
+  });
+
   it("adds the .voice--playing glow class only to lit rows (#104)", () => {
     const litId = CHORD_VOICES[0].id;
     const element = ChordsPanel({

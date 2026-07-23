@@ -30,6 +30,13 @@ const VOICE_BY_ID = new Map<string, ChordVoiceDef>(
   CHORD_VOICES.map((v) => [v.id, v]),
 );
 
+/**
+ * Voice resolver handed to the pure scheduler so a looping voice can derive its
+ * bar-length re-trigger interval from the plan (see `chordLoopIntervalSec`).
+ */
+const resolveVoice = (voiceId: string): ChordVoiceDef | undefined =>
+  VOICE_BY_ID.get(voiceId);
+
 export class ChordsEngine {
   private schedule: ChordFireSchedule = {};
   private settings: ChordSettings;
@@ -48,7 +55,11 @@ export class ChordsEngine {
 
   start(): void {
     if (this.timer) return;
-    this.schedule = initChordSchedule(this.settings, this.ctx.currentTime);
+    this.schedule = initChordSchedule(
+      this.settings,
+      this.ctx.currentTime,
+      resolveVoice,
+    );
     this.timer = setInterval(() => this.pump(), PUMP_MS);
   }
 
@@ -95,6 +106,7 @@ export class ChordsEngine {
       this.settings,
       this.ctx.currentTime,
       LOOKAHEAD_SEC,
+      resolveVoice,
     );
     this.schedule = schedule;
     for (const event of events) {

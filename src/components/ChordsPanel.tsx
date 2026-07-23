@@ -85,6 +85,19 @@ export default function ChordsPanel({
               </label>
 
               <label
+                className="voice-loop"
+                title="Loop continuously in time with the tempo instead of playing once every few minutes"
+              >
+                <input
+                  type="checkbox"
+                  checked={state.loop}
+                  onChange={(e) => onChange(voice.id, { loop: e.target.checked })}
+                  aria-label={`${voice.label} continuous loop`}
+                />
+                loop
+              </label>
+
+              <label
                 className="voice-tempo"
                 title={
                   arpeggiated

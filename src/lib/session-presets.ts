@@ -188,6 +188,8 @@ function normalizeChords(raw: unknown): ChordSettings {
         rv.mode === "arpeggiated" || rv.mode === "block" || rv.mode === "strum"
           ? rv.mode
           : dv.mode,
+      // Older presets predate loop; `bool` falls back to the default (off).
+      loop: bool(rv.loop, dv.loop),
       tempoBpm: num(rv.tempoBpm, dv.tempoBpm, clampTempoBpm),
       timbreId:
         typeof timbre === "string" && isChordTimbreId(timbre)

@@ -672,11 +672,21 @@ export interface ChordVoiceSettings {
    * or as a fast guitar-style downstroke over a very short window (strum).
    */
   mode: ChordMode;
+  /**
+   * Continuous BPM-driven loop. When true the voice re-triggers back-to-back on
+   * the tempo grid (the plan's musical length quantized up to the next bar) so
+   * it plays as a seamless repeating loop, ignoring `intervalMin`. When false
+   * (the default) the voice plays once and then waits `intervalMin` before the
+   * next occurrence. ORTHOGONAL to `mode`: loop controls how *often* the whole
+   * chord/progression re-triggers, `mode` controls how each chord is voiced, so
+   * loop composes with block / arpeggiated / strum.
+   */
+  loop: boolean;
   /** Tempo in beats per minute — sets arpeggio spacing + progression pace. */
   tempoBpm: number;
   /** Which instrument in CHORD_TIMBRES voices the notes. */
   timbreId: ChordTimbreId;
-  /** How often the chord/progression repeats, in minutes. */
+  /** How often the chord/progression repeats, in minutes (when loop is off). */
   intervalMin: number;
   volume: number;
 }
@@ -692,6 +702,13 @@ export const CHORD_MAX_INTERVAL_MIN = 120;
 
 /** Beats between successive notes when arpeggiating (an eighth note). */
 export const ARP_STEP_BEATS = 0.5;
+
+/**
+ * Beats per bar used to quantize the continuous loop re-trigger. The section is
+ * 4/4 throughout (every voice's chord lengths are whole beats), so one bar is
+ * four beats.
+ */
+export const BEATS_PER_BAR = 4;
 
 /**
  * Per-string offset (seconds) of a *strum*, at the slowest and fastest tempi.
@@ -736,6 +753,9 @@ export function createDefaultChordSettings(): ChordSettings {
       // Enable just one voice by default so the section is audible but calm.
       enabled: voice.id === "c-major",
       mode: voice.defaultMode,
+      // Loop is off for every shipped voice — the one-shot minutes cadence is
+      // the existing behavior; nothing loops unless the user opts a voice in.
+      loop: false,
       tempoBpm: voice.defaultTempoBpm,
       timbreId: voice.defaultTimbreId,
       intervalMin: voice.defaultIntervalMin,
@@ -847,6 +867,39 @@ export function chordPlanDurationSec(
   return total;
 }
 
+/**
+ * Total musical length of one play-through in *beats* — each chord floored at a
+ * single beat, mirroring the `Math.max(beatSec, …)` floor in `buildChordPlan` /
+ * `chordPlanDurationSec` so the beat count and the wall-clock duration agree.
+ */
+export function chordPlanBeats(voice: ChordVoiceDef): number {
+  let beats = 0;
+  for (const chord of voice.chords) {
+    beats += Math.max(1, chord.beats);
+  }
+  return beats;
+}
+
+/**
+ * The continuous-loop re-trigger interval (seconds): the plan's musical length
+ * quantized *up* to the next whole bar on the BPM grid. Quantizing to the bar
+ * keeps successive iterations locked to the tempo — a single chord (one bar)
+ * loops as a bar-length pulse, a progression loops the whole sequence — and
+ * rounding up guarantees the next iteration never starts before the current one
+ * finishes (no overlap). Every voice here is an exact whole number of bars, so
+ * in practice the loop is gapless as well. Deterministic and always strictly
+ * positive.
+ */
+export function chordLoopIntervalSec(
+  voice: ChordVoiceDef,
+  settings: ChordVoiceSettings,
+): number {
+  const beatSec = 60 / clampTempoBpm(settings.tempoBpm);
+  const planBeats = chordPlanBeats(voice);
+  const bars = Math.max(1, Math.ceil(planBeats / BEATS_PER_BAR));
+  return bars * BEATS_PER_BAR * beatSec;
+}
+
 /* ------------------------------------------------------------------ *
  * Scheduling (pure): free-running interval lookahead, mirroring meditation
  * ------------------------------------------------------------------ */
@@ -854,11 +907,29 @@ export function chordPlanDurationSec(
 /** Map of voiceId -> next scheduled fire time (audio-clock seconds). */
 export type ChordFireSchedule = Record<string, number>;
 
-/** Next fire time (audio-clock seconds) one full interval after `fromSec`. */
+/**
+ * Resolve a voiceId to its registry definition — supplied by the engine so the
+ * pure scheduler can derive a looping voice's bar-length re-trigger interval
+ * from the plan. Optional: without it (or for a non-looping voice) the classic
+ * minutes-based cadence is used, so existing behavior is unchanged.
+ */
+export type ChordVoiceLookup = (voiceId: string) => ChordVoiceDef | undefined;
+
+/**
+ * Next fire time (audio-clock seconds) after `fromSec`. When the voice's `loop`
+ * is on and its definition is resolvable, the step is the bar-quantized plan
+ * length (see `chordLoopIntervalSec`) so the voice re-triggers back-to-back on
+ * the tempo grid; otherwise it is one full minutes-based interval, exactly as
+ * before.
+ */
 export function computeNextChordFire(
   fromSec: number,
   settings: ChordVoiceSettings,
+  voice?: ChordVoiceDef,
 ): number {
+  if (settings.loop && voice) {
+    return fromSec + Math.max(1, chordLoopIntervalSec(voice, settings));
+  }
   const intervalSec = clampChordIntervalMin(settings.intervalMin) * 60;
   return fromSec + Math.max(1, intervalSec);
 }
@@ -867,11 +938,12 @@ export function computeNextChordFire(
 export function initChordSchedule(
   settings: ChordSettings,
   nowSec: number,
+  voiceLookup?: ChordVoiceLookup,
 ): ChordFireSchedule {
   const schedule: ChordFireSchedule = {};
   for (const [voiceId, voice] of Object.entries(settings)) {
     if (!voice.enabled) continue;
-    schedule[voiceId] = computeNextChordFire(nowSec, voice);
+    schedule[voiceId] = computeNextChordFire(nowSec, voice, voiceLookup?.(voiceId));
   }
   return schedule;
 }
@@ -894,6 +966,7 @@ export function collectDueChordEvents(
   settings: ChordSettings,
   nowSec: number,
   lookaheadSec: number,
+  voiceLookup?: ChordVoiceLookup,
 ): { events: ChordDueEvent[]; schedule: ChordFireSchedule } {
   const events: ChordDueEvent[] = [];
   const next: ChordFireSchedule = {};
@@ -901,17 +974,18 @@ export function collectDueChordEvents(
   for (const [voiceId, voice] of Object.entries(settings)) {
     if (!voice.enabled) continue;
 
-    let fireAt = schedule[voiceId] ?? computeNextChordFire(nowSec, voice);
+    const def = voiceLookup?.(voiceId);
+    let fireAt = schedule[voiceId] ?? computeNextChordFire(nowSec, voice, def);
     if (fireAt < nowSec) {
       events.push({ voiceId, whenSec: nowSec });
-      fireAt = computeNextChordFire(nowSec, voice);
+      fireAt = computeNextChordFire(nowSec, voice, def);
       while (fireAt < nowSec + lookaheadSec) {
-        fireAt = computeNextChordFire(fireAt, voice);
+        fireAt = computeNextChordFire(fireAt, voice, def);
       }
     } else {
       while (fireAt < nowSec + lookaheadSec) {
         events.push({ voiceId, whenSec: fireAt });
-        fireAt = computeNextChordFire(fireAt, voice);
+        fireAt = computeNextChordFire(fireAt, voice, def);
       }
     }
     next[voiceId] = fireAt;
