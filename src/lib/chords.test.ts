@@ -119,6 +119,33 @@ describe("CHORD_VOICES registry", () => {
     }
   });
 
+  it("includes ready-made guitar voices defaulting to guitar timbres", () => {
+    const guitarTimbreIds = new Set(
+      CHORD_TIMBRES.filter((t) => t.category === "guitar").map((t) => t.id),
+    );
+    const expectedGuitarVoiceIds = [
+      "metal-power-chords",
+      "nylon-classical",
+      "steel-folk",
+      "jazz-turnaround",
+      "clean-arpeggios",
+      "twelve-string-jangle",
+    ];
+    for (const id of expectedGuitarVoiceIds) {
+      const voice = findVoice(id);
+      expect(guitarTimbreIds.has(voice.defaultTimbreId)).toBe(true);
+    }
+    // The required metal power-chord voice: low root, block, power chords.
+    const metal = findVoice("metal-power-chords");
+    expect(metal.defaultTimbreId).toBe("metal-guitar");
+    expect(metal.defaultMode).toBe("block");
+    expect(metal.rootMidi).toBeLessThanOrEqual(40); // low-E territory
+    for (const chord of metal.chords) {
+      // Power chords = root + perfect fifth (+ optional octave).
+      expect(chord.intervals).toContain(chord.intervals[0] + 7);
+    }
+  });
+
   it("has both single chords and multi-chord progressions", () => {
     const single = CHORD_VOICES.filter((v) => v.kind === "chord");
     const progressions = CHORD_VOICES.filter((v) => v.kind === "progression");
