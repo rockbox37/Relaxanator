@@ -313,7 +313,8 @@ main > p {
 }
 
 .voice-jitter,
-.voice-sync {
+.voice-sync,
+.voice-loop {
   display: inline-flex;
   gap: 0.3rem;
   align-items: center;

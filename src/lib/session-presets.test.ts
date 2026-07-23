@@ -132,6 +132,7 @@ describe("normalizeSessionSettings", () => {
         "c-major": {
           enabled: false,
           mode: "arpeggiated",
+          loop: true,
           tempoBpm: 120,
           timbreId: "warm-pad",
           intervalMin: 5,
@@ -166,6 +167,29 @@ describe("normalizeSessionSettings", () => {
         chords: { "c-major": { mode: "arpeggiated" } },
       }).chords["c-major"].mode,
     ).toBe("arpeggiated");
+  });
+
+  it("round-trips the chord loop flag and defaults it off for older presets", () => {
+    // A stored loop=true survives normalization.
+    expect(
+      normalizeSessionSettings({ chords: { "c-major": { loop: true } } })
+        .chords["c-major"].loop,
+    ).toBe(true);
+    // A stored loop=false stays false.
+    expect(
+      normalizeSessionSettings({ chords: { "c-major": { loop: false } } })
+        .chords["c-major"].loop,
+    ).toBe(false);
+    // Older presets predate loop (field absent) => safe default of off.
+    const legacy = normalizeSessionSettings({
+      chords: { "c-major": { mode: "block", tempoBpm: 72 } },
+    });
+    expect(legacy.chords["c-major"].loop).toBe(false);
+    // A non-boolean loop is rejected and falls back to the default.
+    expect(
+      normalizeSessionSettings({ chords: { "c-major": { loop: "yes" } } })
+        .chords["c-major"].loop,
+    ).toBe(false);
   });
 
   it("clamps out-of-range numbers and rejects invalid enums per block", () => {
