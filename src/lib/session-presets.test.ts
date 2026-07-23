@@ -151,6 +151,23 @@ describe("normalizeSessionSettings", () => {
     expect(normalizeSessionSettings(custom)).toEqual(custom);
   });
 
+  it("preserves the strum chord mode through normalization", () => {
+    const s = normalizeSessionSettings({
+      chords: { "c-major": { mode: "strum" } },
+    });
+    expect(s.chords["c-major"].mode).toBe("strum");
+    // block and arpeggiated still survive too.
+    expect(
+      normalizeSessionSettings({ chords: { "c-major": { mode: "block" } } })
+        .chords["c-major"].mode,
+    ).toBe("block");
+    expect(
+      normalizeSessionSettings({
+        chords: { "c-major": { mode: "arpeggiated" } },
+      }).chords["c-major"].mode,
+    ).toBe("arpeggiated");
+  });
+
   it("clamps out-of-range numbers and rejects invalid enums per block", () => {
     const s = normalizeSessionSettings({
       state: { color: "chartreuse", masterVolume: 5, eqCurve: "bad" },

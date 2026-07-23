@@ -11,6 +11,8 @@ import {
   DEFAULT_TEMPO_BPM,
   MAX_TEMPO_BPM,
   MIN_TEMPO_BPM,
+  STRUM_MAX_STEP_SEC,
+  STRUM_MIN_STEP_SEC,
   buildChordPlan,
   chordPlanDurationSec,
   clampChordIntervalMin,
@@ -22,6 +24,7 @@ import {
   isChordTimbreId,
   midiToHz,
   noteGain,
+  strumStepSec,
 } from "./chords";
 
 function voiceSettings(
@@ -349,6 +352,161 @@ describe("buildChordPlan — arpeggiated mode", () => {
     for (const e of events) {
       expect(e.holdSec).toBeGreaterThanOrEqual(1); // one beat at 60bpm
     }
+  });
+});
+
+describe("strumStepSec", () => {
+  it("maps tempo onto the strum window, tightening as BPM rises", () => {
+    // Slowest tempo => widest stroke; fastest => tightest.
+    expect(strumStepSec(MIN_TEMPO_BPM)).toBeCloseTo(STRUM_MAX_STEP_SEC, 9);
+    expect(strumStepSec(MAX_TEMPO_BPM)).toBeCloseTo(STRUM_MIN_STEP_SEC, 9);
+    // Monotonically decreasing with tempo.
+    expect(strumStepSec(60)).toBeGreaterThan(strumStepSec(120));
+    expect(strumStepSec(120)).toBeGreaterThan(strumStepSec(200));
+  });
+
+  it("keeps every strum step inside the ~18–35 ms window", () => {
+    for (const bpm of [MIN_TEMPO_BPM, 50, 72, 100, 132, 200, MAX_TEMPO_BPM]) {
+      const step = strumStepSec(bpm);
+      expect(step).toBeGreaterThanOrEqual(STRUM_MIN_STEP_SEC);
+      expect(step).toBeLessThanOrEqual(STRUM_MAX_STEP_SEC);
+    }
+  });
+
+  it("clamps out-of-range / NaN tempo like the rest of the model", () => {
+    expect(strumStepSec(9999)).toBeCloseTo(STRUM_MIN_STEP_SEC, 9);
+    expect(strumStepSec(1)).toBeCloseTo(STRUM_MAX_STEP_SEC, 9);
+    expect(Number.isNaN(strumStepSec(Number.NaN))).toBe(false);
+  });
+});
+
+describe("buildChordPlan — strum mode", () => {
+  it("strikes a single chord low->high over a tight downstroke window", () => {
+    const voice = findVoice("c-major"); // C4 triad, one 4-beat chord
+    const settings = voiceSettings({ mode: "strum", tempoBpm: 60 });
+    const events = buildChordPlan(voice, settings, 10);
+    const strumStep = strumStepSec(60);
+
+    expect(events).toHaveLength(3);
+    // Notes are struck in ascending pitch order, each a tiny step later.
+    expect(events[0].whenSec).toBeCloseTo(10, 9);
+    expect(events[1].whenSec).toBeCloseTo(10 + strumStep, 9);
+    expect(events[2].whenSec).toBeCloseTo(10 + 2 * strumStep, 9);
+    // Low->high in both time and pitch.
+    expect(events[0].whenSec).toBeLessThan(events[1].whenSec);
+    expect(events[1].whenSec).toBeLessThan(events[2].whenSec);
+    expect(events[0].hz).toBeLessThan(events[1].hz);
+    expect(events[1].hz).toBeLessThan(events[2].hz);
+    // Root stays loudest, like block/arp.
+    expect(events[0].gain).toBe(1);
+    expect(events[1].gain).toBe(0.8);
+  });
+
+  it("uses inter-note offsets far tighter than an arpeggio", () => {
+    const voice = findVoice("c-major");
+    const tempoBpm = 60;
+    const beatSec = 60 / tempoBpm;
+    const arpStepSec = ARP_STEP_BEATS * beatSec; // 0.5s at 60bpm
+
+    const strum = buildChordPlan(
+      voice,
+      voiceSettings({ mode: "strum", tempoBpm }),
+      0,
+    );
+    const strumGap = strum[1].whenSec - strum[0].whenSec;
+
+    const arp = buildChordPlan(
+      voice,
+      voiceSettings({ mode: "arpeggiated", tempoBpm }),
+      0,
+    );
+    const arpGap = arp[1].whenSec - arp[0].whenSec;
+
+    expect(arpGap).toBeCloseTo(arpStepSec, 9);
+    // The strum step is a small fraction of the arpeggio step.
+    expect(strumGap).toBeLessThan(arpGap);
+    expect(strumGap).toBeLessThan(arpGap / 5);
+    expect(strumGap).toBeLessThanOrEqual(STRUM_MAX_STEP_SEC);
+  });
+
+  it("sustains each strummed note to the chord end, floored at one beat", () => {
+    const voice = findVoice("c-major"); // 4-beat chord at 60bpm => 4s, 1s beat
+    const events = buildChordPlan(
+      voice,
+      voiceSettings({ mode: "strum", tempoBpm: 60 }),
+      0,
+    );
+    const strumStep = strumStepSec(60);
+    expect(events[0].holdSec).toBeCloseTo(4, 9);
+    expect(events[1].holdSec).toBeCloseTo(4 - strumStep, 9);
+    expect(events[2].holdSec).toBeCloseTo(4 - 2 * strumStep, 9);
+    for (const e of events) expect(e.holdSec).toBeGreaterThanOrEqual(1);
+  });
+
+  it("alternates downstroke/upstroke per chord in a progression", () => {
+    const voice = findVoice("pop-I-V-vi-IV"); // 4 triads, 2 beats each @60bpm
+    const settings = voiceSettings({ mode: "strum", tempoBpm: 60 });
+    const events = buildChordPlan(voice, settings, 0);
+    const strumStep = strumStepSec(60);
+
+    // Group events into the four chords of three notes each, in push order
+    // (which is always low->high by interval).
+    const chords = [
+      events.slice(0, 3),
+      events.slice(3, 6),
+      events.slice(6, 9),
+      events.slice(9, 12),
+    ];
+
+    // Each chord still lands at its beat position: the earliest note of each
+    // chord is exactly at 0, 2, 4, 6 seconds.
+    const starts = chords.map((c) => Math.min(...c.map((e) => e.whenSec)));
+    expect(starts).toEqual([0, 2, 4, 6]);
+
+    // Even chords (0, 2) are downstrokes: lowest pitch struck first.
+    for (const idx of [0, 2]) {
+      const c = chords[idx];
+      const base = idx * 2;
+      expect(c[0].whenSec).toBeCloseTo(base, 9);
+      expect(c[1].whenSec).toBeCloseTo(base + strumStep, 9);
+      expect(c[2].whenSec).toBeCloseTo(base + 2 * strumStep, 9);
+    }
+    // Odd chords (1, 3) are upstrokes: highest pitch struck first, so the
+    // lowest-pitch note (index 0 in push order) fires last.
+    for (const idx of [1, 3]) {
+      const c = chords[idx];
+      const base = idx * 2;
+      expect(c[2].whenSec).toBeCloseTo(base, 9); // top string first
+      expect(c[1].whenSec).toBeCloseTo(base + strumStep, 9);
+      expect(c[0].whenSec).toBeCloseTo(base + 2 * strumStep, 9); // low last
+    }
+  });
+
+  it("tightens the strum as tempo rises but keeps ordering", () => {
+    const voice = findVoice("c-major");
+    const slow = buildChordPlan(
+      voice,
+      voiceSettings({ mode: "strum", tempoBpm: 60 }),
+      0,
+    );
+    const fast = buildChordPlan(
+      voice,
+      voiceSettings({ mode: "strum", tempoBpm: 200 }),
+      0,
+    );
+    const slowGap = slow[1].whenSec - slow[0].whenSec;
+    const fastGap = fast[1].whenSec - fast[0].whenSec;
+    expect(fastGap).toBeLessThan(slowGap);
+    // Still a downstroke: ascending in time.
+    expect(fast[0].whenSec).toBeLessThan(fast[2].whenSec);
+  });
+
+  it("is deterministic: identical inputs yield identical events", () => {
+    const voice = findVoice("pop-I-V-vi-IV");
+    const settings = voiceSettings({ mode: "strum", tempoBpm: 96 });
+    const a = buildChordPlan(voice, settings, 5);
+    const b = buildChordPlan(voice, settings, 5);
+    expect(a).toEqual(b);
   });
 });
 

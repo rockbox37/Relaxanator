@@ -1,0 +1,50 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for adding guitar timbres to the chord picklist",
+    "created": "2026-07-22T19:34:00Z"
+  },
+  "plan": {
+    "title": "Add guitar timbres to the chord sound picklist",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Extend the Chords section's per-voice instrument picklist (CHORD_TIMBRES in src/lib/chords.ts, synthesized in src/audio/chord-voices.ts) with a family of guitar sounds: metal (distorted electric), nylon (classical), jazz (clean archtop with chorus), and a few more that round out the set (steel-string acoustic and clean electric; optionally 12-string). Today's chord synth is purely additive — oscillators + detuned partials → shared lowpass → envelope — with NO distortion or chorus/modulation stage. Nylon / steel-string / clean-electric fit that additive model directly, but a convincing 'metal' needs a distortion (WaveShaperNode) stage and 'jazz with chorus' needs a chorus (LFO-modulated DelayNode, or a well-tuned detuned-layer approximation). So this work also minimally extends the chord-voices synth graph to support optional per-preset distortion and chorus, without regressing the existing 11 timbres.",
+      "Requirements": "FR-1: Add guitar timbres to CHORD_TIMBRES with a new 'guitar' category and matching ChordTimbreId union members: at minimum metal (distorted electric), nylon (classical), and jazz (clean, with chorus); plus steel-string acoustic and clean electric; 12-string optional if it sounds distinct. FR-2: Each new timbre has a synth preset keyed by the same id in src/audio/chord-voices.ts and sounds recognizably guitar-like — plucked/percussive envelope with string-appropriate partials, decay, and lowpass; loudness-matched via the preset scale scalar like the existing presets. FR-3: Extend the chord-voices synth graph with an OPTIONAL distortion stage (WaveShaperNode drive curve) used by the metal timbre (and available to others), inserted in the per-voice chain without altering output for presets that don't opt in. FR-4: Extend the chord-voices synth graph with an OPTIONAL chorus stage (LFO-modulated DelayNode, or a documented detuned-layer approximation if a modulated delay is impractical in the current per-note teardown model) used by the jazz timbre. FR-5: The picklist UI (ChordsPanel) auto-populates from CHORD_TIMBRES grouped by category, so the new 'guitar' optgroup appears with no bespoke UI wiring; confirm it renders. NFR-1: No regression to the existing 11 timbres — their audible output and the loudness balance over the noise bed are unchanged. NFR-2: Existing tests updated/extended and passing; the mocked AudioContext in chord-voices tests gains any new node factories used (createWaveShaper / createDelay / extra oscillators for an LFO); registry tests in chords.test.ts reflect the new timbre count/ids; per-file coverage gates (85% on src/lib) still met; any NEW source file gets a co-located test (forward-coverage gate). NFR-3: typecheck, lint, full test suite, and the production build all pass.",
+      "Assumptions": "A-1: Timbres are additive/subtractive Web Audio approximations (not sampled instruments) consistent with the rest of the app — 'realistic enough to be recognizable,' not sample-accurate. A-2: Guitar timbres default to a plucked/percussive envelope and sensible per-voice defaults (mode/tempo/volume) chosen to sound good; exact ids/labels are the implementer's call (e.g. metal-guitar, nylon-guitar, jazz-guitar, steel-guitar, clean-electric). A-3: If a true LFO-modulated chorus is impractical within the current per-note graph teardown, a detuned/slightly-delayed multi-voice chorus approximation is acceptable and should be noted."
+    },
+    "items": [
+      {
+        "title": "src/lib/chords.ts — add 'guitar' category, new ChordTimbreId members, and CHORD_TIMBRES entries for the guitar sounds",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, NFR-2"
+        }
+      },
+      {
+        "title": "src/audio/chord-voices.ts — guitar presets + optional distortion (WaveShaper) and chorus (modulated delay / detune approx) stages in the synth graph",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2, FR-3, FR-4, NFR-1"
+        }
+      },
+      {
+        "title": "Update tests (chords.test.ts registry, chord-voices.test.ts mock + preset coverage) and confirm ChordsPanel renders the new guitar optgroup",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-5, NFR-2, NFR-3"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "audio",
+      "chords"
+    ],
+    "references": [],
+    "updated": "2026-07-22T23:44:06Z",
+    "metadata": {
+      "completedAt": "2026-07-22T23:44:06Z"
+    }
+  }
+}

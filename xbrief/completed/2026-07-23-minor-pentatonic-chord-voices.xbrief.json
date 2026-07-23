@@ -1,0 +1,50 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for minor-chord voices and soothing pentatonic progressions",
+    "created": "2026-07-23T13:46:00Z"
+  },
+  "plan": {
+    "title": "Add minor-chord voices and soothing pentatonic progressions",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Broaden the Chords section's voice registry (CHORD_VOICES in src/lib/chords.ts) with (a) more minor-chord content — single minor chords (minor triad / minor 7th / minor 9th) and minor-key progressions — and (b) soothing pentatonic progressions: open, tension-free voicings drawn from major and minor pentatonic scales (no semitone clashes), ideal for calm/ambient listening. These are new CHORD_VOICES entries built from semitone intervals over a rootMidi, defaulting to gentle timbres (e.g. nylon-guitar, warm-pad, glass-pad, rhodes) and mostly arpeggiated mode. No synth/engine changes — reuses the shipped timbres and the generic play-plan/scheduler.",
+      "Requirements": "FR-1: Add minor-chord voices: at least a few single minor chords (minor triad, minor 7th, minor 9th) in useful keys, and one or more minor-key progressions (e.g. i–VI–III–VII, i–iv–v, or an Andalusian i–VII–VI–V). FR-2: Add soothing pentatonic progression voices: progressions/voicings derived from major pentatonic (e.g. C D E G A) and minor pentatonic (e.g. A C D E G) scales, voiced openly (stacked fourths/fifths, add9/sus-style, octave spread) so they stay consonant and calming; slow, ambient defaults. FR-3: Each new voice has a clear unique id + label + description consistent with existing CHORD_VOICES, valid semitone intervals over its rootMidi, and a valid defaultTimbreId (favor gentle timbres); pick musical defaultMode/tempo/interval/volume. NFR-1: Voices integrate with the existing scheduler and preview with no engine changes; block and arpeggiated both valid. NFR-2: chords.test.ts registry/scheduler expectations updated for the new voice count/ids and passing; src/lib per-file coverage gate (85%) still met; ChordsPanel renders the new voices. NFR-3: typecheck, lint, full test suite, and production build pass.",
+      "Assumptions": "A-1: 'Pentatonic progressions' = progressions whose chords/voicings are built from pentatonic-scale tones for an open, tension-free sound (not a single sustained scale). A-2: Exact ids/labels/keys/voicings are the implementer's call, provided the minor-chord content (FR-1) and pentatonic progressions (FR-2) are clearly present and soothing. A-3: Existing voices (including jazz-2-5-1 and the new guitar voices) are left unchanged; this only adds voices."
+    },
+    "items": [
+      {
+        "title": "src/lib/chords.ts — add minor-chord voices (single minor triad/7th/9th + a minor-key progression)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-3"
+        }
+      },
+      {
+        "title": "src/lib/chords.ts — add soothing pentatonic progression voices (major + minor pentatonic, open voicings, gentle timbres, ambient defaults)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2, FR-3, NFR-1"
+        }
+      },
+      {
+        "title": "Update chords.test.ts registry/scheduler expectations and confirm ChordsPanel renders the new voices",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-2, NFR-3"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "audio",
+      "chords"
+    ],
+    "references": [],
+    "updated": "2026-07-23T13:55:14Z",
+    "metadata": {
+      "completedAt": "2026-07-23T13:55:14Z"
+    }
+  }
+}

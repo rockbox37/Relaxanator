@@ -78,6 +78,34 @@ describe("ChordsPanel", () => {
     );
   });
 
+  it("offers Block / Arpeggiated / Strum in every voice's mode picker", () => {
+    const element = ChordsPanel({
+      settings: createDefaultChordSettings(),
+      onChange: vi.fn(),
+      onPreview: vi.fn(),
+    }) as ReactElement<{ children: ReactElement[] }>;
+
+    const list = element.props.children.find(
+      (child) => child?.type === "ul",
+    ) as ReactElement<{
+      children: ReactElement<{ children: ReactElement[] }>[];
+    }>;
+    const firstRow = list.props.children[0];
+
+    const labels = firstRow.props.children as ReactElement<{
+      className?: string;
+      children: ReactElement<{ children: ReactElement<{ value: string }>[] }>;
+    }>[];
+    const modeLabel = labels.find(
+      (label) => label?.props?.className === "voice-mode",
+    );
+    expect(modeLabel).toBeDefined();
+
+    const select = modeLabel!.props.children;
+    const values = select.props.children.map((option) => option.props.value);
+    expect(values).toEqual(["block", "arpeggiated", "strum"]);
+  });
+
   it("adds the .voice--playing glow class only to lit rows (#104)", () => {
     const litId = CHORD_VOICES[0].id;
     const element = ChordsPanel({
