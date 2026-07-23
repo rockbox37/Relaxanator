@@ -156,6 +156,50 @@ describe("ChordsPanel", () => {
     expect(onChange).toHaveBeenCalledWith(CHORD_VOICES[0].id, { loop: false });
   });
 
+  it("disables the minutes-interval input while looping and keeps it enabled otherwise", () => {
+    const settings = createDefaultChordSettings();
+    settings[CHORD_VOICES[0].id].loop = true; // first row loops
+    settings[CHORD_VOICES[1].id].loop = false; // second row does not
+    const priorInterval = settings[CHORD_VOICES[0].id].intervalMin;
+
+    const element = ChordsPanel({
+      settings,
+      onChange: vi.fn(),
+      onPreview: vi.fn(),
+    }) as ReactElement<{ children: ReactElement[] }>;
+
+    const list = element.props.children.find(
+      (child) => child?.type === "ul",
+    ) as ReactElement<{
+      children: ReactElement<{ children: ReactElement[] }>[];
+    }>;
+    const rows = list.props.children;
+
+    const intervalInput = (
+      row: ReactElement<{ children: ReactElement[] }>,
+    ) => {
+      const labels = row.props.children as ReactElement<{
+        className?: string;
+        children: ReactElement<{ disabled?: boolean; value: number }>[];
+      }>[];
+      const intervalLabel = labels.find(
+        (label) => label?.props?.className === "voice-interval",
+      );
+      expect(intervalLabel).toBeDefined();
+      // Label children are ["every", <input>, "min"]; the input is index 1.
+      return intervalLabel!.props.children[1];
+    };
+
+    const loopingInput = intervalInput(rows[0]);
+    const idleInput = intervalInput(rows[1]);
+
+    expect(loopingInput.props.disabled).toBe(true);
+    expect(idleInput.props.disabled).toBe(false);
+
+    // Disabling must not clear the stored interval value (FR-4).
+    expect(loopingInput.props.value).toBe(priorInterval);
+  });
+
   it("adds the .voice--playing glow class only to lit rows (#104)", () => {
     const litId = CHORD_VOICES[0].id;
     const element = ChordsPanel({

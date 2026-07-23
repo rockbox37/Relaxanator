@@ -1,0 +1,50 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for disabling the minutes-interval input when a chord voice is looping",
+    "created": "2026-07-23T15:44:00Z"
+  },
+  "plan": {
+    "title": "Grey out the chord minutes-interval input when loop is on",
+    "status": "completed",
+    "narratives": {
+      "Overview": "UX polish for the chords section: when a chord voice's 'loop' toggle is ON, its per-voice minutes-interval control has no effect (the loop re-triggers on the BPM grid, not the minutes interval), so it should be visibly disabled/greyed out to avoid confusing the user. When loop is OFF, the interval control behaves exactly as today. This is a presentational change in the ChordsPanel; no scheduling/engine/logic changes.",
+      "Requirements": "FR-1: In the chords panel, when a voice has loop enabled, its minutes-interval input (the 'every N minutes' control) is rendered disabled and visually greyed out (e.g. reduced opacity / disabled styling consistent with the app). FR-2: When loop is disabled, the interval control is fully enabled and unchanged from current behavior. FR-3: Toggling loop updates the interval control's enabled/greyed state immediately (reactive to the setting). FR-4: The underlying stored interval value is preserved while disabled (do not clear/reset it) so turning loop back off restores the prior interval. Optionally add an unobtrusive hint (e.g. title/aria or helper text) explaining the interval is controlled by tempo while looping — optional, keep it subtle. NFR-1: Accessibility — use the input's `disabled` attribute (not just CSS) so it's non-interactive and announced as disabled. NFR-2: Match existing ChordsPanel/globals.css styling conventions; no new dependencies. NFR-3: Purely presentational — no changes to chords.ts scheduling, chords-engine.ts, or synths. NFR-4: Update the co-located ChordsPanel test to cover the disabled-when-looping behavior; typecheck, lint, full test suite, and production build pass.",
+      "Assumptions": "A-1: The per-voice `loop` boolean and the minutes-interval control already exist in ChordsPanel after the loop-mode feature (PR #123). A-2: ChordsPanel is the presentational component; if it is hookless/stateless, the disabled state is derived from the passed-in settings for that voice. A-3: 'Greyed out' = the app's standard disabled affordance (disabled attribute + muted styling)."
+    },
+    "items": [
+      {
+        "title": "src/components/ChordsPanel.tsx — disable + grey the minutes-interval input when the voice's loop setting is on (preserve stored value)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, FR-4, NFR-1, NFR-3"
+        }
+      },
+      {
+        "title": "src/app/globals.css — disabled/greyed styling for the interval control if needed (match existing conventions)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, NFR-2"
+        }
+      },
+      {
+        "title": "Update ChordsPanel test to assert the interval input is disabled when looping and enabled otherwise; verify gates/build",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-4"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "ui",
+      "chords"
+    ],
+    "references": [],
+    "updated": "2026-07-23T15:51:02Z",
+    "metadata": {
+      "completedAt": "2026-07-23T15:51:02Z"
+    }
+  }
+}
