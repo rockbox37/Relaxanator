@@ -134,6 +134,7 @@ import {
   updatePreset,
 } from "@/lib/session-presets";
 
+import AboutDialog from "./AboutDialog";
 import { BreakBannerStack } from "./BreakBanner";
 import BreakPanel from "./BreakPanel";
 import ChordsPanel from "./ChordsPanel";
@@ -263,6 +264,30 @@ export default function NoisePlayer() {
   const [audioEpoch, setAudioEpoch] = useState(0);
   const [sleepMinutes, setSleepMinutes] = useState(SLEEP_TIMER_OFF);
   const [sleepRemaining, setSleepRemaining] = useState<number | null>(null);
+
+  /** About modal (#134) — open state + trigger for focus return on close. */
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const aboutTriggerRef = useRef<HTMLButtonElement>(null);
+
+  function closeAbout() {
+    setAboutOpen(false);
+    // Return focus to the trigger that opened the dialog (FR-4).
+    aboutTriggerRef.current?.focus();
+  }
+
+  // Escape-to-close while the About modal is open (FR-4). Listener is added
+  // only while open so it never intercepts keys during normal use.
+  useEffect(() => {
+    if (!aboutOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setAboutOpen(false);
+        aboutTriggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [aboutOpen]);
 
   const sleepTimerRef = useRef<SleepTimer | null>(null);
   const sleepPumpRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1036,6 +1061,19 @@ export default function NoisePlayer() {
         onPreview={previewAnnounce}
         previewDisabled={starting}
       />
+
+      <footer className="player-footer">
+        <button
+          type="button"
+          className="about-trigger"
+          ref={aboutTriggerRef}
+          onClick={() => setAboutOpen(true)}
+        >
+          About
+        </button>
+      </footer>
+
+      <AboutDialog open={aboutOpen} onClose={closeAbout} />
     </section>
   );
 }
