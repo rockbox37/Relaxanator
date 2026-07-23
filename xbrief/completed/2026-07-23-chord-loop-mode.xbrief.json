@@ -7,7 +7,7 @@
   },
   "plan": {
     "title": "Add a continuous loop mode for chord sounds (BPM-driven re-trigger)",
-    "status": "running",
+    "status": "completed",
     "narratives": {
       "Overview": "Add a 'loop' option to the chords section that continuously re-triggers a chord/progression in time with the BPM (tempo) setting, so it plays as a seamless continuous loop rather than the current behavior of playing once and then waiting a gap (the per-voice interval-in-minutes cadence) before replaying. When loop is ON, as soon as a voice's chord/progression finishes its musical length, it retriggers immediately on the tempo grid (quantized to the bar/beat so the loop stays rhythmically continuous), producing a repeating groove. When loop is OFF, existing behavior is unchanged (play once, then wait the configured interval before the next occurrence). Loop must compose with the existing voicing modes (block / arpeggiated / strum) and with all existing voices (single chords and progressions).",
       "Requirements": "FR-1: Add a per-voice 'loop' setting (continuous BPM-driven re-trigger). It is ORTHOGONAL to the voicing mode (block/arpeggiated/strum): loop controls how often the whole chord/progression re-triggers, the mode controls how each chord's notes are voiced. Do NOT replace or remove block/arp/strum. FR-2: When loop is enabled, the engine re-triggers the voice's chord/progression back-to-back on the tempo grid derived from BPM (quantize the re-trigger to the end of the plan's musical length / next bar boundary so successive iterations line up seamlessly with no audible gap and no overlap). A single chord loops as a repeating pulse at the bar length; a progression loops the whole sequence. FR-3: When loop is disabled, behavior is exactly as today (one-shot play, then the existing minutes-based interval before the next occurrence). FR-4: Surface the loop control per-voice in the ChordsPanel UI (e.g. a 'Loop' checkbox/toggle) with a default of OFF for existing voices so nothing changes unless the user opts in. FR-5: Loop state must round-trip through whatever settings/persistence the chords section uses (including session presets in src/lib/session-presets.ts) and default-safely for older persisted settings that lack the field. NFR-1: Pure timing/scheduling logic (loop interval derivation from BPM + plan length) lives in src/lib (chords.ts) and is deterministic and unit-tested; src/lib per-file coverage gate (85%) is met. NFR-2: Prefer no new Web Audio/synth graph changes; the engine (src/audio/chords-engine.ts) reschedules the existing note events. Only touch synth code if genuinely required and call it out. NFR-3: typecheck, lint, full test suite, and production build pass. NFR-4: Looping must not leak/stack timers or oscillators — starting, changing, or stopping a looping voice must cleanly cancel the prior scheduling (verify teardown in the engine test).",
@@ -56,6 +56,9 @@
       "chords"
     ],
     "references": [],
-    "updated": "2026-07-23T14:32:23Z"
+    "updated": "2026-07-23T15:15:42Z",
+    "metadata": {
+      "completedAt": "2026-07-23T15:15:42Z"
+    }
   }
 }
