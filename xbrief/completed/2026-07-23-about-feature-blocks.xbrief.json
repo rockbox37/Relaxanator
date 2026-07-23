@@ -1,0 +1,49 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for About dialog feature blocks and Jirius Group LLC link",
+    "created": "2026-07-23T16:01:00Z"
+  },
+  "plan": {
+    "title": "About dialog: feature blocks + link Jirius Group LLC",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Enhance the existing About dialog (src/components/AboutDialog.tsx, opened by the top-right icon button) in two ways: (1) present the app's features as distinct little blocks/cards so each is easy to see and visually separate, and (2) make the 'Jirius Group LLC' copyright text a hyperlink to https://jiriusgroup.com/. Keep the existing blurb and © line; add a features section above/within the dialog body with one small card per feature. Content/presentation change only — no audio-engine or dialog open/close behavior changes.",
+      "Requirements": "FR-1: Add a features section to the About dialog rendering each major feature in its own distinct, visually separated block/card (e.g. a small grid/list of bordered/tinted tiles). Each card has a short feature name and a one-line description. FR-2: Cover the app's actual features, one card each. At minimum include: Colored noise (brown/pink/white EQ-shaped), Meditation sounds (scheduled bells/chimes/drones), Chords (single chords & progressions with timbres, arpeggio/strum/loop), Break reminders/prompts, To-do items, Time announcements (spoken time so you don't lose track of time). Include other real features if present (e.g. sleep timer) and omit any that don't actually exist — the implementer must verify against the codebase (src/components/*Panel.tsx, src/lib: breaks.ts, todos.ts, announce.ts, sleep-timer.ts, meditation.ts, chords.ts) so descriptions are accurate. FR-3: Make 'Jirius Group LLC' in the footer copyright line a link to https://jiriusgroup.com/. It must open in a new tab (target=\"_blank\") with rel=\"noopener noreferrer\", and keep the © symbol (e.g. '© <a>Jirius Group LLC</a>'). Style it as a visible link consistent with the app. FR-4: Keep the existing app blurb and dismissal behavior (close button / backdrop / Escape / focus return) unchanged. NFR-1: Match existing AboutDialog + src/app/globals.css styling conventions; the feature cards should look tidy and on-brand; no heavy new dependencies; fully offline (no remote assets). NFR-2: Accessibility — the features section uses sensible semantics (e.g. a list); the external link has discernible text ('Jirius Group LLC'); dialog semantics unchanged. NFR-3: Update the co-located AboutDialog test to cover the feature cards rendering and the Jirius link (href + target/rel); typecheck, lint, full test suite, and production build pass. NFR-4: Purely additive to the dialog content — do not change NoisePlayer trigger/placement (just merged in PR #128) or any audio engine.",
+      "Assumptions": "A-1: The About dialog and its top-right icon trigger already exist (PRs #125, #128). This brief edits the dialog BODY only (AboutDialog.tsx) plus its styles in globals.css. A-2: The feature list should reflect the real app; the implementer verifies exact features from the codebase and writes concise, accurate one-liners. A-3: 'Little block' = a small card/tile with clear separation (border/background), arranged in a simple responsive grid or list."
+    },
+    "items": [
+      {
+        "title": "src/components/AboutDialog.tsx — add a feature-cards section (one distinct block per real feature) and make 'Jirius Group LLC' a new-tab link to https://jiriusgroup.com/",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, FR-4, NFR-2, NFR-4"
+        }
+      },
+      {
+        "title": "src/app/globals.css — feature-card + about-link styling matching existing conventions (responsive, tidy)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-3, NFR-1"
+        }
+      },
+      {
+        "title": "Update AboutDialog test — assert feature cards render and Jirius link href/target/rel; verify gates/build",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-3"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "ui"
+    ],
+    "references": [],
+    "updated": "2026-07-23T16:43:27Z",
+    "metadata": {
+      "completedAt": "2026-07-23T16:43:27Z"
+    }
+  }
+}
