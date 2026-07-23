@@ -312,6 +312,11 @@ main > p {
   padding: 0.25rem 0.4rem;
 }
 
+.voice-interval:has(input:disabled) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .voice-jitter,
 .voice-sync,
 .voice-loop {

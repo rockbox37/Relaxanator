@@ -141,7 +141,14 @@ export default function ChordsPanel({
                 </select>
               </label>
 
-              <label className="voice-interval">
+              <label
+                className="voice-interval"
+                title={
+                  state.loop
+                    ? "Interval is controlled by tempo while looping"
+                    : undefined
+                }
+              >
                 every
                 <input
                   type="number"
@@ -149,6 +156,7 @@ export default function ChordsPanel({
                   max={CHORD_MAX_INTERVAL_MIN}
                   step={0.5}
                   value={state.intervalMin}
+                  disabled={state.loop}
                   onChange={(e) =>
                     onChange(voice.id, {
                       intervalMin: clampChordIntervalMin(Number(e.target.value)),
