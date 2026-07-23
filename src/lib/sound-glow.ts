@@ -7,8 +7,13 @@
  * NoisePlayer. Everything here is deterministic and unit-tested.
  */
 
-/** How long a row stays lit before it has fully faded back (ms). */
-export const GLOW_DURATION_MS = 2600;
+/**
+ * How long a row stays lit before it has fully faded back (ms). The row holds
+ * at full highlight for the first ~4s, then fades back to baseline over the
+ * final ~2s (see the `voice-glow` keyframes in globals.css, which mirror this
+ * total 6s window).
+ */
+export const GLOW_DURATION_MS = 6000;
 
 /**
  * Emitted by the audio engines when a voice is actually heard (the scheduled

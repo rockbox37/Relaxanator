@@ -200,6 +200,59 @@ describe("ChordsPanel", () => {
     expect(loopingInput.props.value).toBe(priorInterval);
   });
 
+  it("adds the .voice--looping border only when a voice has loop && enabled", () => {
+    const settings = createDefaultChordSettings();
+    settings[CHORD_VOICES[0].id].loop = true;
+    settings[CHORD_VOICES[0].id].enabled = true; // looping AND active -> border
+    settings[CHORD_VOICES[1].id].loop = true;
+    settings[CHORD_VOICES[1].id].enabled = false; // looping but off -> no border
+    settings[CHORD_VOICES[2].id].loop = false;
+    settings[CHORD_VOICES[2].id].enabled = true; // active but not looping -> none
+
+    const element = ChordsPanel({
+      settings,
+      onChange: vi.fn(),
+      onPreview: vi.fn(),
+    }) as ReactElement<{ children: ReactElement[] }>;
+
+    const list = element.props.children.find(
+      (child) => child?.type === "ul",
+    ) as ReactElement<{ children: ReactElement<{ className: string }>[] }>;
+    const rows = list.props.children;
+
+    const hasLoopBorder = (row: ReactElement<{ className: string }>) =>
+      row.props.className.split(" ").includes("voice--looping");
+
+    expect(hasLoopBorder(rows[0])).toBe(true);
+    expect(hasLoopBorder(rows[1])).toBe(false);
+    expect(hasLoopBorder(rows[2])).toBe(false);
+    // Exactly the one loop && enabled row gets the border.
+    expect(rows.filter(hasLoopBorder)).toHaveLength(1);
+  });
+
+  it("lets the loop border coexist with the .voice--playing glow", () => {
+    const litLoopingId = CHORD_VOICES[0].id;
+    const settings = createDefaultChordSettings();
+    settings[litLoopingId].loop = true;
+    settings[litLoopingId].enabled = true;
+
+    const element = ChordsPanel({
+      settings,
+      onChange: vi.fn(),
+      onPreview: vi.fn(),
+      playingVoiceIds: new Set([litLoopingId]),
+    }) as ReactElement<{ children: ReactElement[] }>;
+
+    const list = element.props.children.find(
+      (child) => child?.type === "ul",
+    ) as ReactElement<{ children: ReactElement<{ className: string }>[] }>;
+    const classes = list.props.children[0].props.className.split(" ");
+
+    // Both classes are present on the same row without clobbering each other.
+    expect(classes).toContain("voice--playing");
+    expect(classes).toContain("voice--looping");
+  });
+
   it("adds the .voice--playing glow class only to lit rows (#104)", () => {
     const litId = CHORD_VOICES[0].id;
     const element = ChordsPanel({
