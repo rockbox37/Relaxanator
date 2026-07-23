@@ -117,10 +117,19 @@ describe("createDefaultMeditationSettings", () => {
     expect(settings.omm.enabled).toBe(false);
   });
 
-  it("defaults every voice to clock-sync off (preserves free-running)", () => {
+  it("defaults the bell to clock-synced, every 30 minutes, enabled (#33)", () => {
     const settings = createDefaultMeditationSettings();
-    for (const voiceId of Object.keys(settings)) {
-      expect(settings[voiceId].syncToClock).toBe(false);
+    expect(settings.bell.enabled).toBe(true);
+    expect(settings.bell.intervalMin).toBe(30);
+    expect(settings.bell.syncToClock).toBe(true);
+  });
+
+  it("keeps every non-bell voice free-running with its own default interval", () => {
+    const settings = createDefaultMeditationSettings();
+    for (const v of MEDITATION_VOICES) {
+      if (v.id === "bell") continue;
+      expect(settings[v.id].syncToClock).toBe(false);
+      expect(settings[v.id].intervalMin).toBe(v.defaultIntervalMin);
     }
   });
 

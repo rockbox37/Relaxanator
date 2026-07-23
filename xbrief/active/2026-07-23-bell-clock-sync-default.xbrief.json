@@ -1,0 +1,40 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for defaulting the Bell meditation sound to clock-synced, every 30 minutes",
+    "created": "2026-07-23T14:37:00Z"
+  },
+  "plan": {
+    "title": "Default the Bell sound to clock-synced, every 30 minutes",
+    "status": "running",
+    "narratives": {
+      "Overview": "Change the default configuration of the 'bell' meditation voice so that, out of the box, it is synced to the wall clock and triggers every 30 minutes (i.e. on the :00 and :30 clock boundaries). The meditation model already supports both concepts: MeditationSettings has a per-voice `syncToClock` boolean, and each voice has a `defaultIntervalMin`. Today the bell defaults to intervalMin 15 and syncToClock false (see src/lib/meditation.ts: MEDITATION_VOICES bell entry `defaultIntervalMin: 15`, and createDefaultMeditationSettings which sets `syncToClock: false` for every voice). This brief updates those defaults for the bell voice only. No scheduler or synth changes — the clock-sync scheduling already exists; we are only changing default values.",
+      "Requirements": "FR-1: The bell voice's default interval becomes 30 minutes (change bell `defaultIntervalMin` from 15 to 30 in MEDITATION_VOICES). FR-2: The bell voice defaults to syncToClock = true, so a fresh session has the bell aligned to clock boundaries (every 30 minutes ⇒ on :00 and :30). Implement this cleanly: add an optional `defaultSyncToClock?: boolean` to the voice def (default falsey) and have createDefaultMeditationSettings honor it (`syncToClock: voice.defaultSyncToClock ?? false`), setting it true for bell — OR an equivalently clean approach. Do NOT hardcode a bell-specific branch that would rot; keep it data-driven per the existing registry style. FR-3: Only the bell voice changes; every other voice keeps its current defaultIntervalMin and syncToClock=false, and bell stays enabled-by-default as it is today. FR-4: This only affects DEFAULTS for fresh sessions — do not force the setting onto users who have already customized bell (persisted settings / presets keep their stored values; only the default factory changes). NFR-1: Pure logic in src/lib/meditation.ts; deterministic + unit-tested; src/lib per-file coverage gate (85%) met. NFR-2: No changes to the meditation engine/scheduler or synths. NFR-3: typecheck, lint, full test suite, and production build pass.",
+      "Assumptions": "A-1: 'Synced to clock' == the existing `syncToClock` behavior (align triggers to wall-clock boundaries). A-2: 'Every 30 minutes' == intervalMin 30, which with clock-sync lands on :00/:30. A-3: The existing scheduler already implements syncToClock alignment; if the implementer finds it does not actually align to clock boundaries, note it and (only if small/safe) fix the alignment, otherwise report the gap rather than silently shipping a non-functional default."
+    },
+    "items": [
+      {
+        "title": "src/lib/meditation.ts — bell defaultIntervalMin 15→30; add data-driven defaultSyncToClock (bell=true) honored by createDefaultMeditationSettings",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, FR-4, NFR-1, NFR-2"
+        }
+      },
+      {
+        "title": "src/lib/meditation.test.ts — assert bell defaults (interval 30, syncToClock true) and that other voices are unchanged (syncToClock false, their own intervals)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, NFR-1, NFR-3"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "audio",
+      "meditation"
+    ],
+    "references": [],
+    "updated": "2026-07-23T14:39:05Z"
+  }
+}
