@@ -502,46 +502,6 @@ const fogHorn3: VoicePlayer = (ctx, dest, when, volume) => {
   );
 };
 
-/** C3 — fog horn 4 first blast (0.85 s); vintage film tugboat horn. */
-export const FOG_HORN_4_TONE1_HZ = 130.81;
-/** F2 — fog horn 4 second blast (2.15 s); perfect fifth (7 semitones) below tone 1. */
-export const FOG_HORN_4_TONE2_HZ = 87.31;
-export const FOG_HORN_4_INTERVAL_SEMITONES = 7;
-
-const fogHorn4: VoicePlayer = (ctx, dest, when, volume) => {
-  // Vintage two-tone boat horn (#54, ref 5KwjDwt5m3w): C3 short blast then
-  // lower F2 long blast — perfect fifth down (7 semitones), aligned with fog
-  // horn 3; classic 60s Cinesound tug/film character retained. Triangle
-  // partials for warm vinyl; much wetter reverb than fog horns 2/3.
-  gatedTwoBlastHorn(ctx, dest, when, volume, FOG_HORN_4_TONE1_HZ, FOG_HORN_4_TONE2_HZ, 480, 400, {
-    attackSec: 0.05,
-    tone1DurSec: 0.85,
-    tone2DurSec: 2.15,
-    dryGain: 0.08,
-    wetGain: 0.92,
-    feedbackBoost: 0.06,
-    reverbTailSec: 24,
-    reverbSendFadeSec: 1.2,
-    reverbDampScale: 0.48,
-    reverbWetFromDamp: true,
-    wetHighCutHz: 720,
-    outputScale: 0.87,
-    oscType: "triangle",
-    tone1Partials: [
-      [1, 1],
-      [1.5, 0.4],
-      [2, 0.42],
-      [3, 0.04],
-    ],
-    tone2Partials: [
-      [1, 1],
-      [1.5, 0.38],
-      [2, 0.4],
-      [3, 0.03],
-    ],
-  });
-};
-
 const shipHorn: VoicePlayer = (ctx, dest, when, volume) => {
   // Ship's horn (#23, #92): F2 fundamental (~19% above prior D2) with
   // quint-heavy brass partials and brighter lowpass for a clearer maritime
@@ -621,6 +581,8 @@ const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
   // Higher ship's horn (#26): D3 maritime blast with brassy quint-heavy partials,
   // very sharp attack, sustained body, and massive feedback-delay reverb — wetter
   // and longer-tailed than train horn while staying distinct from ship horn 1.
+  // Inherent output scalar trimmed 0.58→0.50 so its massive reverb no longer
+  // reads hotter than peer horns at an equal volume setting.
   const attackSec = 0.014;
   const holdSec = 1.76;
   const decaySec = 22;
@@ -630,7 +592,7 @@ const shipHorn2: VoicePlayer = (ctx, dest, when, volume) => {
   const f0 = 146.84; // D3
 
   const out = ctx.createGain();
-  out.gain.value = volume * 0.58;
+  out.gain.value = volume * 0.5;
   out.connect(dest);
 
   const dry = ctx.createGain();
@@ -795,7 +757,6 @@ const PLAYERS: Record<MeditationVoiceDef["synth"], VoicePlayer> = {
   fogHorn,
   fogHorn2,
   fogHorn3,
-  fogHorn4,
   shipHorn,
   shipHorn2,
   trainHorn,

@@ -44,7 +44,6 @@ describe("MEDITATION_VOICES", () => {
       "fog-horn",
       "fog-horn-2",
       "fog-horn-3",
-      "fog-horn-4",
       "ship-horn",
       "ship-horn-2",
       "train-horn",
@@ -97,12 +96,20 @@ describe("MEDITATION_VOICES", () => {
     expect(fogHorn3?.description).not.toMatch(/D[♭b]/i);
   });
 
-  it("documents fog horn 4 as vintage film two-tone with perfect fifth", () => {
-    const fogHorn4 = MEDITATION_VOICES.find((v) => v.id === "fog-horn-4");
-    expect(fogHorn4?.description).toContain("Vintage film two-tone");
-    expect(fogHorn4?.description).toContain("perfect fifth");
-    expect(fogHorn4?.description).toMatch(/C then lower F/i);
-    expect(fogHorn4?.description).not.toContain("perfect fourth");
+  it("has fully removed fog horn 4", () => {
+    expect(MEDITATION_VOICES.find((v) => v.id === "fog-horn-4")).toBeUndefined();
+    expect(MEDITATION_VOICES.some((v) => v.synth === ("fogHorn4" as never))).toBe(
+      false,
+    );
+  });
+
+  it("keeps ship's horn 2 quieter by default so it sits with peer horns", () => {
+    const shipHorn2 = MEDITATION_VOICES.find((v) => v.id === "ship-horn-2");
+    expect(shipHorn2?.synth).toBe("shipHorn2");
+    // Lowered from 0.55 → 0.35 (it was too loud with its massive reverb).
+    expect(shipHorn2?.defaultVolume).toBe(0.35);
+    const shipHorn = MEDITATION_VOICES.find((v) => v.id === "ship-horn");
+    expect(shipHorn2?.defaultVolume).toBeLessThan(shipHorn?.defaultVolume ?? 1);
   });
 });
 
