@@ -1,0 +1,49 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for applying an audio (perceptual) taper to volume sliders",
+    "created": "2026-07-23T14:00:00Z"
+  },
+  "plan": {
+    "title": "Use an audio taper (not linear) for volume sliders",
+    "status": "completed",
+    "narratives": {
+      "Overview": "The app's volume sliders (master noise volume in NoisePlayer, and per-voice volume in the meditation, chords, and break sections) currently map slider position to audio gain linearly, which feels unnatural — most of the perceived loudness change happens in the top of the slider's travel. Change the mapping to a perceptual 'audio taper' (roughly logarithmic / exponential-in-gain) so slider travel corresponds more evenly to perceived loudness. Implement this WITHOUT changing the stored slider values or the settings schema: keep the stored volume as the 0..1 slider position and convert to a tapered gain at the point gain is applied (in the audio engines). First confirm the current mapping is linear; if a taper already exists, only adjust/normalize it.",
+      "Requirements": "FR-1: Add a shared, pure taper helper in src/lib (e.g. `src/lib/audio-taper.ts` exporting something like `sliderToGain(position01: number): number`) implementing a perceptual audio taper (e.g. exponential curve such as gain = position^k with k≈2..3, or a dB-based curve mapping 0 -> silence and 1 -> unity). Deterministic and unit-tested (monotonic, sliderToGain(0)=0, sliderToGain(1)=1, and mid-travel gain noticeably below linear). FR-2: Apply the taper at the volume->gain boundary in the audio ENGINES so every volume slider benefits: noise-engine (master volume / setVolume), meditation-engine (per-voice volume passed to the voice synth), chords-engine (per-voice volume passed to the chord synth), break-engine (any volume it applies). Apply by transforming the stored 0..1 volume through `sliderToGain` right before it becomes a GainNode value or is passed into a synth. FR-3: Keep stored settings and the slider UI unchanged (still 0..1). Do NOT change the settings schema or session-presets. Slider min/max/step stay as-is. FR-4: Preserse existing behavior at the extremes (0 -> silent, 1 -> full/unchanged max). NFR-1: DO NOT edit src/audio/voices.ts, src/audio/chord-voices.ts, or src/lib/meditation.ts — a concurrent worker owns those files. Apply the taper at the engine call sites instead (pass an already-tapered value into the synths). If you believe an engine-level application is impossible for some path, do NOT edit those owned files — implement what you can and report the gap. NFR-2: Deterministic pure helper with co-located tests; update engine tests as needed. NFR-3: typecheck, lint, full test suite, and production build pass. NFR-4: Rebase onto latest origin/main before opening/merging the PR (a concurrent horns PR may have merged) and re-run gates.",
+      "Assumptions": "A-1: Volume sliders currently pass the stored 0..1 value directly as (or linearly into) a GainNode value / synth volume param — verify this is linear before changing. A-2: Applying the taper centrally at the engine boundary (via one shared helper) is preferable to editing each synth. A-3: A power curve (gain = pos^2.5 or similar) is an acceptable, simple perceptual taper; the implementer may choose a dB-based curve instead as long as 0->0 and 1->1 and it's monotonic and perceptually smoother than linear. A-4: The master noise volume and each section's per-voice volume all route through their respective engines, so engine-level application covers all sliders."
+    },
+    "items": [
+      {
+        "title": "src/lib/audio-taper.ts (+ test) — pure perceptual sliderToGain helper (0->0, 1->1, monotonic, sub-linear mid-travel)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, NFR-2"
+        }
+      },
+      {
+        "title": "Apply sliderToGain at the volume->gain boundary in noise-engine, meditation-engine, chords-engine, break-engine (NOT in voices.ts/chord-voices.ts/meditation.ts)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2, FR-3, FR-4, NFR-1"
+        }
+      },
+      {
+        "title": "Update affected engine tests; verify gates/build; rebase onto latest origin/main before merge",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-2, NFR-3, NFR-4"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "audio"
+    ],
+    "references": [],
+    "updated": "2026-07-23T18:47:26Z",
+    "metadata": {
+      "completedAt": "2026-07-23T18:47:26Z"
+    }
+  }
+}

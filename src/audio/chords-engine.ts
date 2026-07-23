@@ -19,6 +19,7 @@ import {
   collectDueChordEvents,
   initChordSchedule,
 } from "@/lib/chords";
+import { sliderToGain } from "@/lib/audio-taper";
 import type { VoiceFireEvent } from "@/lib/sound-glow";
 
 import { playChordVoice } from "./chord-voices";
@@ -89,7 +90,15 @@ export class ChordsEngine {
     const settings = this.settings[voiceId];
     if (!voice || !settings) return;
     const events = buildChordPlan(voice, settings, this.ctx.currentTime);
-    playChordVoice(settings.timbreId, this.ctx, this.dest, events, settings.volume);
+    // settings.volume is the stored 0..1 slider position; taper it to a
+    // perceptual gain at the engine->synth boundary (FR-2).
+    playChordVoice(
+      settings.timbreId,
+      this.ctx,
+      this.dest,
+      events,
+      sliderToGain(settings.volume),
+    );
     this.onFire?.({ voiceId, whenSec: this.ctx.currentTime });
   }
 
@@ -114,7 +123,13 @@ export class ChordsEngine {
       const settings = this.settings[event.voiceId];
       if (!voice || !settings) continue;
       const plan = buildChordPlan(voice, settings, event.whenSec);
-      playChordVoice(settings.timbreId, this.ctx, this.dest, plan, settings.volume);
+      playChordVoice(
+        settings.timbreId,
+        this.ctx,
+        this.dest,
+        plan,
+        sliderToGain(settings.volume),
+      );
       this.notifyFireAt(event.voiceId, event.whenSec);
     }
   }

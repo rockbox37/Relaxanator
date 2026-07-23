@@ -15,6 +15,7 @@ import {
   collectDueBreakEvents,
   initBreakFireSchedule,
 } from "@/lib/breaks";
+import { sliderToGain } from "@/lib/audio-taper";
 import { showBreakNotification } from "@/lib/break-notifications";
 
 import { playCueSound } from "./cue-sounds";
@@ -60,12 +61,14 @@ export class BreakEngine {
 
   /** Fire the cue immediately (UI preview button). */
   preview(): void {
+    // cueVolume is the stored 0..1 slider position; taper it to a perceptual
+    // gain at the engine->synth boundary (FR-2).
     playCueSound(
       this.settings.cueSoundId,
       this.ctx,
       this.dest,
       this.ctx.currentTime,
-      this.settings.cueVolume,
+      sliderToGain(this.settings.cueVolume),
     );
   }
 
@@ -110,7 +113,7 @@ export class BreakEngine {
       this.ctx,
       this.dest,
       event.whenSec,
-      this.settings.cueVolume,
+      sliderToGain(this.settings.cueVolume),
     );
 
     // Avoid double-firing UI for the same scheduled instant if the pump

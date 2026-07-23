@@ -12,6 +12,7 @@ import {
   collectDueEvents,
   initFireSchedule,
 } from "@/lib/meditation";
+import { sliderToGain } from "@/lib/audio-taper";
 import type { VoiceFireEvent } from "@/lib/sound-glow";
 
 import { playVoice } from "./voices";
@@ -76,7 +77,15 @@ export class MeditationEngine {
     const synth = VOICE_SYNTH.get(voiceId);
     const voice = this.settings[voiceId];
     if (!synth || !voice) return;
-    playVoice(synth, this.ctx, this.dest, this.ctx.currentTime, voice.volume);
+    // voice.volume is the stored 0..1 slider position; taper it to a
+    // perceptual gain at the engine->synth boundary (FR-2).
+    playVoice(
+      synth,
+      this.ctx,
+      this.dest,
+      this.ctx.currentTime,
+      sliderToGain(voice.volume),
+    );
     this.onFire?.({ voiceId, whenSec: this.ctx.currentTime });
   }
 
@@ -100,7 +109,13 @@ export class MeditationEngine {
       const synth = VOICE_SYNTH.get(event.voiceId);
       const voice = this.settings[event.voiceId];
       if (synth && voice) {
-        playVoice(synth, this.ctx, this.dest, event.whenSec, voice.volume);
+        playVoice(
+          synth,
+          this.ctx,
+          this.dest,
+          event.whenSec,
+          sliderToGain(voice.volume),
+        );
         this.notifyFireAt(event.voiceId, event.whenSec);
       }
     }
