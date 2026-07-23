@@ -1,0 +1,50 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for adding a 'strum' chord playback mode",
+    "created": "2026-07-23T13:55:00Z"
+  },
+  "plan": {
+    "title": "Add a 'strum' chord playback mode",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Add a third chord playback mode, 'strum', alongside the existing 'block' and 'arpeggiated' modes, imitating a guitar being strummed. Where block plays all chord notes simultaneously and arpeggiated spreads them across the beat by tempo, strum plays a chord's notes low->high in very quick succession over a short window (much tighter than an arpeggio) to simulate a downstroke, optionally alternating downstroke/upstroke on repeats with slight humanization. This is a pure-timing change in src/lib/chords.ts (the mode type + buildChordPlan note scheduling) plus surfacing the option in the ChordsPanel picklist; no Web Audio/synth changes are required (the engine just plays the scheduled note events).",
+      "Requirements": "FR-1: Extend the chord mode type (currently 'block' | 'arpeggiated') to include 'strum' everywhere it is referenced (type, defaults, settings, UI), keeping existing modes and persisted settings valid. FR-2: In the pure buildChordPlan, 'strum' schedules each chord's notes low->high with a short inter-note offset (a strum window much shorter than the arpeggiated spacing, e.g. ~20-40 ms per string) so it reads as a downstroke, not an arpeggio; the whole chord still lands at/around its beat position and progressions still advance by tempo. FR-3: Strum works for both single-chord and progression voices, and interacts sensibly with tempo (higher tempo may tighten the strum) and with the block/arpeggiated hold semantics. FR-4: Optional realism — alternate downstroke (low->high) and upstroke (high->low) on successive chords/repeats and/or apply small deterministic humanization to timing/gain, WITHOUT breaking determinism required by the unit tests (any randomization must be seeded/deterministic or omitted). FR-5: The ChordsPanel mode picklist offers Block / Arpeggiated / Strum for every voice. NFR-1: buildChordPlan timing stays deterministic and unit-tested (strum note ordering + offsets asserted); src/lib per-file coverage gate (85%) still met. NFR-2: No engine/synth changes needed; existing block/arpeggiated behavior is unchanged. NFR-3: typecheck, lint, full test suite, and production build pass.",
+      "Assumptions": "A-1: Strum is a downstroke by default (low->high); alternating up/down and humanization are nice-to-haves (FR-4) that must remain deterministic for tests. A-2: A sensible default strum window (per-string offset) is the implementer's call; keep it clearly tighter than arpeggiated spacing. A-3: Existing voices keep their current defaultMode; strum is simply selectable. Existing modes/settings and all shipped voices are unchanged."
+    },
+    "items": [
+      {
+        "title": "src/lib/chords.ts — add 'strum' to the mode type and implement strum scheduling in buildChordPlan (low->high short-window downstroke)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, FR-4, NFR-1, NFR-2"
+        }
+      },
+      {
+        "title": "src/components/ChordsPanel.tsx — add 'Strum' to the per-voice mode picklist",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-5"
+        }
+      },
+      {
+        "title": "Update chords.test.ts (strum ordering/offset + determinism) and ChordsPanel test; verify coverage/build",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-1, NFR-3"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "audio",
+      "chords"
+    ],
+    "references": [],
+    "updated": "2026-07-23T14:10:52Z",
+    "metadata": {
+      "completedAt": "2026-07-23T14:10:52Z"
+    }
+  }
+}

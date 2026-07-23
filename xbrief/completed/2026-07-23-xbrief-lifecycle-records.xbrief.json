@@ -1,0 +1,35 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for committing orphaned completed-xBRIEF lifecycle records",
+    "created": "2026-07-23T14:24:00Z"
+  },
+  "plan": {
+    "title": "Commit orphaned completed-xBRIEF lifecycle records",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Several completed-xBRIEF lifecycle records were produced by `deft scope:complete` and are sitting untracked in the main checkout because direct commits to the protected `main` branch are disabled. Land them via a tiny housekeeping PR so the completed-work history is tracked. This is pure `xbrief/` metadata — no source, engine, or config changes.",
+      "Requirements": "FR-1: Commit the orphaned completed-xBRIEF records (`xbrief/completed/2026-07-23-strum-chord-mode.xbrief.json`, `xbrief/completed/2026-07-23-deploy-chords-to-fly.xbrief.json`, and this brief's own completion record) via a PR against `main`. FR-2: Stage ONLY `xbrief/` metadata — nothing from `.deft/core/`, no source, no `next-env.d.ts`. FR-3: Merge on green required checks; leave the main checkout clean with no leftover untracked completed-xBRIEF duplicates. NFR-1: Must not trip `no-mixed-core-and-app` (xbrief/ is app-side, not core).",
+      "Assumptions": "A-1: The untracked records already exist in the operator's main checkout at known absolute paths and are valid. A-2: Repo merge convention is a merge commit; only `no-mixed-core-and-app` is required (SLizard advisory)."
+    },
+    "items": [
+      {
+        "title": "Open + merge a housekeeping PR committing the orphaned completed-xBRIEF records; leave main checkout clean",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, NFR-1"
+        }
+      }
+    ],
+    "tags": [
+      "chore",
+      "xbrief"
+    ],
+    "references": [],
+    "updated": "2026-07-23T14:26:34Z",
+    "metadata": {
+      "completedAt": "2026-07-23T14:26:34Z"
+    }
+  }
+}
