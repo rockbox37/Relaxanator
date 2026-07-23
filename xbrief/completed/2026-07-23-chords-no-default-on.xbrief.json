@@ -1,0 +1,43 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for not enabling any chord voice (C major) by default",
+    "created": "2026-07-23T15:45:00Z"
+  },
+  "plan": {
+    "title": "Chords section should not default any voice (C major) to on",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Currently the chords section enables the 'C major' voice by default: createDefaultChordSettings() in src/lib/chords.ts sets `enabled: voice.id === \"c-major\"`. Per operator request, the C major chord should NOT default to on. Change the default so no chord voice is enabled out of the box — the chords section starts silent until the user explicitly enables a voice (consistent with an opt-in sound section). This is a defaults-only change; no scheduler/engine/synth/UI-behavior changes.",
+      "Requirements": "FR-1: In createDefaultChordSettings(), no chord voice is enabled by default — change `enabled: voice.id === \"c-major\"` to `enabled: false` for all voices (and update the now-inaccurate code comment about enabling one voice). FR-2: All other per-voice defaults (mode, tempo, timbre, interval, loop, volume) are unchanged. FR-3: This affects only the factory defaults for fresh sessions — do not add migration overwriting users' persisted/customized chord settings or presets. NFR-1: Pure logic in src/lib/chords.ts; deterministic + unit-tested. NFR-2: No changes to chords-engine.ts, ChordsPanel.tsx behavior, or synths. NFR-3: typecheck, lint, full test suite, and production build pass; src/lib per-file coverage gate (85%) met. NFR-4: Update any existing test that asserts 'c-major enabled by default' to assert no voice is enabled by default (and that c-major is off).",
+      "Assumptions": "A-1: 'C major meditation sounds' refers to the chords-section 'c-major' voice (the only default-enabled sound of that name; meditation voices like bell/chime have no 'C major'). A-2: The intended behavior is the chords section starts fully silent by default (no voice enabled). If the operator instead wanted a DIFFERENT single default voice, that is a trivial follow-up; this brief implements the literal request that C major not default on, by defaulting all chord voices off."
+    },
+    "items": [
+      {
+        "title": "src/lib/chords.ts — createDefaultChordSettings enables no voice by default (c-major off); fix stale comment",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, NFR-1, NFR-2"
+        }
+      },
+      {
+        "title": "src/lib/chords.test.ts — update default-enabled assertion (no voice enabled by default; c-major off)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-3, NFR-4"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "audio",
+      "chords"
+    ],
+    "references": [],
+    "updated": "2026-07-23T15:52:07Z",
+    "metadata": {
+      "completedAt": "2026-07-23T15:52:07Z"
+    }
+  }
+}

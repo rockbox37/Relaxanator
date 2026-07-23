@@ -750,8 +750,9 @@ export function createDefaultChordSettings(): ChordSettings {
   const settings: ChordSettings = {};
   for (const voice of CHORD_VOICES) {
     settings[voice.id] = {
-      // Enable just one voice by default so the section is audible but calm.
-      enabled: voice.id === "c-major",
+      // The chords section starts fully silent (opt-in): no voice is enabled by
+      // default, so nothing plays until the user explicitly enables a voice.
+      enabled: false,
       mode: voice.defaultMode,
       // Loop is off for every shipped voice — the one-shot minutes cadence is
       // the existing behavior; nothing loops unless the user opts a voice in.

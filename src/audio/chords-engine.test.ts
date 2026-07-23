@@ -72,7 +72,9 @@ describe("ChordsEngine", () => {
     });
 
     const settings = createDefaultChordSettings();
-    // Only c-major enabled by default; give it a 1-min interval.
+    // No voice is enabled by default now, so enable c-major and give it a
+    // 1-min interval to exercise the scheduler.
+    settings["c-major"].enabled = true;
     settings["c-major"].intervalMin = 1;
 
     const engine = new ChordsEngine(ctx, {} as AudioNode, settings);
@@ -105,6 +107,7 @@ describe("ChordsEngine", () => {
       configurable: true,
     });
     const settings = createDefaultChordSettings();
+    settings["c-major"].enabled = true;
     settings["c-major"].intervalMin = 1;
 
     const engine = new ChordsEngine(ctx, {} as AudioNode, settings);
@@ -168,6 +171,7 @@ describe("ChordsEngine", () => {
     // c-major is a single 4-beat bar; at 60bpm that loops every 4 seconds.
     // The 5-minute one-shot interval would be 300s — never reached below —
     // so any second fire proves loop is driving the cadence, not minutes.
+    settings["c-major"].enabled = true;
     settings["c-major"].loop = true;
     settings["c-major"].tempoBpm = 60;
     settings["c-major"].intervalMin = 5;
@@ -203,6 +207,7 @@ describe("ChordsEngine", () => {
     });
 
     const settings = createDefaultChordSettings();
+    settings["c-major"].enabled = true;
     settings["c-major"].loop = true;
     settings["c-major"].tempoBpm = 60;
 

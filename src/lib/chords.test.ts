@@ -266,12 +266,16 @@ describe("clampChordIntervalMin", () => {
 });
 
 describe("createDefaultChordSettings", () => {
-  it("creates one entry per voice, enabling exactly one", () => {
+  it("creates one entry per voice, enabling none by default", () => {
     const settings = createDefaultChordSettings();
     expect(Object.keys(settings)).toHaveLength(CHORD_VOICES.length);
     const enabled = Object.values(settings).filter((s) => s.enabled);
-    expect(enabled).toHaveLength(1);
-    expect(settings["c-major"].enabled).toBe(true);
+    expect(enabled).toHaveLength(0);
+    // The chords section starts silent (opt-in); c-major is off like the rest.
+    expect(settings["c-major"].enabled).toBe(false);
+    for (const voice of CHORD_VOICES) {
+      expect(settings[voice.id].enabled).toBe(false);
+    }
   });
 
   it("seeds each voice from its registry defaults", () => {
