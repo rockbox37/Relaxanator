@@ -96,6 +96,55 @@ describe("AboutDialog", () => {
     expect(collectText(copyright).join("")).toBe("© Jirius Group LLC");
   });
 
+  it("links 'Jirius Group LLC' to the company site, opening safely in a new tab", () => {
+    const element = AboutDialog({
+      open: true,
+      onClose: vi.fn(),
+    }) as ReactElement<Record<string, unknown>>;
+
+    const link = collectByType(element, "a").find((a) =>
+      collectText(a).join("").includes("Jirius Group LLC"),
+    );
+    expect(link).toBeDefined();
+    expect(link!.props.href).toBe("https://jiriusgroup.com/");
+    expect(link!.props.target).toBe("_blank");
+    expect(link!.props.rel).toBe("noopener noreferrer");
+    // The © symbol stays with (but outside) the link.
+    expect(collectText(link).join("")).toBe("Jirius Group LLC");
+  });
+
+  it("renders each app feature as its own distinct card in a list", () => {
+    const element = AboutDialog({
+      open: true,
+      onClose: vi.fn(),
+    }) as ReactElement<Record<string, unknown>>;
+
+    // Features live in a semantic list (FR-1 / NFR-2).
+    const list = collectByType(element, "ul").find(
+      (u) => u.props.className === "about-features",
+    );
+    expect(list).toBeDefined();
+    expect(list!.props["aria-label"]).toBe("Features");
+
+    // Each feature is its own card with a name + one-line description.
+    const cards = collectByType(element, "li").filter(
+      (li) => li.props.className === "about-feature",
+    );
+    expect(cards.length).toBeGreaterThanOrEqual(6);
+
+    const allText = collectText(list).join(" ");
+    for (const name of [
+      "Colored noise",
+      "Meditation sounds",
+      "Chords",
+      "Break reminders",
+      "To-do list",
+      "Time announcements",
+    ]) {
+      expect(allText).toContain(name);
+    }
+  });
+
   it("closes via the close button", () => {
     const onClose = vi.fn();
     const element = AboutDialog({
