@@ -146,6 +146,69 @@ describe("CHORD_VOICES registry", () => {
     }
   });
 
+  it("includes the new minor-chord voices with minor-flavored voicings", () => {
+    const expectedMinorVoiceIds = [
+      "e-minor",
+      "em7",
+      "gm9",
+      "minor-andalusian",
+      "minor-i-VI-III-VII",
+    ];
+    for (const id of expectedMinorVoiceIds) {
+      const voice = findVoice(id);
+      expect(isChordTimbreId(voice.defaultTimbreId)).toBe(true);
+    }
+    // The single minor chords carry a minor third (3 semitones) above the root.
+    for (const id of ["e-minor", "em7", "gm9"]) {
+      const voice = findVoice(id);
+      expect(voice.kind).toBe("chord");
+      expect(voice.chords[0].intervals).toContain(3);
+      expect(voice.chords[0].intervals).toContain(7); // perfect fifth
+    }
+    // Em7 adds a minor seventh; Gm9 adds the seventh and the ninth.
+    expect(findVoice("em7").chords[0].intervals).toContain(10);
+    expect(findVoice("gm9").chords[0].intervals).toEqual([0, 3, 7, 10, 14]);
+    // The minor-key progressions are multi-chord.
+    for (const id of ["minor-andalusian", "minor-i-VI-III-VII"]) {
+      expect(findVoice(id).chords.length).toBeGreaterThan(1);
+    }
+  });
+
+  it("includes soothing pentatonic progressions with no semitone clashes", () => {
+    // Each pentatonic voice's chord tones must belong to its named pentatonic
+    // scale (as pitch classes), guaranteeing an open, tension-free sound.
+    const pentatonicScales: Record<string, Set<number>> = {
+      // C major pentatonic: C D E G A
+      "pentatonic-major-drift": new Set([0, 2, 4, 7, 9]),
+      // A minor pentatonic: A C D E G
+      "pentatonic-minor-flow": new Set([9, 0, 2, 4, 7]),
+      // D major pentatonic: D E F# A B
+      "pentatonic-quartal-air": new Set([2, 4, 6, 9, 11]),
+    };
+    for (const [id, scale] of Object.entries(pentatonicScales)) {
+      const voice = findVoice(id);
+      expect(voice.kind).toBe("progression");
+      expect(voice.chords.length).toBeGreaterThan(1);
+      // Gentle, slow ambient defaults.
+      expect(voice.defaultMode).toBe("arpeggiated");
+      expect(voice.defaultTempoBpm).toBeLessThanOrEqual(60);
+      for (const chord of voice.chords) {
+        const pitchClasses = chord.intervals.map(
+          (semi) => (((voice.rootMidi + semi) % 12) + 12) % 12,
+        );
+        // Every tone lies on the pentatonic scale — no out-of-scale/semitone notes.
+        for (const pc of pitchClasses) {
+          expect(scale.has(pc)).toBe(true);
+        }
+        // No two distinct tones a semitone apart (open, clash-free voicing).
+        const sorted = [...chord.intervals].sort((a, b) => a - b);
+        for (let i = 1; i < sorted.length; i += 1) {
+          expect(sorted[i] - sorted[i - 1]).not.toBe(1);
+        }
+      }
+    }
+  });
+
   it("has both single chords and multi-chord progressions", () => {
     const single = CHORD_VOICES.filter((v) => v.kind === "chord");
     const progressions = CHORD_VOICES.filter((v) => v.kind === "progression");

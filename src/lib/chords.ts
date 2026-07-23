@@ -307,6 +307,48 @@ export const CHORD_VOICES: readonly ChordVoiceDef[] = [
     defaultVolume: 0.45,
   },
 
+  // --- Single minor chords -------------------------------------------
+  // More minor-chord content across a couple of useful keys, gentle timbres.
+  {
+    id: "e-minor",
+    label: "E minor",
+    description: "Dark, resonant minor triad (E–G–B)",
+    kind: "chord",
+    rootMidi: E3,
+    chords: [{ intervals: [0, 3, 7], beats: 4 }], // Em
+    defaultTimbreId: "nylon-guitar",
+    defaultMode: "block",
+    defaultTempoBpm: 66,
+    defaultIntervalMin: 2,
+    defaultVolume: 0.5,
+  },
+  {
+    id: "em7",
+    label: "E minor 7",
+    description: "Smooth, mellow minor-seventh chord (E–G–B–D)",
+    kind: "chord",
+    rootMidi: E3,
+    chords: [{ intervals: [0, 3, 7, 10], beats: 4 }], // Em7
+    defaultTimbreId: "rhodes",
+    defaultMode: "arpeggiated",
+    defaultTempoBpm: 72,
+    defaultIntervalMin: 2,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "gm9",
+    label: "G minor 9",
+    description: "Lush, contemplative minor-ninth voicing (G–B♭–D–F–A)",
+    kind: "chord",
+    rootMidi: G3,
+    chords: [{ intervals: [0, 3, 7, 10, 14], beats: 4 }], // Gm9
+    defaultTimbreId: "warm-pad",
+    defaultMode: "arpeggiated",
+    defaultTempoBpm: 64,
+    defaultIntervalMin: 2.5,
+    defaultVolume: 0.45,
+  },
+
   // --- Progressions --------------------------------------------------
   {
     id: "pop-I-V-vi-IV",
@@ -400,6 +442,45 @@ export const CHORD_VOICES: readonly ChordVoiceDef[] = [
     defaultTempoBpm: 90,
     defaultIntervalMin: 4,
     defaultVolume: 0.45,
+  },
+
+  // --- Minor-key progressions ----------------------------------------
+  {
+    id: "minor-andalusian",
+    label: "Andalusian cadence (i–VII–VI–V)",
+    description: "Flamenco-style descending minor cadence in A minor (Am–G–F–E)",
+    kind: "progression",
+    // Anchored on the low E so the descending A→G→F→E bass stays positive.
+    rootMidi: E3,
+    chords: [
+      { intervals: [5, 8, 12], beats: 2 }, // Am
+      { intervals: [3, 7, 10], beats: 2 }, // G
+      { intervals: [1, 5, 8], beats: 2 }, // F
+      { intervals: [0, 4, 7], beats: 4 }, // E (major dominant, resolves, held)
+    ],
+    defaultTimbreId: "nylon-guitar",
+    defaultMode: "arpeggiated",
+    defaultTempoBpm: 68,
+    defaultIntervalMin: 3,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "minor-i-VI-III-VII",
+    label: "Minor loop (i–VI–III–VII)",
+    description: "Wistful, anthemic minor loop in E minor (Em–C–G–D)",
+    kind: "progression",
+    rootMidi: E3,
+    chords: [
+      { intervals: [0, 3, 7], beats: 2 }, // Em
+      { intervals: [8, 12, 15], beats: 2 }, // C
+      { intervals: [3, 7, 10], beats: 2 }, // G
+      { intervals: [10, 14, 17], beats: 2 }, // D
+    ],
+    defaultTimbreId: "warm-pad",
+    defaultMode: "block",
+    defaultTempoBpm: 74,
+    defaultIntervalMin: 3,
+    defaultVolume: 0.5,
   },
 
   // --- Ready-made guitar voices --------------------------------------
@@ -512,6 +593,69 @@ export const CHORD_VOICES: readonly ChordVoiceDef[] = [
     defaultTempoBpm: 116,
     defaultIntervalMin: 3,
     defaultVolume: 0.45,
+  },
+
+  // --- Soothing pentatonic progressions ------------------------------
+  // Voices built purely from pentatonic-scale tones and voiced openly
+  // (stacked fourths/fifths, add9/sus, octave spread) so there are no harsh
+  // semitone clashes — an open, tension-free, calming sound. Slow, ambient,
+  // gentle timbres, arpeggiated by default.
+  {
+    id: "pentatonic-major-drift",
+    label: "Pentatonic drift (C major pentatonic)",
+    description:
+      "Open add9/quintal voicings drawn from C major pentatonic (C–D–E–G–A)",
+    kind: "progression",
+    rootMidi: C4,
+    chords: [
+      { intervals: [0, 7, 14, 16], beats: 4 }, // Cadd9 open (C–G–D–E)
+      { intervals: [2, 9, 14, 21], beats: 4 }, // Dsus open (D–A–D–A)
+      { intervals: [4, 7, 14, 16], beats: 4 }, // Em add (E–G–D–E)
+      { intervals: [7, 14, 16, 21], beats: 4 }, // G6 open (G–D–E–A)
+    ],
+    defaultTimbreId: "warm-pad",
+    defaultMode: "arpeggiated",
+    defaultTempoBpm: 54,
+    defaultIntervalMin: 4,
+    defaultVolume: 0.4,
+  },
+  {
+    id: "pentatonic-minor-flow",
+    label: "Pentatonic flow (A minor pentatonic)",
+    description:
+      "Quartal, open voicings drawn from A minor pentatonic (A–C–D–E–G)",
+    kind: "progression",
+    rootMidi: A3,
+    chords: [
+      { intervals: [0, 7, 10, 17], beats: 4 }, // Am11 open (A–E–G–D)
+      { intervals: [3, 10, 12, 19], beats: 4 }, // Cadd open (C–G–A–E)
+      { intervals: [5, 10, 12, 17], beats: 4 }, // Dsus quartal (D–G–A–D)
+      { intervals: [10, 17, 19, 24], beats: 4 }, // G open (G–D–E–A)
+    ],
+    defaultTimbreId: "glass-pad",
+    defaultMode: "arpeggiated",
+    defaultTempoBpm: 50,
+    defaultIntervalMin: 4,
+    defaultVolume: 0.4,
+  },
+  {
+    id: "pentatonic-quartal-air",
+    label: "Pentatonic air (D major pentatonic)",
+    description:
+      "Stacked open fifths drawn from D major pentatonic (D–E–F♯–A–B)",
+    kind: "progression",
+    rootMidi: D4,
+    chords: [
+      { intervals: [0, 7, 14], beats: 4 }, // D open fifths (D–A–E)
+      { intervals: [2, 9, 16], beats: 4 }, // E open fifths (E–B–F♯)
+      { intervals: [7, 14, 21], beats: 4 }, // A open fifths (A–E–B)
+      { intervals: [9, 16, 21], beats: 4 }, // B open fifths (B–F♯–B)
+    ],
+    defaultTimbreId: "air-choir",
+    defaultMode: "arpeggiated",
+    defaultTempoBpm: 52,
+    defaultIntervalMin: 4,
+    defaultVolume: 0.4,
   },
 ];
 
