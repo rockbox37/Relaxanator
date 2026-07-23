@@ -5,9 +5,11 @@
  *
  * A "chord" voice plays one sustained chord; a "progression" voice plays a
  * short sequence of chords. Either can be voiced as a *block* (all notes at
- * once) or *arpeggiated* (spread out); a tempo (BPM) sets the arpeggio note
- * spacing and how long each chord in a progression is held. The timbre is
- * chosen per voice from CHORD_TIMBRES.
+ * once), *arpeggiated* (spread across the beat), or *strum* (a fast guitar-
+ * style downstroke — notes low->high over a very short window, tighter than an
+ * arpeggio); a tempo (BPM) sets the arpeggio note spacing and how long each
+ * chord in a progression is held. The timbre is chosen per voice from
+ * CHORD_TIMBRES.
  *
  * As with meditation sounds, the Web Audio synthesis + pump loop live in
  * src/audio/ (chord-voices.ts / chords-engine.ts); everything here is
@@ -190,7 +192,7 @@ export interface Chord {
 }
 
 export type ChordVoiceKind = "chord" | "progression";
-export type ChordMode = "block" | "arpeggiated";
+export type ChordMode = "block" | "arpeggiated" | "strum";
 
 export interface ChordVoiceDef {
   id: string;
@@ -665,7 +667,10 @@ export const CHORD_VOICES: readonly ChordVoiceDef[] = [
 
 export interface ChordVoiceSettings {
   enabled: boolean;
-  /** Play the chord all at once (block) or spread out (arpeggiated). */
+  /**
+   * Play the chord all at once (block), spread across the beat (arpeggiated),
+   * or as a fast guitar-style downstroke over a very short window (strum).
+   */
   mode: ChordMode;
   /** Tempo in beats per minute — sets arpeggio spacing + progression pace. */
   tempoBpm: number;
@@ -687,6 +692,29 @@ export const CHORD_MAX_INTERVAL_MIN = 120;
 
 /** Beats between successive notes when arpeggiating (an eighth note). */
 export const ARP_STEP_BEATS = 0.5;
+
+/**
+ * Per-string offset (seconds) of a *strum*, at the slowest and fastest tempi.
+ * A strum is a fast guitar downstroke: notes are struck one after another over
+ * a very short window — always far tighter than an arpeggio (whose step is a
+ * fraction of a *beat*, i.e. hundreds of ms). Faster tempi tighten the strum
+ * (harder, snappier strokes); slower tempi relax it slightly. These bounds keep
+ * every strum in the ~18–35 ms/string range regardless of tempo.
+ */
+export const STRUM_MIN_STEP_SEC = 0.018;
+export const STRUM_MAX_STEP_SEC = 0.035;
+
+/**
+ * The per-note (per-string) offset of a strum at a given tempo. Deterministic:
+ * a linear map from the tempo range onto [STRUM_MIN_STEP_SEC, STRUM_MAX_STEP_SEC]
+ * so higher BPM => tighter strum. Always << the arpeggio step, so a strum reads
+ * as a single strummed chord, not an arpeggio.
+ */
+export function strumStepSec(tempoBpm: number): number {
+  const bpm = clampTempoBpm(tempoBpm);
+  const t = (bpm - MIN_TEMPO_BPM) / (MAX_TEMPO_BPM - MIN_TEMPO_BPM);
+  return STRUM_MAX_STEP_SEC - t * (STRUM_MAX_STEP_SEC - STRUM_MIN_STEP_SEC);
+}
 
 export function clampTempoBpm(bpm: number): number {
   if (Number.isNaN(bpm)) return DEFAULT_TEMPO_BPM;
@@ -741,7 +769,14 @@ export function noteGain(index: number): number {
  * Expand a voice into the exact note events to schedule, starting at
  * `startSec` on the audio clock. Block mode stacks each chord's notes at the
  * chord's start; arpeggiated mode spreads them by ARP_STEP_BEATS and sustains
- * each note through the rest of the chord. Pure and deterministic.
+ * each note through the rest of the chord; strum mode fires the notes in a fast
+ * guitar-style stroke — a per-string offset of only ~18–35 ms (see
+ * `strumStepSec`), far tighter than an arpeggio, so the whole chord still lands
+ * at its beat position. Strokes alternate deterministically per chord: even
+ * chords are downstrokes (low->high), odd chords upstrokes (high->low), so a
+ * progression reads like a strummed guitar without any randomness. Both arp and
+ * strum notes sustain through the rest of the chord (floored at one beat). Pure
+ * and deterministic.
  */
 export function buildChordPlan(
   voice: ChordVoiceDef,
@@ -750,11 +785,17 @@ export function buildChordPlan(
 ): ChordNoteEvent[] {
   const beatSec = 60 / clampTempoBpm(settings.tempoBpm);
   const stepSec = ARP_STEP_BEATS * beatSec;
+  const strumStep = strumStepSec(settings.tempoBpm);
   const events: ChordNoteEvent[] = [];
 
   let cursor = startSec;
-  for (const chord of voice.chords) {
+  voice.chords.forEach((chord, chordIndex) => {
     const chordDurSec = Math.max(beatSec, chord.beats * beatSec);
+    const noteCount = chord.intervals.length;
+    // Alternate downstroke (low->high) / upstroke (high->low) per chord so a
+    // progression sounds hand-strummed. Deterministic — derived from the index,
+    // never Math.random. Single chords (index 0) are always a downstroke.
+    const upstroke = settings.mode === "strum" && chordIndex % 2 === 1;
     chord.intervals.forEach((semitone, index) => {
       const hz = midiToHz(voice.rootMidi + semitone);
       const gain = noteGain(index);
@@ -768,12 +809,24 @@ export function buildChordPlan(
           // notes still ring rather than being clipped short.
           holdSec: Math.max(beatSec, chordDurSec - offsetSec),
         });
+      } else if (settings.mode === "strum") {
+        // Strum position: which string is struck first. Downstrokes go
+        // low->high (position === index); upstrokes reverse it.
+        const strumPos = upstroke ? noteCount - 1 - index : index;
+        const offsetSec = strumPos * strumStep;
+        events.push({
+          hz,
+          whenSec: cursor + offsetSec,
+          gain,
+          // Ring to the end of the chord (floored at one beat), matching arp.
+          holdSec: Math.max(beatSec, chordDurSec - offsetSec),
+        });
       } else {
         events.push({ hz, whenSec: cursor, gain, holdSec: chordDurSec });
       }
     });
     cursor += chordDurSec;
-  }
+  });
 
   return events;
 }

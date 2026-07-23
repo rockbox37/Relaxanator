@@ -184,7 +184,10 @@ function normalizeChords(raw: unknown): ChordSettings {
     const timbre = rv.timbreId;
     out[id] = {
       enabled: bool(rv.enabled, dv.enabled),
-      mode: rv.mode === "arpeggiated" || rv.mode === "block" ? rv.mode : dv.mode,
+      mode:
+        rv.mode === "arpeggiated" || rv.mode === "block" || rv.mode === "strum"
+          ? rv.mode
+          : dv.mode,
       tempoBpm: num(rv.tempoBpm, dv.tempoBpm, clampTempoBpm),
       timbreId:
         typeof timbre === "string" && isChordTimbreId(timbre)

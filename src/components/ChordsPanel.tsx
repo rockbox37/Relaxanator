@@ -5,6 +5,7 @@ import {
   CHORD_MIN_INTERVAL_MIN,
   CHORD_TIMBRES,
   CHORD_VOICES,
+  type ChordMode,
   type ChordSettings,
   type ChordTimbreCategory,
   type ChordVoiceSettings,
@@ -21,6 +22,12 @@ interface ChordsPanelProps {
   previewDisabled?: boolean;
   /** voiceIds currently lit by the "just played" glow (#104). */
   playingVoiceIds?: ReadonlySet<string>;
+}
+
+/** Coerce a picklist value into a valid ChordMode, defaulting to block. */
+function toChordMode(value: string): ChordMode {
+  if (value === "arpeggiated" || value === "strum") return value;
+  return "block";
 }
 
 const TIMBRE_GROUPS: { category: ChordTimbreCategory; label: string }[] = [
@@ -60,18 +67,20 @@ export default function ChordsPanel({
                 {voice.label}
               </label>
 
-              <label className="voice-mode" title="Play all notes at once or spread them out">
+              <label
+                className="voice-mode"
+                title="Play all notes at once, spread them out, or strum them like a guitar"
+              >
                 <select
                   value={state.mode}
                   onChange={(e) =>
-                    onChange(voice.id, {
-                      mode: e.target.value === "arpeggiated" ? "arpeggiated" : "block",
-                    })
+                    onChange(voice.id, { mode: toChordMode(e.target.value) })
                   }
                   aria-label={`${voice.label} playback mode`}
                 >
                   <option value="block">Block</option>
                   <option value="arpeggiated">Arpeggiated</option>
+                  <option value="strum">Strum</option>
                 </select>
               </label>
 
