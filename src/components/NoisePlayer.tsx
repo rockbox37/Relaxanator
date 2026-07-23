@@ -853,6 +853,31 @@ export default function NoisePlayer() {
 
   return (
     <section className="player">
+      {/* About trigger (#134) — top-right icon button. Positioned via CSS at the
+          top-right of the app/header area; opens the AboutDialog. Focus returns
+          here on close (FR-4). The SVG is decorative (aria-hidden); the button
+          carries the accessible name (FR-3). */}
+      <button
+        type="button"
+        className="about-trigger"
+        ref={aboutTriggerRef}
+        onClick={() => setAboutOpen(true)}
+        aria-label="About"
+        title="About Relaxanator"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle
+            cx="12"
+            cy="12"
+            r="9"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <circle cx="12" cy="7.6" r="1.3" fill="currentColor" />
+          <rect x="10.9" y="10.6" width="2.2" height="7" rx="1.1" fill="currentColor" />
+        </svg>
+      </button>
       <BreakBannerStack
         breaks={activeBreaks}
         onDidIt={didBreakBanner}
@@ -1061,17 +1086,6 @@ export default function NoisePlayer() {
         onPreview={previewAnnounce}
         previewDisabled={starting}
       />
-
-      <footer className="player-footer">
-        <button
-          type="button"
-          className="about-trigger"
-          ref={aboutTriggerRef}
-          onClick={() => setAboutOpen(true)}
-        >
-          About
-        </button>
-      </footer>
 
       <AboutDialog open={aboutOpen} onClose={closeAbout} />
     </section>

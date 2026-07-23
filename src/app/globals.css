@@ -991,26 +991,76 @@ main > p {
   background: rgba(212, 168, 85, 0.32);
 }
 
-/* About modal (#134) — unobtrusive footer trigger + accessible overlay. */
-.player-footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: -0.5rem;
+/* About trigger (top-right) — icon button moved out of the footer (#134
+   follow-up). Positioned relative to <main> (which is position: relative) so it
+   sits at the top-right of the app/header area on every width without covering
+   the transport controls, which live lower in the card (FR-1, FR-5). */
+.about-trigger {
+  position: absolute;
+  top: 2.75rem;
+  right: 1.25rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
+  color: var(--accent);
+  background: rgba(127, 200, 169, 0.1);
+  border: 1px solid rgba(127, 200, 169, 0.35);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(127, 200, 169, 0.45);
+  animation: about-pulse 2.8s ease-in-out infinite;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
-.about-trigger {
-  background: transparent;
-  color: var(--muted);
-  border: none;
-  padding: 0.25rem 0.35rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+.about-trigger svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  display: block;
 }
 
 .about-trigger:hover {
-  color: var(--text);
+  color: #0d1b16;
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.06);
+}
+
+.about-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Reserve room at the header's right edge so its title never runs under the
+   absolutely-positioned About icon on narrow screens (FR-5). */
+.app-header {
+  padding-right: 3rem;
+}
+
+/* Soft, non-distracting halo pulse to draw the eye to the trigger (FR-2). */
+@keyframes about-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(127, 200, 169, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(127, 200, 169, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(127, 200, 169, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-trigger {
+    animation: none;
+  }
 }
 
 .about-overlay {
