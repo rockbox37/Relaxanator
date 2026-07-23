@@ -1,0 +1,49 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for moving the About trigger to top-right with an attractive icon",
+    "created": "2026-07-23T15:47:00Z"
+  },
+  "plan": {
+    "title": "Move About trigger to top-right with an attractive icon",
+    "status": "completed",
+    "narratives": {
+      "Overview": "The About popup trigger currently lives in the footer of the NoisePlayer layout (added in PR #125). Move it to the TOP-RIGHT of the app, and render it as a nice-looking icon button that attracts interest (rather than a plain text link). Opening/closing behavior and the AboutDialog content are unchanged — this is placement + presentation only.",
+      "Requirements": "FR-1: Remove the About trigger from the footer and place it in the top-right corner of the app (top-right of the main header/app area). It should be clearly visible/discoverable at the top-right without overlapping other controls. FR-2: Render the trigger as an attractive icon button (e.g. an info 'i'-in-circle or a tasteful sparkle/star) using an INLINE SVG — no new icon-library dependency. Add a subtle, tasteful affordance to draw the eye (e.g. gentle hover highlight and/or a soft pulse/glow), consistent with the app's aesthetic; keep it non-distracting. FR-3: Keep it a real accessible <button> with an accessible name (aria-label like 'About' and/or a title tooltip); the icon SVG is decorative (aria-hidden). FR-4: Clicking it still opens the existing AboutDialog; Escape/backdrop/close still work; focus still returns to this trigger on close. FR-5: Responsive/no-overlap — the top-right placement must not cover the noise/transport controls on small screens; use existing layout/CSS conventions. NFR-1: Match existing styling in src/app/globals.css and component conventions; no heavy dependencies. NFR-2: Purely presentational/layout — no audio-engine or dialog-content behavior changes. NFR-3: Update the co-located test if it asserted footer placement; typecheck, lint, full test suite, and production build pass. NFR-4: Fully offline (inline SVG, no remote assets).",
+      "Assumptions": "A-1: The AboutDialog component and its open/close wiring already exist (PR #125); this brief moves the trigger and restyles it as an icon. A-2: 'Top-right' means the top-right of the main app view/header. The implementer picks the exact anchor (header flex row vs absolutely-positioned corner) to best fit the existing layout and avoid overlap, and notes the choice. A-3: A concurrent worker is editing src/app/globals.css and src/components/ChordsPanel.tsx for an unrelated change (disabling the chord interval input while looping); this brief also edits globals.css and NoisePlayer.tsx — keep globals.css additions in a distinct, clearly-labeled block, and rebase onto latest origin/main before merge, resolving any globals.css overlap by KEEPING BOTH sets of additions."
+    },
+    "items": [
+      {
+        "title": "src/components/NoisePlayer.tsx — remove footer About trigger; add top-right icon-button trigger (inline SVG, aria-label, opens AboutDialog, focus return)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, FR-4, NFR-2"
+        }
+      },
+      {
+        "title": "src/app/globals.css — top-right positioning + attractive icon-button styling (hover/pulse), responsive no-overlap; distinct labeled block",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2, FR-5, NFR-1"
+        }
+      },
+      {
+        "title": "Update About/NoisePlayer test if it asserted footer placement; verify gates/build",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-3"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "ui"
+    ],
+    "references": [],
+    "updated": "2026-07-23T15:53:33Z",
+    "metadata": {
+      "completedAt": "2026-07-23T15:53:33Z"
+    }
+  }
+}
