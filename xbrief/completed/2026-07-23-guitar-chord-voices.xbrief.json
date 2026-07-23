@@ -1,0 +1,50 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for adding ready-made guitar chord voices",
+    "created": "2026-07-23T13:39:00Z"
+  },
+  "plan": {
+    "title": "Add ready-made guitar chord/progression voices",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Now that the Chords section has a guitar timbre family (nylon, steel-string, clean electric, jazz/archtop, metal, 12-string), add a set of ready-made chord/progression VOICES in CHORD_VOICES (src/lib/chords.ts) that default to those guitar timbres so users get musically-useful guitar presets out of the box — not just a raw timbre they must pair with an existing piano/pad voice. The showcase set must include a metal power-chord progression defaulting to metal-guitar, plus tasteful voices highlighting the other guitar timbres. Voices are built the same way as existing entries: semitone-interval chords over a rootMidi, with per-voice defaults (kind, rootMidi, chords[], defaultTimbreId, defaultMode, defaultTempoBpm, defaultIntervalMin, defaultVolume).",
+      "Requirements": "FR-1: Add a metal power-chord progression voice defaulting to metal-guitar — power chords (root+fifth, optionally +octave), a low rootMidi appropriate for metal (e.g. E2), block mode, driving tempo. FR-2: Add several more ready-made guitar voices showcasing the other timbres — at minimum a nylon classical fingerstyle/arpeggiated progression (nylon-guitar), an acoustic steel-string progression (steel-guitar), and a jazz comping progression (jazz-guitar); optionally clean-electric and 12-string voices. Choose musical, pleasant voicings and sensible per-voice defaults (mode/tempo/volume). FR-3: Each new voice has a clear id + label + description consistent with existing CHORD_VOICES naming, and references a valid guitar ChordTimbreId as its defaultTimbreId. NFR-1: Voices integrate with the existing play-plan/scheduler and preview with no engine changes; block and arpeggiated modes both work. NFR-2: Registry/scheduler tests in chords.test.ts updated for the new voice count/ids and still pass; src/lib per-file coverage gate (85%) still met; ChordsPanel renders the new voices. NFR-3: typecheck, lint, full test suite, and production build pass.",
+      "Assumptions": "A-1: These are additive Web Audio voices using the timbres already shipped — no new synth work. A-2: Exact ids/labels/voicings and the precise chord choices are the implementer's call, provided the metal power-chord + metal-guitar voice from FR-1 is present and each new voice defaults to a guitar timbre. A-3: Existing voices (including jazz-2-5-1) are left unchanged."
+    },
+    "items": [
+      {
+        "title": "src/lib/chords.ts — add metal power-chord progression voice (defaultTimbreId metal-guitar, low root, block)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-3"
+        }
+      },
+      {
+        "title": "src/lib/chords.ts — add nylon / steel / jazz (and optional clean-electric / 12-string) ready-made guitar voices with musical voicings + defaults",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2, FR-3, NFR-1"
+        }
+      },
+      {
+        "title": "Update chords.test.ts registry/scheduler expectations and confirm ChordsPanel renders the new voices",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-2, NFR-3"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "audio",
+      "chords"
+    ],
+    "references": [],
+    "updated": "2026-07-23T13:45:28Z",
+    "metadata": {
+      "completedAt": "2026-07-23T13:45:28Z"
+    }
+  }
+}
