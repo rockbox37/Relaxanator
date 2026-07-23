@@ -1,0 +1,66 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for an in-app feedback form emailed to the admin (issue #132)",
+    "created": "2026-07-23T14:38:00Z"
+  },
+  "plan": {
+    "title": "In-app feedback form with email delivery (#132)",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Implement issue #132: an in-app feedback form so users can report issues or request features. Provide a noticeable entry point near the top of the app (coherent with the existing top-right About icon), a link to the same form from the About dialog, and deliver submissions to the site administrator by email. Because the app is a Next.js app deployed as a standalone Node server on Fly.io, email is sent from a server-side Route Handler (app/api/feedback) using an email provider configured via environment variables; secrets are never committed.",
+      "Requirements": "FR-1 (entry points): Add a noticeable feedback link/icon near the TOP of the app, visually coherent with the existing top-right About icon button, easy to spot without crowding the transport controls. Also add a 'Send feedback' link inside the About dialog. Both open the same feedback form. FR-2 (form UI): A feedback form (modal/dialog consistent with AboutDialog patterns) with: a type selector (Bug / Feature request / Other), a required message textarea, and an OPTIONAL email field (so the admin can reply). Client-side validation (message required; basic email format if provided), clear submitting/success/error states, and the user's text is preserved on error. Accessible (labeled fields, dialog role/aria, focus management, Escape/backdrop/close consistent with AboutDialog) and mobile-friendly. FR-3 (email delivery): Add a server-side Next.js Route Handler at app/api/feedback (POST) that emails the submission to the admin. Use an email provider behind a small, swappable, testable module (recommended: Resend via RESEND_API_KEY; acceptable alternatives: SMTP/nodemailer or another API). The admin destination (e.g. FEEDBACK_ADMIN_EMAIL) and provider API key come from process.env — NEVER hardcoded/committed. The route validates input server-side, returns appropriate status codes/JSON, and the client handles them. FR-4 (anti-abuse): Include a honeypot field and basic rate limiting (per-IP or simple in-memory/token) plus server-side validation; reject oversized/empty messages. FR-5 (graceful failure): If the email provider/env is not configured or the network fails, the API returns a clear error and the client shows a friendly message without losing the user's input. If env is unset, the route must fail safe (clear 'not configured' error) rather than crash the app. NFR-1: Follow existing component/CSS conventions (AboutDialog, globals.css, top-right icon patterns); no heavy deps beyond the chosen email SDK. NFR-2: Pure/unit-testable validation logic in src/lib (e.g. feedback validation + payload shaping) with co-located tests; mock the email provider and network in tests (no real emails/network in the test suite). NFR-3: typecheck, lint, full test suite, and production build pass. NFR-4: Do NOT commit secrets; document required env vars (README or a short note) and the Fly secrets to set (e.g. `fly secrets set RESEND_API_KEY=... FEEDBACK_ADMIN_EMAIL=...`). NFR-5: Purely additive — do not change audio engines or unrelated behavior.",
+      "Assumptions": "A-1: The app runs as a standalone Node server on Fly.io (next.config output standalone), so a Route Handler executes server-side and can send email — verify and, if the app were purely static, fall back to a hosted form backend (e.g. Formspree) and document it. A-2: Resend is the default provider (simple modern API); the implementer may choose another if better-justified, keeping the send behind a swappable module. A-3: The actual admin address + API key are provided at deploy time via Fly secrets by the operator; the code must run/build without them present (failing safe at request time), so CI/build/tests don't need real secrets. A-4: The feedback dialog can reuse the AboutDialog accessibility/dismissal patterns for consistency."
+    },
+    "items": [
+      {
+        "title": "src/lib feedback validation/payload module (+ tests) — pure, testable (type/message/email validation, honeypot check)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2, FR-4, NFR-2"
+        }
+      },
+      {
+        "title": "app/api/feedback Route Handler — POST: validate, rate-limit, send email via env-configured provider module; fail safe when unconfigured",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-3, FR-4, FR-5, NFR-4"
+        }
+      },
+      {
+        "title": "src/components/FeedbackDialog.tsx (+ test) — accessible form modal (type/message/optional email), submit states, error preserves input",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2, FR-5, NFR-1"
+        }
+      },
+      {
+        "title": "Wire entry points: top-of-app feedback icon/link in NoisePlayer + 'Send feedback' link in AboutDialog; styles in globals.css",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, NFR-1"
+        }
+      },
+      {
+        "title": "Document required env vars / Fly secrets; verify gates/build (no real network in tests)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-3, NFR-4"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "ui",
+      "backend"
+    ],
+    "references": [
+      "https://github.com/rockbox37/Relaxanator/issues/132"
+    ],
+    "updated": "2026-07-23T21:39:38Z",
+    "metadata": {
+      "completedAt": "2026-07-23T21:39:38Z"
+    }
+  }
+}
