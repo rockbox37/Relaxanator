@@ -12,6 +12,12 @@ export interface MeditationVoiceDef {
   synth: "bell" | "doomBell" | "chime" | "darkChime" | "drone" | "omm" | "fogHorn" | "fogHorn2" | "fogHorn3" | "fogHorn4" | "shipHorn" | "shipHorn2" | "trainHorn";
   defaultIntervalMin: number;
   defaultVolume: number;
+  /**
+   * Anchor this voice to the wall clock by default (#33). Omitted/false keeps
+   * the original free-running default; only voices that opt in start clock-synced
+   * in a fresh session. Persisted/customized settings are unaffected.
+   */
+  defaultSyncToClock?: boolean;
 }
 
 /**
@@ -25,8 +31,9 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
     label: "Bell",
     description: "Struck meditation bell with slow decay",
     synth: "bell",
-    defaultIntervalMin: 15,
+    defaultIntervalMin: 30,
     defaultVolume: 0.5,
+    defaultSyncToClock: true,
   },
   {
     id: "doom-bell",
@@ -160,7 +167,7 @@ export function createDefaultMeditationSettings(): MeditationSettings {
       enabled: voice.id === "bell",
       intervalMin: voice.defaultIntervalMin,
       jitter: false,
-      syncToClock: false,
+      syncToClock: voice.defaultSyncToClock ?? false,
       volume: voice.defaultVolume,
     };
   }
