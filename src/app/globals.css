@@ -5,6 +5,8 @@
   --text: #e6e9ef;
   --muted: #8b93a3;
   --accent: #7fc8a9;
+  /* Warm amber for the persistent looping-voice border — distinct from --accent. */
+  --loop: #e0954f;
 }
 
 * {
@@ -250,17 +252,21 @@ main > p {
   align-items: center;
   gap: 0.9rem;
   background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
 }
 
 /*
  * Sound-trigger glow (#104): when a voice fires (schedule or preview) its row
- * gets .voice--playing for a few seconds. Ease in to a soft accent tint + glow
- * quickly (~200ms), then fade back. Accent channels mirror --accent (#7fc8a9).
+ * gets .voice--playing for the full glow window (GLOW_DURATION_MS = 6s). Ease in
+ * to a soft accent tint + glow quickly (~200ms), HOLD at full highlight through
+ * 4s (~66.7% of 6s), then fade back to baseline over the final 2s. Accent
+ * channels mirror --accent (#7fc8a9). Uses background + box-shadow only (never
+ * `border`), so it coexists with the persistent .voice--looping border below.
  */
 .voice--playing {
-  animation: voice-glow 2.6s ease-out;
+  animation: voice-glow 6s ease-out;
 }
 
 @keyframes voice-glow {
@@ -268,13 +274,22 @@ main > p {
     background: rgba(255, 255, 255, 0.03);
     box-shadow: 0 0 0 0 rgba(127, 200, 169, 0);
   }
-  8% {
+  3.5% {
+    /* Quick ease-in to full highlight (~210ms). */
+    background: rgba(127, 200, 169, 0.16);
+    box-shadow:
+      0 0 0 1px rgba(127, 200, 169, 0.55),
+      0 0 14px 2px rgba(127, 200, 169, 0.35);
+  }
+  66.7% {
+    /* Hold at full highlight through 4s (66.7% of the 6s window). */
     background: rgba(127, 200, 169, 0.16);
     box-shadow:
       0 0 0 1px rgba(127, 200, 169, 0.55),
       0 0 14px 2px rgba(127, 200, 169, 0.35);
   }
   100% {
+    /* Fade back to baseline over the final 2s. */
     background: rgba(255, 255, 255, 0.03);
     box-shadow: 0 0 0 0 rgba(127, 200, 169, 0);
   }
@@ -286,6 +301,19 @@ main > p {
     animation: none;
     background: rgba(127, 200, 169, 0.16);
   }
+}
+
+/*
+ * Looping indicator: a persistent thin amber-orange border on a chord voice
+ * whose per-voice settings have loop && enabled (applied in ChordsPanel). It
+ * does NOT animate — it stays for as long as the voice is looping and active,
+ * and clears when either is turned off. Amber is deliberately distinct from the
+ * green --accent (#7fc8a9). The base .voice reserves a transparent 1px border so
+ * toggling the color causes no layout shift, and because this uses `border`
+ * (not box-shadow) it coexists with the .voice--playing glow.
+ */
+.voice--looping {
+  border-color: var(--loop);
 }
 
 .voice-enable {

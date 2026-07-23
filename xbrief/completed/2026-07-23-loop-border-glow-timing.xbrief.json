@@ -1,0 +1,57 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for a persistent orange looping border and retuned trigger-glow timing",
+    "created": "2026-07-23T17:11:00Z"
+  },
+  "plan": {
+    "title": "Looping orange border + retune trigger-glow to 4s hold / 2s fade",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Two related visual-feedback changes to the sound rows/boxes. (1) LOOP INDICATOR: when a chord voice is looping, keep a thin ORANGE border around that sound's box for as long as it is playing (i.e. while the voice is enabled and looping), so it's obvious which sounds are on a continuous loop. (2) TRIGGER-GLOW TIMING: the existing sound-trigger highlight (#104, the .voice--playing glow shown when a sound fires) should stay at full highlight for 4 seconds and then fade away over the following 2 seconds (total ~6s), instead of the current 2.6s ease-out. The glow is driven by GLOW_DURATION_MS in src/lib/sound-glow.ts and the `voice-glow` CSS animation in src/app/globals.css.",
+      "Requirements": "FR-1 (loop border): Add a persistent thin orange border around a chord voice's box/row whenever that voice is currently looping and playing — i.e. when its per-voice settings have loop=true AND enabled=true. The border stays (does not fade/animate away) the whole time the looping voice is active, and disappears when loop is turned off or the voice is disabled. Use a tasteful orange (implementer picks an on-brand orange, distinct from the green --accent; note the chosen value). Keep it thin. FR-2: The loop border is applied in the chords UI (ChordsPanel) since loop is a chords-only feature; derive it from the per-voice settings (loop && enabled). It must coexist with the trigger-glow (a looping row can also glow when it fires) without one clobbering the other. FR-3 (glow timing): Change the trigger-glow so the highlight holds at full intensity for 4s, then fades back over 2s (total 6s). Update GLOW_DURATION_MS (2600 -> 6000) and the `voice-glow` @keyframes so it eases in quickly, holds full until 4s (~66.7%), then fades to baseline by 6s; set the animation duration to 6s. Keep the quick ease-in. FR-4: Respect prefers-reduced-motion (existing reduced-motion block) — keep a static tint fallback for the glow; the orange loop border should still show under reduced motion (it's a static border, not an animation). NFR-1: sound-glow.ts stays pure/deterministic and unit-tested; update sound-glow.test.ts for the new duration. NFR-2: No audio-engine/scheduler/synth changes — purely presentational + the glow-duration constant. NFR-3: Match existing CSS conventions (.voice--playing, .voice-loop, accent variables); keep additions tidy and labeled. NFR-4: Update the co-located ChordsPanel test to assert the loop-border class appears when loop&enabled and not otherwise; typecheck, lint, full test suite, and production build pass.",
+      "Assumptions": "A-1: 'The sound's box' = the per-voice row/box in the panel (the same element that receives .voice--playing). A-2: Looping is a chord-voice feature only (meditation/breaks don't loop), so the orange border lives in ChordsPanel; if the implementer finds looping applies elsewhere, extend accordingly and note it. A-3: 'While it is playing' for a looping voice = while loop && enabled (a looping enabled voice retriggers continuously). A-4: Total glow window becomes 6s (4s hold + 2s fade); GLOW_DURATION_MS drives both the pure expiry and should match the CSS animation length. A-5: The glow row highlight and the persistent loop border are separate concerns and both can be present at once."
+    },
+    "items": [
+      {
+        "title": "src/lib/sound-glow.ts — GLOW_DURATION_MS 2600 -> 6000 (4s hold + 2s fade); update comment",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-3, NFR-1, NFR-2"
+        }
+      },
+      {
+        "title": "src/app/globals.css — retune voice-glow animation to 6s (quick ease-in, hold full to ~66.7%, fade to baseline by 100%); add thin orange .voice--looping border; reduced-motion handling",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-3, FR-4, NFR-3"
+        }
+      },
+      {
+        "title": "src/components/ChordsPanel.tsx — apply the looping-border class when a voice has loop && enabled (coexists with .voice--playing)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2"
+        }
+      },
+      {
+        "title": "Update sound-glow.test.ts (new duration) and ChordsPanel test (loop-border class); verify gates/build",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-1, NFR-4"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "ui",
+      "chords"
+    ],
+    "references": [],
+    "updated": "2026-07-23T17:28:34Z",
+    "metadata": {
+      "completedAt": "2026-07-23T17:28:34Z"
+    }
+  }
+}

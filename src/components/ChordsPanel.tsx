@@ -53,11 +53,19 @@ export default function ChordsPanel({
           const state = settings[voice.id];
           const arpeggiated = state.mode === "arpeggiated";
           const playing = playingVoiceIds?.has(voice.id) ?? false;
+          // A looping, enabled voice retriggers continuously, so mark its row
+          // with a persistent orange border (coexists with the .voice--playing
+          // glow that flashes each time it actually fires).
+          const looping = state.loop && state.enabled;
+          const className = [
+            "voice",
+            playing ? "voice--playing" : "",
+            looping ? "voice--looping" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
           return (
-            <li
-              key={voice.id}
-              className={playing ? "voice voice--playing" : "voice"}
-            >
+            <li key={voice.id} className={className}>
               <label className="voice-enable" title={voice.description}>
                 <input
                   type="checkbox"
