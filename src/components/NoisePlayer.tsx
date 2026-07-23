@@ -4,6 +4,7 @@ import {
   type Dispatch,
   type SetStateAction,
   useEffect,
+  useReducer,
   useRef,
   useState,
   useSyncExternalStore,
@@ -134,7 +135,15 @@ import {
   updatePreset,
 } from "@/lib/session-presets";
 
+import {
+  feedbackFormReducer,
+  initialFeedbackFormState,
+  postFeedback,
+  validateFeedbackInput,
+} from "@/lib/feedback";
+
 import AboutDialog from "./AboutDialog";
+import FeedbackDialog, { type FeedbackField } from "./FeedbackDialog";
 import { BreakBannerStack } from "./BreakBanner";
 import BreakPanel from "./BreakPanel";
 import ChordsPanel from "./ChordsPanel";
@@ -288,6 +297,65 @@ export default function NoisePlayer() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [aboutOpen]);
+
+  /** Feedback modal (#132) — open state + trigger for focus return on close. */
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const feedbackTriggerRef = useRef<HTMLButtonElement>(null);
+  // Form state machine + validation are pure (src/lib/feedback); this container
+  // owns the reducer and drives the submit lifecycle, mirroring how the other
+  // panels keep their state here while staying hookless + testable themselves.
+  const [feedbackState, feedbackDispatch] = useReducer(
+    feedbackFormReducer,
+    initialFeedbackFormState,
+  );
+
+  function changeFeedbackField(field: FeedbackField, value: string) {
+    feedbackDispatch({ kind: "setField", field, value });
+  }
+
+  function submitFeedback() {
+    const validation = validateFeedbackInput({
+      type: feedbackState.type,
+      message: feedbackState.message,
+      email: feedbackState.email,
+    });
+    if (!validation.ok) {
+      feedbackDispatch({ kind: "validationFailed", errors: validation.errors });
+      return;
+    }
+    feedbackDispatch({ kind: "submitStart" });
+    void postFeedback({
+      type: feedbackState.type,
+      message: feedbackState.message,
+      email: feedbackState.email,
+      company: feedbackState.company,
+    }).then((action) => feedbackDispatch(action));
+  }
+
+  function openFeedback() {
+    // A fresh form each time the dialog opens; also close About if it launched us.
+    feedbackDispatch({ kind: "reset" });
+    setAboutOpen(false);
+    setFeedbackOpen(true);
+  }
+
+  function closeFeedback() {
+    setFeedbackOpen(false);
+    feedbackTriggerRef.current?.focus();
+  }
+
+  // Escape-to-close while the feedback modal is open (FR-2), mirroring About.
+  useEffect(() => {
+    if (!feedbackOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setFeedbackOpen(false);
+        feedbackTriggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [feedbackOpen]);
 
   const sleepTimerRef = useRef<SleepTimer | null>(null);
   const sleepPumpRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -857,6 +925,29 @@ export default function NoisePlayer() {
           top-right of the app/header area; opens the AboutDialog. Focus returns
           here on close (FR-4). The SVG is decorative (aria-hidden); the button
           carries the accessible name (FR-3). */}
+      {/* Feedback trigger (#132) — top-right icon button, coherent with the
+          About icon and sitting just to its left. Opens the feedback form;
+          focus returns here on close (FR-1). SVG is decorative. */}
+      <button
+        type="button"
+        className="feedback-trigger"
+        ref={feedbackTriggerRef}
+        onClick={openFeedback}
+        aria-label="Send feedback"
+        title="Send feedback"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9l-5 4V5a1 1 0 0 1 1-1z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <line x1="8" y1="9" x2="16" y2="9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <line x1="8" y1="12.5" x2="13" y2="12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </button>
       <button
         type="button"
         className="about-trigger"
@@ -1087,7 +1178,19 @@ export default function NoisePlayer() {
         previewDisabled={starting}
       />
 
-      <AboutDialog open={aboutOpen} onClose={closeAbout} />
+      <AboutDialog
+        open={aboutOpen}
+        onClose={closeAbout}
+        onSendFeedback={openFeedback}
+      />
+
+      <FeedbackDialog
+        open={feedbackOpen}
+        onClose={closeFeedback}
+        state={feedbackState}
+        onFieldChange={changeFeedbackField}
+        onSubmit={submitFeedback}
+      />
     </section>
   );
 }

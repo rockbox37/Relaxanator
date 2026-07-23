@@ -7,6 +7,11 @@ interface AboutDialogProps {
   open: boolean;
   /** Close the modal — wired to the close button and the backdrop. */
   onClose: () => void;
+  /**
+   * Open the feedback form (#132). Optional so the component can still be
+   * rendered/tested standalone; when provided, a "Send feedback" link appears.
+   */
+  onSendFeedback?: () => void;
 }
 
 /** Stable id linking the dialog to its title for `aria-labelledby` (FR-5). */
@@ -65,7 +70,11 @@ const FEATURES: readonly { name: string; description: string }[] = [
  * returning focus to the trigger, so this component only renders and reports
  * dismissal via `onClose` (close button + backdrop click).
  */
-export default function AboutDialog({ open, onClose }: AboutDialogProps) {
+export default function AboutDialog({
+  open,
+  onClose,
+  onSendFeedback,
+}: AboutDialogProps) {
   if (!open) return null;
 
   // Dismiss only when the backdrop itself is clicked — not content within it.
@@ -109,6 +118,18 @@ export default function AboutDialog({ open, onClose }: AboutDialogProps) {
             </li>
           ))}
         </ul>
+        {onSendFeedback && (
+          <p className="about-feedback-cta">
+            Have a bug or an idea?{" "}
+            <button
+              type="button"
+              className="about-link about-feedback-link"
+              onClick={onSendFeedback}
+            >
+              Send feedback
+            </button>
+          </p>
+        )}
         <p className="about-copyright">
           ©{" "}
           <a
