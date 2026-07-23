@@ -1,0 +1,35 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for deploying the merged chord features to Fly.io",
+    "created": "2026-07-23T14:15:00Z"
+  },
+  "plan": {
+    "title": "Deploy merged chord features to Fly.io",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Deploy the current main branch (commit b2cd90f) to Fly.io so the recently merged chord features reach production: guitar timbres, guitar chord voices, minor + pentatonic chord voices, and the new 'strum' playback mode. This is a deploy-only operation using the existing fly.toml / Dockerfile; no code changes.",
+      "Requirements": "FR-1: Deploy main@b2cd90f to Fly.io via the Fly CLI using the existing fly.toml + Dockerfile config. FR-2: Do not commit, push, or modify any source; deploy-only. FR-3: After deploy, verify the app is live (HTTP 200 on the root URL) and report app name, URL, release version, and machine health. NFR-1: If the deploy fails for a non-transient reason (auth, unrecoverable build/config error), stop and report rather than making risky changes.",
+      "Assumptions": "A-1: Fly CLI is installed and authenticated on this machine. A-2: fly.toml/Dockerfile are already correct from prior deploys. A-3: Remote build is acceptable (default)."
+    },
+    "items": [
+      {
+        "title": "Run fly deploy for main@b2cd90f and verify the live app returns HTTP 200",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3, NFR-1"
+        }
+      }
+    ],
+    "tags": [
+      "deploy",
+      "ops"
+    ],
+    "references": [],
+    "updated": "2026-07-23T14:21:11Z",
+    "metadata": {
+      "completedAt": "2026-07-23T14:21:11Z"
+    }
+  }
+}
