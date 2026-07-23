@@ -1,0 +1,56 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for an About popup with app blurb and copyright",
+    "created": "2026-07-23T15:22:00Z"
+  },
+  "plan": {
+    "title": "Add an About popup with app blurb and copyright",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Add an 'About' popup (modal/dialog) to the Relaxanator PWA that briefly describes the app and shows a copyright line '(c) Jirius Group LLC' at the bottom. A small, unobtrusive 'About' trigger (e.g. a button/link in the app header or footer) opens the popup; the popup can be dismissed (close button, backdrop click, and Escape). The blurb should concisely describe what the app does: an offline-capable PWA that generates EQ-shaped colored noise (brown/pink/white) alongside scheduled meditation sounds, chord ambiences, and break prompts to help the user focus, relax, and rest.",
+      "Requirements": "FR-1: Add an 'About' trigger control in the app UI (header or footer area of the main NoisePlayer layout) that is clearly discoverable but unobtrusive. FR-2: Clicking the trigger opens an About popup/modal overlay describing the app in a short blurb (1-3 short sentences / small paragraph). FR-3: The popup shows a copyright line at the bottom reading exactly '© Jirius Group LLC' (render the copyright symbol; '(c)' as authored is acceptable to display as ©). Including the current year is optional — if included, keep it simple (e.g. '© 2026 Jirius Group LLC'); the operator only specified '(c) Jirius Group LLC', so at minimum that text must appear. FR-4: The popup is dismissible via a visible close (X/Close) button, clicking the backdrop, and pressing Escape; focus handling should be reasonable (return focus to trigger on close). FR-5: Accessible: dialog has role/aria attributes and an accessible name; trigger is a real button. NFR-1: Match the app's existing visual style/CSS approach (see src/app/globals.css and existing panels/components) — no heavy new dependencies; use the project's existing React/CSS patterns. NFR-2: Works offline (no external network/assets) consistent with the PWA. NFR-3: A co-located component test (forward-coverage gate #1310) covering render + open/close behavior; typecheck, lint, full test suite, and production build pass. NFR-4: Purely additive UI — no changes to audio engines or existing panel behavior.",
+      "Assumptions": "A-1: The About content is static (no data fetching). A-2: Implement as a React component (e.g. src/components/AboutDialog.tsx) wired into the main layout (src/components/NoisePlayer.tsx) with styles in src/app/globals.css, following existing component/CSS conventions. The implementer may choose the exact placement of the trigger (header vs footer) — pick what fits the existing layout best and note the choice. A-3: The blurb wording can be lightly refined by the implementer for tone/fit as long as it accurately describes the app (noise + meditation + chords + breaks, offline PWA) and the copyright line is present."
+    },
+    "items": [
+      {
+        "title": "Create src/components/AboutDialog.tsx — accessible modal with app blurb + '© Jirius Group LLC' footer, dismissible (button/backdrop/Escape)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-2, FR-3, FR-4, FR-5, NFR-1, NFR-2, NFR-4"
+        }
+      },
+      {
+        "title": "Wire an 'About' trigger into src/components/NoisePlayer.tsx layout (header/footer)",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, NFR-4"
+        }
+      },
+      {
+        "title": "Add About/dialog styles to src/app/globals.css matching existing style",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-1"
+        }
+      },
+      {
+        "title": "Add co-located AboutDialog test (render + open/close); verify gates/coverage/build",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-3"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "ui"
+    ],
+    "references": [],
+    "updated": "2026-07-23T15:33:41Z",
+    "metadata": {
+      "completedAt": "2026-07-23T15:33:41Z"
+    }
+  }
+}
