@@ -218,6 +218,8 @@ const A3 = 57;
 const D4 = 62;
 const F3 = 53;
 const G3 = 55;
+const E3 = 52;
+const E2 = 40; // Low open-E, the classic metal power-chord root.
 
 /**
  * Extensible registry of chord + progression voices. Intervals are semitone
@@ -397,6 +399,118 @@ export const CHORD_VOICES: readonly ChordVoiceDef[] = [
     defaultMode: "arpeggiated",
     defaultTempoBpm: 90,
     defaultIntervalMin: 4,
+    defaultVolume: 0.45,
+  },
+
+  // --- Ready-made guitar voices --------------------------------------
+  // Each defaults to a timbre from the CHORD_TIMBRES "guitar" family so the
+  // section ships musically-useful guitar presets out of the box.
+  {
+    id: "metal-power-chords",
+    label: "Metal power chords (i–VI–III–VII)",
+    description: "Driving low-E power-chord riff (E5–C5–G5–D5)",
+    kind: "progression",
+    rootMidi: E2,
+    chords: [
+      { intervals: [0, 7, 12], beats: 2 }, // E5
+      { intervals: [8, 15, 20], beats: 2 }, // C5
+      { intervals: [3, 10, 15], beats: 2 }, // G5
+      { intervals: [10, 17, 22], beats: 2 }, // D5
+    ],
+    defaultTimbreId: "metal-guitar",
+    defaultMode: "block",
+    defaultTempoBpm: 132,
+    defaultIntervalMin: 3,
+    defaultVolume: 0.5,
+  },
+  {
+    id: "nylon-classical",
+    label: "Nylon classical (i–iv–V–i)",
+    description: "Gentle fingerstyle cadence in A minor (Am–Dm–E–Am)",
+    kind: "progression",
+    rootMidi: A3,
+    chords: [
+      { intervals: [0, 3, 7], beats: 2 }, // Am
+      { intervals: [5, 8, 12], beats: 2 }, // Dm
+      { intervals: [7, 11, 14], beats: 2 }, // E (major dominant)
+      { intervals: [0, 3, 7], beats: 4 }, // Am (resolves, held)
+    ],
+    defaultTimbreId: "nylon-guitar",
+    defaultMode: "arpeggiated",
+    defaultTempoBpm: 66,
+    defaultIntervalMin: 3,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "steel-folk",
+    label: "Steel folk (I–V–vi–IV)",
+    description: "Bright strummed acoustic loop in G (G–D–Em–C)",
+    kind: "progression",
+    rootMidi: G3,
+    chords: [
+      { intervals: [0, 4, 7], beats: 2 }, // G
+      { intervals: [7, 11, 14], beats: 2 }, // D
+      { intervals: [9, 12, 16], beats: 2 }, // Em
+      { intervals: [5, 9, 12], beats: 2 }, // C
+    ],
+    defaultTimbreId: "steel-guitar",
+    defaultMode: "block",
+    defaultTempoBpm: 100,
+    defaultIntervalMin: 3,
+    defaultVolume: 0.5,
+  },
+  {
+    id: "jazz-turnaround",
+    label: "Jazz turnaround (I–VI7–ii–V)",
+    description: "Swinging rhythm-changes comp in C (Cmaj7–A7–Dm7–G7)",
+    kind: "progression",
+    rootMidi: C4,
+    chords: [
+      { intervals: [0, 4, 7, 11], beats: 2 }, // Cmaj7
+      { intervals: [9, 13, 16, 19], beats: 2 }, // A7 (secondary dominant)
+      { intervals: [2, 5, 9, 12], beats: 2 }, // Dm7
+      { intervals: [7, 11, 14, 17], beats: 2 }, // G7
+    ],
+    defaultTimbreId: "jazz-guitar",
+    defaultMode: "block",
+    defaultTempoBpm: 120,
+    defaultIntervalMin: 3,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "clean-arpeggios",
+    label: "Clean arpeggios (I–V–vi–IV)",
+    description: "Shimmering clean-electric picking in E (E–B–C♯m–A)",
+    kind: "progression",
+    rootMidi: E3,
+    chords: [
+      { intervals: [0, 4, 7], beats: 2 }, // E
+      { intervals: [7, 11, 14], beats: 2 }, // B
+      { intervals: [9, 12, 16], beats: 2 }, // C#m
+      { intervals: [5, 9, 12], beats: 2 }, // A
+    ],
+    defaultTimbreId: "clean-electric",
+    defaultMode: "arpeggiated",
+    defaultTempoBpm: 96,
+    defaultIntervalMin: 3,
+    defaultVolume: 0.45,
+  },
+  {
+    id: "twelve-string-jangle",
+    label: "12-string jangle (I–IV–V)",
+    description: "Chiming octave-doubled jangle in D (D–G–A–G)",
+    kind: "progression",
+    rootMidi: D4,
+    chords: [
+      { intervals: [0, 4, 7], beats: 2 }, // D
+      { intervals: [5, 9, 12], beats: 2 }, // G
+      { intervals: [7, 11, 14], beats: 2 }, // A
+      { intervals: [5, 9, 12], beats: 2 }, // G
+    ],
+    defaultTimbreId: "twelve-string",
+    defaultMode: "arpeggiated",
+    defaultTempoBpm: 116,
+    defaultIntervalMin: 3,
     defaultVolume: 0.45,
   },
 ];
