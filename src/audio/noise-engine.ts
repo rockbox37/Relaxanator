@@ -5,6 +5,7 @@
  * Deliberately thin: all decisions live in src/lib (tested); this class only
  * maps state onto AudioNode parameters. Runs in the browser only.
  */
+import { sliderToGain } from "@/lib/audio-taper";
 import { EQ_BAND_FREQUENCIES, type EqBand } from "@/lib/eq";
 import { type NoiseState, clampVolume, colorToIndex } from "@/lib/noise";
 
@@ -263,8 +264,10 @@ export class NoiseEngine {
 
   setMasterVolume(volume: number): void {
     if (!this.ctx || !this.master) return;
+    // Stored volume is the 0..1 slider position; convert to a perceptual
+    // (audio-taper) gain here, at the volume->GainNode boundary (FR-2).
     this.master.gain.setTargetAtTime(
-      clampVolume(volume),
+      sliderToGain(clampVolume(volume)),
       this.ctx.currentTime,
       SMOOTHING,
     );
