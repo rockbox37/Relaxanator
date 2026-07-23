@@ -9,7 +9,7 @@ export interface MeditationVoiceDef {
   label: string;
   description: string;
   /** Key into the synth implementations in src/audio/voices.ts. */
-  synth: "bell" | "doomBell" | "chime" | "darkChime" | "drone" | "omm" | "fogHorn" | "fogHorn2" | "fogHorn3" | "fogHorn4" | "shipHorn" | "shipHorn2" | "trainHorn";
+  synth: "bell" | "doomBell" | "chime" | "darkChime" | "drone" | "omm" | "fogHorn" | "fogHorn2" | "fogHorn3" | "shipHorn" | "shipHorn2" | "trainHorn";
   defaultIntervalMin: number;
   defaultVolume: number;
   /**
@@ -100,14 +100,6 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
     defaultVolume: 0.45,
   },
   {
-    id: "fog-horn-4",
-    label: "fog horn 4",
-    description: "Vintage film two-tone boat horn — C then lower F (0.85 s + 2.15 s blasts, perfect fifth) with vast reverb",
-    synth: "fogHorn4",
-    defaultIntervalMin: 26,
-    defaultVolume: 0.45,
-  },
-  {
     id: "ship-horn",
     label: "ship's horn",
     description: "Brassy ship's horn — F2 maritime blast with sharp attack and long decay",
@@ -121,7 +113,7 @@ export const MEDITATION_VOICES: readonly MeditationVoiceDef[] = [
     description: "Higher brassy ship's horn with sharp attack and massive reverb",
     synth: "shipHorn2",
     defaultIntervalMin: 20,
-    defaultVolume: 0.55,
+    defaultVolume: 0.35,
   },
   {
     id: "train-horn",

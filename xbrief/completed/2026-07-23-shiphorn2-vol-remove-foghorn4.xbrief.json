@@ -1,0 +1,50 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF for lowering ship's horn 2 volume and removing fog horn 4",
+    "created": "2026-07-23T17:53:00Z"
+  },
+  "plan": {
+    "title": "Lower ship's horn 2 volume; remove fog horn 4",
+    "status": "completed",
+    "narratives": {
+      "Overview": "Two meditation-voice adjustments. (1) Lower the volume of the 'ship's horn 2' voice (id `ship-horn-2`, synth `shipHorn2`) which is currently louder than desired (defaultVolume 0.55, with massive reverb). (2) Remove the 'fog horn 4' voice (id `fog-horn-4`, synth `fogHorn4`) entirely from the app. Both live in src/lib/meditation.ts (registry) and src/audio/voices.ts (synths).",
+      "Requirements": "FR-1 (quieter ship's horn 2): Make 'ship's horn 2' noticeably quieter than today. Lower its `defaultVolume` in MEDITATION_VOICES (from 0.55 to roughly 0.35, implementer may fine-tune) so fresh sessions are calmer. If the `shipHorn2` synth in src/audio/voices.ts has an inherent output level that makes it louder than peer horns even at equal volume, also trim that internal gain modestly so it sits comfortably with the other voices. Do not alter other voices' volumes. FR-2 (remove fog horn 4): Remove the `fog-horn-4` entry from MEDITATION_VOICES, remove `fogHorn4` from the synth type union on MeditationVoiceDef.synth, remove the `fogHorn4` player from the PLAYERS map and delete its synth function in src/audio/voices.ts (and any helper used ONLY by it). Keep fog horn 1/2/3 and ship's horn 1/2, train horn, etc. intact. FR-3 (graceful removal): Removing the voice must not break the app for users whose persisted settings/presets reference `fog-horn-4` — loading such settings should simply ignore the now-unknown voice (verify createDefaultMeditationSettings/scheduler/session-presets don't crash on an unknown/removed id; they key off the current registry, so a stale id is harmless — confirm and, if needed, ensure defensive handling). NFR-1: Update tests: src/lib/meditation.test.ts (the voice-id list/order no longer includes fog-horn-4; any fog-horn-4 assertions removed) and src/audio/voices.test.ts (drop fogHorn4 coverage; keep others). Keep coverage gates satisfied. NFR-2: No unrelated behavior changes; other voices unchanged. NFR-3: typecheck, lint, full test suite, and production build pass.",
+      "Assumptions": "A-1: 'ship's horn 2' == id `ship-horn-2` / synth `shipHorn2` (defaultVolume 0.55). 'fog horn 4' == id `fog-horn-4` / synth `fogHorn4`. A-2: Lowering defaultVolume is the primary lever for FR-1; trimming synth gain is secondary if it's inherently hot. A-3: The registry is the source of truth for available voices, so removing an entry removes it from the UI picklist automatically; persisted references to a removed id are simply not rendered/scheduled. The implementer verifies this holds (no hard crash) and adds a defensive guard only if a real gap exists."
+    },
+    "items": [
+      {
+        "title": "src/lib/meditation.ts — lower ship-horn-2 defaultVolume (~0.55->0.35); remove fog-horn-4 registry entry and fogHorn4 from the synth union",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2, FR-3"
+        }
+      },
+      {
+        "title": "src/audio/voices.ts — remove fogHorn4 player + synth fn (and its exclusive helpers); optionally trim shipHorn2 inherent gain if hot",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "FR-1, FR-2"
+        }
+      },
+      {
+        "title": "Update src/lib/meditation.test.ts and src/audio/voices.test.ts for the removal + volume change; verify gates/build",
+        "status": "proposed",
+        "narrative": {
+          "Traces": "NFR-1, NFR-3"
+        }
+      }
+    ],
+    "tags": [
+      "enhancement",
+      "audio",
+      "meditation"
+    ],
+    "references": [],
+    "updated": "2026-07-23T18:11:35Z",
+    "metadata": {
+      "completedAt": "2026-07-23T18:11:35Z"
+    }
+  }
+}
