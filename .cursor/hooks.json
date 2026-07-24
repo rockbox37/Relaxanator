@@ -9,15 +9,21 @@
     ],
     "preToolUse": [
       {
+        "command": "node .cursor/hooks/deft-cursor-hook-adapter.mjs ApplyPatch",
+        "matcher": "ApplyPatch|apply_patch",
+        "failClosed": true,
+        "timeout": 5
+      },
+      {
         "command": "deft hook:dispatch --host cursor --event tool.before",
-        "matcher": "Edit|Write|WriteFile|CreateFile|MultiEdit|NotebookEdit|StrReplace|SearchReplace|Delete|DeleteFile|ApplyPatch|apply_patch",
-        "failClosed": false,
+        "matcher": "Edit|Write|WriteFile|CreateFile|MultiEdit|NotebookEdit|StrReplace|SearchReplace|Delete|DeleteFile",
+        "failClosed": true,
         "timeout": 5
       },
       {
         "command": "deft hook:dispatch --host cursor --event tool.before",
         "matcher": "Task|SubagentStart|spawn_subagent|start_agent|CreateAgent",
-        "failClosed": false,
+        "failClosed": true,
         "timeout": 5
       }
     ],
