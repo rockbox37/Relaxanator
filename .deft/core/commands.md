@@ -170,10 +170,22 @@ Current status: the validation, extractor, provider, registry, generated MAP, an
 
 ## Quality And Verification Commands
 
-- `task check` -- primary directive repo pre-commit gate.
+- `task check` -- primary directive repo pre-commit gate (merge chokepoint — #1704).
+- `task check:merge` -- explicit merge-chokepoint alias for `check:framework-source` in the framework source repo (#1704).
 - `task check:framework-source` -- framework-source lane.
 - `task check:consumer` -- consumer-shape lane.
 - `task check:slow` -- slower/full checks.
+
+### Gate throughput — iteration fast lane (#1704)
+
+> **Invariant:** every change MUST pass the full gate at least once before merge.
+
+- ! **Iteration lane (agents + humans):** during implementation, use affected/static gates — targeted tests on changed paths, relevant static `verify:*` gates, `task coverage:hotspots` / `task verify:forward-coverage` — not full `task check` on every commit.
+- ! **Merge chokepoint:** full `task check` (or `task check:merge` in framework source) before push/PR and in CI via the monolith merge-gate job (`.github/workflows/ci.yml` runs `check:merge`, not cached `deft check`, until `#1713` can invoke internal Taskfile shims).
+- ! **Escape-rate safety:** consume `#1703` Tier-1 telemetry (`helped/crud-metrics.jsonl`) and `task eval:health` (Tier 0) before tightening fast-lane defaults — do not invent a separate metric surface.
+- ~ **In-engine incrementality (#1713):** content-hash cache + runner-delegated affected selection are delivered separately.
+- ~ **Merge queue:** deferred — GitHub merge queue adoption waits until the CI monolith + escape-rate signal are stable; batch merge throughput is the next lever after `#1713` cache lands (#1704 ROI order).
+- ⊗ Skip the merge chokepoint because the iteration lane passed.
 - `task verify:session-ritual` -- validate session-start ritual state.
 - `task verify:branch` -- enforce default-branch protection.
 - `task verify:hooks-installed` -- ensure local git hooks are configured; use `deft verify:hooks-installed --scope=agent` for agent-host hooks.
@@ -187,12 +199,14 @@ Use `task --list` for the exact current verify namespace.
 
 ### Agent-host direct-write hooks (#2438, #2596)
 
-`directive init` and `deft update` idempotently merge Directive-owned entries into `.claude/settings.json`, `.grok/hooks/deft.json`, `.cursor/hooks.json`, and `.codex/hooks.json` while preserving unrelated settings. `SessionStart` refreshes resume bookkeeping on a non-blocking path. `PreToolUse` covers direct edit/write tools and denies them until both existing gates pass: a fresh gated session ritual and an active/running xBRIEF accepted by canonical preflight. A second `PreToolUse` matcher covers spawn/Task tools (`Task`, `SubagentStart`, `spawn_subagent`, `start_agent`, `CreateAgent`) with the same pre-`start_agent` gate stack; explore spawns (`subagent_type: explore`) pass without implementation gates.
+`directive init` and `deft update` idempotently merge Directive-owned entries into `.claude/settings.json`, `.grok/hooks/deft.json`, `.cursor/hooks.json`, and `.codex/hooks.json` while preserving unrelated settings. `SessionStart` refreshes resume bookkeeping on a non-blocking path. `PreToolUse` covers direct edit/write tools and denies them until both existing gates pass: a fresh gated session ritual and an active/running xBRIEF accepted by canonical preflight. Cursor `preToolUse` deposits set `failClosed: true`, so allow decisions emit `{"permission":"allow"}` — empty stdout is treated as hook failure and would block Write tools. A second `PreToolUse` matcher covers spawn/Task tools (`Task`, `SubagentStart`, `spawn_subagent`, `start_agent`, `CreateAgent`) with the same pre-`start_agent` gate stack; explore spawns (`subagent_type: explore`) pass without implementation gates.
 
 - **Read-only explore (#1185):** Prefer Grok role deposit `default_capability_mode = "read-only"` (see [issue #1185](https://github.com/deftai/directive/issues/1185)). Hooks also deny direct writes when `DEFT_HOOK_READ_ONLY=1` or the host payload signals read-only capability. Implementation spawns remain blocked in read-only posture unless explicitly marked explore.
 
 - Verify registration: `deft verify:hooks-installed --scope=agent` (or `--scope=all` for git + agent hooks).
 - Repair missing/drifted entries: `deft update`.
+- **Opt-out (#2752):** Set `plan.policy.hostHooks.<host>` to `false` in `xbrief/PROJECT-DEFINITION.xbrief.json` for any of the four deposited hosts (`claude`, `cursor`, `grok`, `codex`). Unset or `true` keeps the current fail-closed deposit. When a host is opted out, `deft update` / `directive init` skip creating or re-merging Directive-managed hook entries for that host; if a prior deposit left managed entries in the file, the next update strips only those entries and preserves unrelated settings. Inspect with `deft policy:show --field=hostHooks`. Doctor and `verify:hooks-installed --scope=agent` treat opted-out hosts as healthy — they do not recommend `deft update` to repair them.
+- **Claude matcher scope:** Once `.claude/settings.json` hooks are loaded, Claude's `PreToolUse` matcher keys on tool names (`Edit`, `Write`, …), not target paths — matched tools can be gated for the whole session, including writes outside the project tree. Opt out of Claude hook deposit when that posture is unwanted.
 - **Compact re-arm (#2113):** Cursor `preCompact` and Claude/Grok `PreCompact`/`PostCompact` call `deft hook:dispatch --event session.compact` to mark the gated session ritual stale after context compaction/resume; the existing PreToolUse gate then denies direct writes until `deft session:start` and `deft verify:session-ritual -- --tier=gated`. Codex has no native compact hook — operators must re-run the mutation ritual manually after compaction.
 - Codex project hooks are trust-gated by Codex. Directive verifies only that the registrations are structurally current; after an install or changed hook hash, open `/hooks` in Codex and review/approve the project hook commands. Runtime trust cannot be inferred from the file alone.
 - Directive writes only `.codex/hooks.json`; it does not parse or modify `.codex/config.toml`. Codex can also load inline hooks from `config.toml`, so avoid defining duplicate Directive commands there or they may run more than once. See the [Codex hooks documentation](https://learn.chatgpt.com/docs/hooks).

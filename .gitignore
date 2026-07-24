@@ -81,3 +81,6 @@ vbrief/*.lock
 *.premigrate.*
 vbrief/.eval/results/
 xbrief/.eval/results/
+
+# Deft framework: ignore local-only caches and scratch directories
+.deft/cache/
