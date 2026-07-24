@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { sliderToGain } from "@/lib/audio-taper";
 import { createDefaultMeditationSettings } from "@/lib/meditation";
@@ -49,5 +49,45 @@ describe("MeditationEngine audio taper", () => {
     settings.bell.volume = 1;
     new MeditationEngine(ctx, {} as AudioNode, settings).preview("bell");
     expect(vi.mocked(playVoice).mock.calls[0][4]).toBe(1);
+  });
+});
+
+describe("MeditationEngine wake resync (#135)", () => {
+  beforeEach(() => {
+    vi.mocked(playVoice).mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("drops the fire missed while asleep and re-anchors the cadence to now", () => {
+    vi.useFakeTimers();
+    let now = 0;
+    const ctx = {
+      get currentTime() {
+        return now;
+      },
+    } as unknown as BaseAudioContext;
+
+    const settings = createDefaultMeditationSettings();
+    settings.bell.syncToClock = false;
+    settings.bell.intervalMin = 1;
+
+    const engine = new MeditationEngine(ctx, {} as AudioNode, settings);
+    engine.start(); // first ring reserved for t=60
+
+    // The machine slept through it; the pump comes back 40s past the mark.
+    now = 100;
+    engine.resync();
+    vi.advanceTimersByTime(200);
+    expect(playVoice).not.toHaveBeenCalled();
+
+    // Cadence resumes a full interval after the wake, not from the old anchor.
+    now = 159.8;
+    vi.advanceTimersByTime(200);
+    expect(playVoice).toHaveBeenCalledTimes(1);
+
+    engine.stop();
   });
 });

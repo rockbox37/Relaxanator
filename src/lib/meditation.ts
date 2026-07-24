@@ -4,6 +4,8 @@
  * live in src/audio/; everything here is deterministic and unit-tested.
  */
 
+import { shouldCatchUp } from "./wake-sync";
+
 export interface MeditationVoiceDef {
   id: string;
   label: string;
@@ -267,8 +269,10 @@ export interface DueEvent {
  * Collect events due within [nowSec, nowSec + lookaheadSec) and return the
  * advanced schedule. Disabled voices are dropped; newly enabled voices are
  * seeded one interval out (free-running) or at the next wall-clock boundary
- * (sync-to-clock, #33). `nowMs` samples the wall clock alongside the audio
- * clock `nowSec`. Pure — the pump loop feeds it both clocks.
+ * (sync-to-clock, #33). A schedule left behind by a throttled tab rings once
+ * as a catch-up; one left behind by a suspend is re-anchored silently (#135).
+ * `nowMs` samples the wall clock alongside the audio clock `nowSec`. Pure —
+ * the pump loop feeds it both clocks.
  */
 export function collectDueEvents(
   schedule: FireSchedule,
@@ -290,12 +294,14 @@ export function collectDueEvents(
 
     let fireAt = schedule[voiceId] ?? nextFire(nowSec);
     if (fireAt < nowSec) {
-      // A long suspend left the schedule stale. Ring once now as a catch-up,
+      // A throttled tab left the schedule stale. Ring once now as a catch-up,
       // then resume the cadence at the next fire beyond this lookahead window
       // rather than burst-firing every missed step. For a synced voice this
       // also skips a boundary that is imminent on resume (e.g. resuming 0.3s
       // before :05), so the catch-up ring and that boundary don't double up.
-      events.push({ voiceId, whenSec: nowSec });
+      // Past the grace the stall was a suspend, not throttling: the missed
+      // fires are stale by the time the machine wakes, so drop them (#135).
+      if (shouldCatchUp(fireAt, nowSec)) events.push({ voiceId, whenSec: nowSec });
       fireAt = nextFire(nowSec);
       while (fireAt < nowSec + lookaheadSec) fireAt = nextFire(fireAt);
     } else {

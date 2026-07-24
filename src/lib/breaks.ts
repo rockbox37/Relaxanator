@@ -9,6 +9,7 @@ import {
   type CueSoundId,
   DEFAULT_BREAK_CUE_SOUND_ID,
 } from "./cue-sounds";
+import { shouldCatchUp } from "./wake-sync";
 
 export type BreakKind = "stretch" | "walk" | "water" | "custom";
 
@@ -173,8 +174,9 @@ export interface BreakDueEvent {
 /**
  * Collect break events due within [nowSec, nowSec + lookaheadSec) and return
  * the advanced schedule. Disabled types are dropped; newly enabled types are
- * seeded one interval out. Stale schedules (long suspend) catch up once then
- * resume cadence — same contract as meditation collectDueEvents.
+ * seeded one interval out. A schedule left behind by a throttled tab prompts
+ * once then resumes cadence; one left behind by a suspend is re-anchored
+ * silently (#135) — same contract as meditation collectDueEvents.
  */
 export function collectDueBreakEvents(
   schedule: BreakFireSchedule,
@@ -191,7 +193,9 @@ export function collectDueBreakEvents(
 
     let fireAt = schedule[def.id] ?? computeNextBreakFire(nowSec, type);
     if (fireAt < nowSec) {
-      events.push({ kind: def.id, whenSec: nowSec });
+      if (shouldCatchUp(fireAt, nowSec)) {
+        events.push({ kind: def.id, whenSec: nowSec });
+      }
       fireAt = computeNextBreakFire(nowSec, type);
       while (fireAt < nowSec + lookaheadSec) {
         fireAt = computeNextBreakFire(fireAt, type);

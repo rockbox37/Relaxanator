@@ -86,6 +86,36 @@ describe("ChordsEngine", () => {
     engine.stop();
   });
 
+  it("resync drops the fire missed while asleep and re-anchors to now (#135)", () => {
+    vi.useFakeTimers();
+    let now = 100;
+    const ctx = mockCtx(now);
+    Object.defineProperty(ctx, "currentTime", {
+      get: () => now,
+      configurable: true,
+    });
+
+    const settings = createDefaultChordSettings();
+    settings["c-major"].enabled = true;
+    settings["c-major"].intervalMin = 1;
+
+    const engine = new ChordsEngine(ctx, {} as AudioNode, settings);
+    engine.start(); // first fire reserved for t=160
+
+    // Slept past it, then woke 40s late.
+    now = 200;
+    engine.resync();
+    vi.advanceTimersByTime(250);
+    expect(ctx.createOscillator).not.toHaveBeenCalled();
+
+    // Cadence resumes a full interval after the wake.
+    now = 259.7;
+    vi.advanceTimersByTime(250);
+    expect(ctx.createOscillator).toHaveBeenCalled();
+
+    engine.stop();
+  });
+
   it("fires onFire immediately on preview (#104)", () => {
     const ctx = mockCtx(10);
     const engine = new ChordsEngine(ctx, {} as AudioNode, createDefaultChordSettings());

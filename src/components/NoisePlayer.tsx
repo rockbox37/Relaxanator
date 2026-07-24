@@ -120,6 +120,7 @@ import {
   toggleMuteExceptTodo,
 } from "@/lib/mute";
 import { playCueSound } from "@/audio/cue-sounds";
+import { type ClockSample, observeClocks } from "@/lib/wake-sync";
 import {
   type SessionPreset,
   type SessionSettings,
@@ -155,6 +156,8 @@ import { TodoReminderStack } from "./TodoReminderBanner";
 
 /** Sleep-timer pump cadence — reads the audio clock to drive fade + stop. */
 const SLEEP_PUMP_MS = 250;
+/** Wake-watchdog cadence — compares the wall clock against the audio clock. */
+const WAKE_WATCH_MS = 1_000;
 /** Poll clock so ToDo reminders appear when local time crosses due. */
 const TODO_REMINDER_POLL_MS = 15_000;
 
@@ -437,6 +440,43 @@ export default function NoisePlayer() {
       ctx?.removeEventListener("statechange", resyncIfRunning);
     };
   }, [playing, audioEpoch]);
+
+  /**
+   * Wake watchdog (#135). A machine suspend stalls the audio clock while wall
+   * time runs on, so every wall→audio mapping made before the sleep now points
+   * at a civil time that has already passed — and the schedulers behind them
+   * would release the whole missed backlog. Sampling both clocks each tick
+   * catches that divergence (timer throttling advances them together, so it
+   * stays quiet there) and re-anchors every scheduler to now.
+   */
+  useEffect(() => {
+    let prev: ClockSample | null = null;
+
+    const id = window.setInterval(() => {
+      const ctx = engineRef.current?.context;
+      // A paused context stalls its clock for the same reason a sleeping
+      // machine does — wait for it to run again before comparing.
+      if (!ctx || ctx.state !== "running") {
+        prev = null;
+        return;
+      }
+
+      const sample: ClockSample = {
+        wallMs: Date.now(),
+        audioSec: ctx.currentTime,
+      };
+      const observation = prev ? observeClocks(prev, sample) : null;
+      prev = sample;
+      if (!observation?.woke) return;
+
+      announceRef.current?.resync({ dropMissed: true });
+      meditationRef.current?.resync();
+      chordsRef.current?.resync();
+      breakRef.current?.resync();
+    }, WAKE_WATCH_MS);
+
+    return () => window.clearInterval(id);
+  }, []);
 
   /**
    * iOS Safari (#83): if a context already exists, kick unlock *synchronously*

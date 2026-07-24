@@ -59,6 +59,16 @@ export class BreakEngine {
     this.settings = settings;
   }
 
+  /**
+   * Re-anchor the schedule to the live audio clock after a wake, dropping
+   * prompts missed while the machine slept (#135). The dedupe map is cleared
+   * with them so the re-anchored schedule is not mistaken for a repeat.
+   */
+  resync(): void {
+    this.schedule = initBreakFireSchedule(this.settings, this.ctx.currentTime);
+    this.lastNotified.clear();
+  }
+
   /** Fire the cue immediately (UI preview button). */
   preview(): void {
     // cueVolume is the stored 0..1 slider position; taper it to a perceptual

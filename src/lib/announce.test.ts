@@ -13,6 +13,7 @@ import {
   getAnnounceVoice,
   missedBoundaryMs,
   nextBoundaryMs,
+  previousBoundaryMs,
   scheduleHorizonMs,
   scheduleLookaheadMs,
   scheduleMissGraceMs,
@@ -94,6 +95,33 @@ describe("nextBoundaryMs", () => {
     const lateNight = new Date(2026, 5, 15, 23, 50).getTime();
     const nextMidnight = new Date(2026, 5, 16, 0, 0).getTime();
     expect(nextBoundaryMs(lateNight, 60)).toBe(nextMidnight);
+  });
+});
+
+describe("previousBoundaryMs", () => {
+  it("floors to the mark that has already gone by", () => {
+    expect(previousBoundaryMs(localMs(14, 47), 60)).toBe(localMs(14, 0));
+    expect(previousBoundaryMs(localMs(14, 20), 15)).toBe(localMs(14, 15));
+    expect(previousBoundaryMs(localMs(14, 29), 30)).toBe(localMs(14, 0));
+  });
+
+  it("returns the mark itself when sitting exactly on one", () => {
+    expect(previousBoundaryMs(localMs(15, 0), 60)).toBe(localMs(15, 0));
+    expect(previousBoundaryMs(localMs(14, 45), 15)).toBe(localMs(14, 45));
+  });
+
+  it("aligns multi-hour intervals to divisible hours from midnight", () => {
+    expect(previousBoundaryMs(localMs(14, 47), 120)).toBe(localMs(14, 0));
+    expect(previousBoundaryMs(localMs(15, 59), 180)).toBe(localMs(15, 0));
+  });
+
+  it("brackets the next boundary — one interval apart, now in between", () => {
+    const now = localMs(14, 37, 12);
+    const previous = previousBoundaryMs(now, 15);
+    const next = nextBoundaryMs(now, 15);
+    expect(previous).toBeLessThanOrEqual(now);
+    expect(next).toBeGreaterThan(now);
+    expect(next - previous).toBe(15 * 60_000);
   });
 });
 

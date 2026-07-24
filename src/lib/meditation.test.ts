@@ -215,11 +215,19 @@ describe("collectDueEvents", () => {
     expect(schedule.fresh).toBe(100 + 120);
   });
 
-  it("fires once after a long suspend instead of burst-firing to catch up", () => {
+  it("fires once after a throttled tab overslept instead of burst-firing", () => {
     const settings = { a: voice({ intervalMin: 1 }) };
-    // Last fire was scheduled 10 minutes ago (audio clock paused meanwhile).
-    const { events, schedule } = collectDueEvents({ a: 40 }, settings, 640, 0.5);
+    // Last fire was scheduled a minute ago — an intensively throttled tab.
+    const { events, schedule } = collectDueEvents({ a: 580 }, settings, 640, 0.5);
     expect(events).toEqual([{ voiceId: "a", whenSec: 640 }]);
+    expect(schedule.a).toBe(640 + 60);
+  });
+
+  it("drops the catch-up when a suspend left the schedule far behind (#135)", () => {
+    const settings = { a: voice({ intervalMin: 1 }) };
+    // Ten minutes stale: the machine slept, so the missed fires are stale news.
+    const { events, schedule } = collectDueEvents({ a: 40 }, settings, 640, 0.5);
+    expect(events).toEqual([]);
     expect(schedule.a).toBe(640 + 60);
   });
 });
@@ -349,11 +357,11 @@ describe("collectDueEvents (sync-to-clock)", () => {
     expect(schedule.a).toBeCloseTo(400, 6);
   });
 
-  it("fires a synced voice once after a long suspend, then re-aligns", () => {
+  it("fires a synced voice once after a throttled tab overslept, then re-aligns", () => {
     const settings = { a: voice({ intervalMin: 5, syncToClock: true }) };
-    // Scheduled fire is far in the past on the audio clock (tab was suspended).
+    // Scheduled fire is a minute back on the audio clock (tab was throttled).
     const { events, schedule } = collectDueEvents(
-      { a: 40 },
+      { a: 580 },
       settings,
       640,
       0.6,
@@ -362,6 +370,20 @@ describe("collectDueEvents (sync-to-clock)", () => {
     expect(events).toEqual([{ voiceId: "a", whenSec: 640 }]);
     // Resumes on the next real wall-clock boundary rather than burst-firing.
     expect(schedule.a).toBeGreaterThan(640);
+  });
+
+  it("re-aligns a synced voice silently when a suspend left it far behind (#135)", () => {
+    const settings = { a: voice({ intervalMin: 5, syncToClock: true }) };
+    const { events, schedule } = collectDueEvents(
+      { a: 40 },
+      settings,
+      640,
+      0.6,
+      localMs(12, 4, 59, 700),
+    );
+    expect(events).toEqual([]);
+    // Next fire is a real future boundary, not a replay of the missed ones.
+    expect(schedule.a).toBeGreaterThan(640.6);
   });
 
   it("keeps free-running voices unchanged when a synced voice is present", () => {

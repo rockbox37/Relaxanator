@@ -430,6 +430,72 @@ describe("AnnounceEngine pump scheduling", () => {
     engine.stop();
   });
 
+  it("never speaks a boundary that passed while the machine slept (#135)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 15, 14, 50, 0));
+
+    // The mock's audio clock never advances, which is exactly what a sleeping
+    // machine does to a real one while wall time runs on.
+    const ctx = mockAudioContext();
+    const timeTokensSpy = vi.spyOn(announce, "timeTokens");
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.start();
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Sleep past 15:00 and 16:00; wake 2 minutes after the hour, which is
+    // inside miss grace — without wake detection 16:00 would be spoken late.
+    vi.setSystemTime(new Date(2026, 0, 15, 16, 2, 0));
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(
+      timeTokensSpy.mock.calls.filter((c) => c[0] === 16 && c[1] === 0),
+    ).toHaveLength(0);
+    // The next real boundary is still announced.
+    expect(
+      timeTokensSpy.mock.calls.filter((c) => c[0] === 17 && c[1] === 0),
+    ).toHaveLength(1);
+
+    timeTokensSpy.mockRestore();
+    engine.stop();
+  });
+
+  it("resync(dropMissed) commits past the boundaries a sleep swallowed (#135)", async () => {
+    vi.useFakeTimers();
+    // 90s past the hour: inside miss grace, so a plain resync would speak
+    // 15:00 — but the player's watchdog just reported a wake, so it is gone.
+    vi.setSystemTime(new Date(2026, 0, 15, 15, 1, 30));
+
+    const ctx = mockAudioContext();
+    const timeTokensSpy = vi.spyOn(announce, "timeTokens");
+    const dest = { connect: () => dest } as unknown as AudioNode;
+    const engine = new AnnounceEngine(ctx, dest, {
+      enabled: true,
+      intervalMin: 60,
+      voiceId: "vocoder",
+      volume: 0.6,
+    });
+
+    engine.resync({ dropMissed: true });
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(
+      timeTokensSpy.mock.calls.filter((c) => c[0] === 15 && c[1] === 0),
+    ).toHaveLength(0);
+    expect(
+      timeTokensSpy.mock.calls.filter((c) => c[0] === 16 && c[1] === 0),
+    ).toHaveLength(1);
+
+    timeTokensSpy.mockRestore();
+    engine.stop();
+  });
+
   it("resync during miss grace does not re-speak an already catch-up boundary (#62)", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 0, 15, 15, 0, 2));
