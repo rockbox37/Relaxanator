@@ -14,12 +14,14 @@ import {
   getAnnounceVoice,
   missedBoundaryMs,
   nextBoundaryMs,
+  previousBoundaryMs,
   scheduleLookaheadMs,
   scheduleMissGraceMs,
   systemPrefers24Hour,
   timeTokens,
   wordGapAfterToken,
 } from "@/lib/announce";
+import { type ClockSample, observeClocks } from "@/lib/wake-sync";
 import { fadeInDecodedBuffer } from "@/audio/announce-buffer";
 import {
   VOCODER_DETUNE_CENTS,
@@ -74,6 +76,8 @@ export class AnnounceEngine {
    * leave an orphan copy of the same boundary sounding (#73).
    */
   private pendingSources: AudioBufferSourceNode[] = [];
+  /** Clocks as the previous pump saw them — the wake signal (#135). */
+  private lastClocks: ClockSample | null = null;
 
   constructor(
     private readonly ctx: BaseAudioContext,
@@ -129,11 +133,33 @@ export class AnnounceEngine {
    * the wrong civil time. Does not clear {@link committedBoundaryMs} — already
    * spoken / enqueued marks must not re-enter miss-grace catch-up (#62).
    * Cancels orphan BufferSources from the prior mapping first (#73).
+   *
+   * Pass `dropMissed` when the resync follows a detected wake: boundaries that
+   * went by while the machine slept are stale news, so commit past them rather
+   * than letting miss-grace speak a time that has already gone (#135).
    */
-  resync(): void {
+  resync(options: { dropMissed?: boolean } = {}): void {
+    if (options.dropMissed) {
+      this.dropMissedBoundaries(Date.now());
+    } else {
+      this.cancelPendingSources();
+      this.scheduledBoundaryMs = 0;
+    }
+    void this.pump();
+  }
+
+  /**
+   * Drop the pending mapping and commit past every boundary at or before
+   * `nowMs`, so miss-grace catch-up cannot speak a time that went by while the
+   * machine slept (#135).
+   */
+  private dropMissedBoundaries(nowMs: number): void {
     this.cancelPendingSources();
     this.scheduledBoundaryMs = 0;
-    void this.pump();
+    this.committedBoundaryMs = Math.max(
+      this.committedBoundaryMs,
+      previousBoundaryMs(nowMs, this.settings.intervalMin),
+    );
   }
 
   stop(): void {
@@ -145,6 +171,7 @@ export class AnnounceEngine {
     this.vocoderPrimed = false;
     this.scheduling = false;
     this.speakGeneration += 1;
+    this.lastClocks = null;
     this.cancelPendingSources();
     const t = this.ctx.currentTime;
     this.outputBus.gain.cancelScheduledValues(t);
@@ -223,12 +250,26 @@ export class AnnounceEngine {
     this.vocoderPrimed = true;
   }
 
+  /**
+   * Notice a suspend between pumps (#135). The pump owns the wall→audio
+   * mapping, so it also has to notice when that mapping broke: a sleeping
+   * machine stalls the audio clock while wall time runs on. Detecting it here
+   * rather than only from the player's watchdog closes the race where the
+   * 500ms pump reaches a boundary missed during the sleep first.
+   */
+  private wokeSinceLastPump(nowMs: number): boolean {
+    const previous = this.lastClocks;
+    this.lastClocks = { wallMs: nowMs, audioSec: this.ctx.currentTime };
+    return previous !== null && observeClocks(previous, this.lastClocks).woke;
+  }
+
   private async pump(): Promise<void> {
     if (!this.settings.enabled || this.ctx.state !== "running") return;
     if (this.scheduling) return;
 
     const nowMs = Date.now();
     const intervalMin = this.settings.intervalMin;
+    if (this.wokeSinceLastPump(nowMs)) this.dropMissedBoundaries(nowMs);
     const lookaheadMs = scheduleLookaheadMs(intervalMin);
     const missGraceMs = scheduleMissGraceMs(intervalMin);
     const missed = missedBoundaryMs(nowMs, intervalMin, missGraceMs);

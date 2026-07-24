@@ -93,29 +93,40 @@ export function getAnnounceVoice(voiceId: string): AnnounceVoiceDef {
 }
 
 /**
- * Epoch ms of the next announcement boundary strictly after `nowMs`, in
+ * Epoch ms of the most recent announcement boundary at or before `nowMs`, in
  * local time. Sub-hour intervals land on minute marks divisible by the
  * interval (:00/:15/:30/:45…); multi-hour intervals land on hour marks
  * divisible by the hour count (from local midnight).
  */
-export function nextBoundaryMs(nowMs: number, intervalMin: number): number {
+export function previousBoundaryMs(nowMs: number, intervalMin: number): number {
   const candidate = new Date(nowMs);
   candidate.setSeconds(0, 0);
 
   if (intervalMin <= 60) {
     const step = Math.max(1, Math.floor(intervalMin));
-    candidate.setMinutes(
-      Math.floor(candidate.getMinutes() / step) * step,
-    );
+    candidate.setMinutes(Math.floor(candidate.getMinutes() / step) * step);
+  } else {
+    const stepHours = Math.max(1, Math.round(intervalMin / 60));
+    candidate.setMinutes(0);
+    candidate.setHours(Math.floor(candidate.getHours() / stepHours) * stepHours);
+  }
+  return candidate.getTime();
+}
+
+/**
+ * Epoch ms of the next announcement boundary strictly after `nowMs`, on the
+ * same local-time grid as {@link previousBoundaryMs}.
+ */
+export function nextBoundaryMs(nowMs: number, intervalMin: number): number {
+  const candidate = new Date(previousBoundaryMs(nowMs, intervalMin));
+
+  if (intervalMin <= 60) {
+    const step = Math.max(1, Math.floor(intervalMin));
     while (candidate.getTime() <= nowMs) {
       candidate.setMinutes(candidate.getMinutes() + step);
     }
   } else {
     const stepHours = Math.max(1, Math.round(intervalMin / 60));
-    candidate.setMinutes(0);
-    candidate.setHours(
-      Math.floor(candidate.getHours() / stepHours) * stepHours,
-    );
     while (candidate.getTime() <= nowMs) {
       candidate.setHours(candidate.getHours() + stepHours);
     }

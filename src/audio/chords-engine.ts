@@ -68,6 +68,21 @@ export class ChordsEngine {
     this.settings = settings;
   }
 
+  /**
+   * Re-anchor the schedule to the live audio clock after a wake, dropping
+   * fires missed while the machine slept along with the glow callbacks they
+   * had queued (#135).
+   */
+  resync(): void {
+    for (const timer of this.fireTimers) clearTimeout(timer);
+    this.fireTimers.clear();
+    this.schedule = initChordSchedule(
+      this.settings,
+      this.ctx.currentTime,
+      resolveVoice,
+    );
+  }
+
   /** Register a callback fired when a voice is actually heard (for UI glow). */
   setOnFire(cb: (event: VoiceFireEvent) => void): void {
     this.onFire = cb;

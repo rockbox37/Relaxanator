@@ -16,6 +16,8 @@
  * deterministic and unit-tested.
  */
 
+import { shouldCatchUp } from "./wake-sync";
+
 /* ------------------------------------------------------------------ *
  * Timbres (the per-voice instrument picklist)
  * ------------------------------------------------------------------ */
@@ -958,9 +960,10 @@ export interface ChordDueEvent {
 /**
  * Collect voices due within [nowSec, nowSec + lookaheadSec) and return the
  * advanced schedule. Disabled voices are dropped; newly enabled voices are
- * seeded one interval out. After a long suspend (schedule stale in the past)
- * the voice fires once as a catch-up rather than burst-firing every missed
- * step — mirrors the meditation scheduler.
+ * seeded one interval out. A schedule a throttled tab left in the past fires
+ * once as a catch-up rather than burst-firing every missed step; one a suspend
+ * left behind is re-anchored silently (#135) — mirrors the meditation
+ * scheduler.
  */
 export function collectDueChordEvents(
   schedule: ChordFireSchedule,
@@ -978,7 +981,7 @@ export function collectDueChordEvents(
     const def = voiceLookup?.(voiceId);
     let fireAt = schedule[voiceId] ?? computeNextChordFire(nowSec, voice, def);
     if (fireAt < nowSec) {
-      events.push({ voiceId, whenSec: nowSec });
+      if (shouldCatchUp(fireAt, nowSec)) events.push({ voiceId, whenSec: nowSec });
       fireAt = computeNextChordFire(nowSec, voice, def);
       while (fireAt < nowSec + lookaheadSec) {
         fireAt = computeNextChordFire(fireAt, voice, def);

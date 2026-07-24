@@ -1,0 +1,57 @@
+{
+  "xBRIEFInfo": {
+    "version": "0.8",
+    "author": "agent:cursor",
+    "description": "Scope xBRIEF",
+    "created": "2026-07-24T17:25:00Z"
+  },
+  "plan": {
+    "title": "Drop stale clock-synced triggers after wake",
+    "status": "completed",
+    "narratives": {
+      "Overview": "After the machine wakes from sleep, time announcements and other scheduled sounds fire as a backlog of missed triggers, announcing times that are already past until the schedule catches up to now. Every scheduler maps a wall-clock instant onto the audio clock and enqueues ahead; a suspend stalls the audio clock while wall time runs on, so the mapping — and any queued schedule — points at a civil time that has passed. Announce resync is wired only to visibilitychange / AudioContext statechange, neither of which necessarily fires on wake, and the meditation / break / chord schedulers ring an unbounded-staleness catch-up whenever their schedule falls behind.",
+      "Requirements": "FR-1: Detect a suspend/resume by watching wall-clock and audio-clock divergence while the context runs. FR-2: On wake, re-anchor every scheduler to the live clocks and cancel schedules mapped from the stale clock pair. FR-3: A schedule stale beyond a bounded grace drops its catch-up fire instead of playing it. FR-4: Announcements never speak a boundary missed during the suspend. NFR-1: A throttled background tab keeps its existing catch-up behavior — the wake path must not trigger on timer throttling alone. NFR-2: No regression of #47 lookahead, #62 continual-loop, or #73 double-fire fixes."
+    },
+    "items": [
+      {
+        "title": "Pure wake detection + shared catch-up staleness bound",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-1, FR-3, NFR-1"
+        }
+      },
+      {
+        "title": "Bound stale catch-up in meditation / break / chord schedulers",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-3"
+        }
+      },
+      {
+        "title": "Engine resync contract; announce drops boundaries missed while suspended",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-2, FR-4, NFR-2"
+        }
+      },
+      {
+        "title": "Wake watchdog wiring in NoisePlayer",
+        "status": "pending",
+        "narrative": {
+          "Traces": "FR-1, FR-2"
+        }
+      }
+    ],
+    "references": [
+      {
+        "uri": "https://github.com/rockbox37/Relaxanator/issues/135",
+        "type": "x-xbrief/github-issue",
+        "TrustLevel": "external"
+      }
+    ],
+    "updated": "2026-07-24T17:38:38Z",
+    "metadata": {
+      "completedAt": "2026-07-24T17:38:38Z"
+    }
+  }
+}

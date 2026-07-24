@@ -707,7 +707,19 @@ describe("collectDueChordEvents", () => {
     expect(schedule.fresh).toBe(100 + 120);
   });
 
-  it("fires once after a long suspend instead of burst-firing", () => {
+  it("fires once after a throttled tab overslept instead of burst-firing", () => {
+    const settings = { a: voiceSettings({ intervalMin: 1 }) };
+    const { events, schedule } = collectDueChordEvents(
+      { a: 580 },
+      settings,
+      640,
+      0.5,
+    );
+    expect(events).toEqual([{ voiceId: "a", whenSec: 640 }]);
+    expect(schedule.a).toBe(640 + 60);
+  });
+
+  it("drops the catch-up when a suspend left the schedule far behind (#135)", () => {
     const settings = { a: voiceSettings({ intervalMin: 1 }) };
     const { events, schedule } = collectDueChordEvents(
       { a: 40 },
@@ -715,7 +727,7 @@ describe("collectDueChordEvents", () => {
       640,
       0.5,
     );
-    expect(events).toEqual([{ voiceId: "a", whenSec: 640 }]);
+    expect(events).toEqual([]);
     expect(schedule.a).toBe(640 + 60);
   });
 

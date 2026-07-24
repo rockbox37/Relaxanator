@@ -72,6 +72,22 @@ export class MeditationEngine {
     this.settings = settings;
   }
 
+  /**
+   * Re-anchor the schedule to the live clocks after a wake, dropping fires
+   * missed while the machine slept along with the glow callbacks they had
+   * queued (#135). Voices already handed to the audio clock are inside the
+   * 0.6s lookahead, so nothing audible is left stranded.
+   */
+  resync(): void {
+    for (const timer of this.fireTimers) clearTimeout(timer);
+    this.fireTimers.clear();
+    this.schedule = initFireSchedule(
+      this.settings,
+      this.ctx.currentTime,
+      Date.now(),
+    );
+  }
+
   /** Fire a voice immediately (UI preview button). */
   preview(voiceId: string): void {
     const synth = VOICE_SYNTH.get(voiceId);

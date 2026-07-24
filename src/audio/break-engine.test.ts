@@ -102,4 +102,40 @@ describe("BreakEngine", () => {
     expect(() => engine.snooze("stretch")).not.toThrow();
     engine.stop();
   });
+
+  it("resync drops the prompt missed while asleep and re-anchors to now (#135)", () => {
+    vi.useFakeTimers();
+    let now = 100;
+    const ctx = mockCtx(now);
+    Object.defineProperty(ctx, "currentTime", {
+      get: () => now,
+      configurable: true,
+    });
+
+    const settings = createDefaultBreakSettings();
+    settings.types.stretch.enabled = true;
+    settings.types.stretch.intervalMin = 1;
+    settings.types.walk.enabled = false;
+    settings.types.water.enabled = false;
+    settings.types.custom.enabled = false;
+    settings.notificationsEnabled = false;
+
+    const engine = new BreakEngine(ctx, {} as AudioNode, settings);
+    const onFire = vi.fn();
+    engine.setOnFire(onFire);
+    engine.start(); // first prompt reserved for t=160
+
+    // Slept past it, then woke 40s late.
+    now = 200;
+    engine.resync();
+    vi.advanceTimersByTime(250);
+    expect(onFire).not.toHaveBeenCalled();
+
+    // Cadence resumes a full interval after the wake.
+    now = 259.7;
+    vi.advanceTimersByTime(250);
+    expect(onFire).toHaveBeenCalledTimes(1);
+
+    engine.stop();
+  });
 });

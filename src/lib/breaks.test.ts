@@ -133,7 +133,25 @@ describe("initBreakFireSchedule / collectDueBreakEvents", () => {
     expect(schedule.stretch).toBe(165);
   });
 
-  it("catch-up fires once after a long suspend, then resumes cadence", () => {
+  it("catch-up fires once after a throttled tab overslept, then resumes cadence", () => {
+    const settings = createDefaultBreakSettings();
+    settings.types.stretch.enabled = true;
+    settings.types.stretch.intervalMin = 1;
+    settings.types.walk.enabled = false;
+    settings.types.water.enabled = false;
+    settings.types.custom.enabled = false;
+
+    const { events, schedule } = collectDueBreakEvents(
+      { stretch: 940 },
+      settings,
+      1000,
+      0.6,
+    );
+    expect(events).toEqual([{ kind: "stretch", whenSec: 1000 }]);
+    expect(schedule.stretch).toBe(1060);
+  });
+
+  it("drops the catch-up when a suspend left the schedule far behind (#135)", () => {
     const settings = createDefaultBreakSettings();
     settings.types.stretch.enabled = true;
     settings.types.stretch.intervalMin = 1;
@@ -147,7 +165,7 @@ describe("initBreakFireSchedule / collectDueBreakEvents", () => {
       1000,
       0.6,
     );
-    expect(events).toEqual([{ kind: "stretch", whenSec: 1000 }]);
+    expect(events).toEqual([]);
     expect(schedule.stretch).toBe(1060);
   });
 
